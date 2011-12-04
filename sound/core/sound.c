@@ -233,6 +233,12 @@ static int snd_kernel_minor(int type, struct snd_card *card, int dev)
 			return -EINVAL;
 		minor = SNDRV_MINOR(card->number, type + dev);
 		break;
+	case SNDRV_DEVICE_TYPE_COMPR_PLAYBACK:
+	case SNDRV_DEVICE_TYPE_COMPR_CAPTURE:
+		if (snd_BUG_ON(!card))
+			return -EINVAL;
+		minor = SNDRV_MINOR(card->number, type);
+		break;
 	default:
 		return -EINVAL;
 	}
