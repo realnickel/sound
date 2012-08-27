@@ -59,6 +59,15 @@ struct media_device_info {
 /* A converter of analogue video to its digital representation. */
 #define MEDIA_ENT_T_V4L2_SUBDEV_DECODER	(MEDIA_ENT_T_V4L2_SUBDEV + 4)
 
+#define MEDIA_ENT_T_JACK		(3 << MEDIA_ENT_TYPE_SHIFT)
+
+#define MEDIA_ENT_T_ALSA		(4 << MEDIA_ENT_TYPE_SHIFT)
+#define MEDIA_ENT_T_ALSA_MIXER		(MEDIA_ENT_T_ALSA + 1)
+#define MEDIA_ENT_T_ALSA_SELECTOR	(MEDIA_ENT_T_ALSA + 2)
+#define MEDIA_ENT_T_ALSA_PROCESSING	(MEDIA_ENT_T_ALSA + 3)
+#define MEDIA_ENT_T_ALSA_SPLIT		(MEDIA_ENT_T_ALSA + 4)
+#define MEDIA_ENT_T_ALSA_MERGE		(MEDIA_ENT_T_ALSA + 5)
+
 #define MEDIA_ENT_FL_DEFAULT		(1 << 0)
 
 struct media_entity_desc {
