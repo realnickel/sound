@@ -154,7 +154,7 @@ static int create_fixed_stream_quirk(struct snd_usb_audio *chip,
 
 	stream = (fp->endpoint & USB_DIR_IN)
 		? SNDRV_PCM_STREAM_CAPTURE : SNDRV_PCM_STREAM_PLAYBACK;
-	err = snd_usb_add_audio_stream(chip, stream, fp);
+	err = snd_usb_add_audio_stream(chip, stream, 0, fp);
 	if (err < 0) {
 		kfree(fp);
 		kfree(rate_table);
@@ -471,7 +471,7 @@ static int create_uaxx_quirk(struct snd_usb_audio *chip,
 
 	stream = (fp->endpoint & USB_DIR_IN)
 		? SNDRV_PCM_STREAM_CAPTURE : SNDRV_PCM_STREAM_PLAYBACK;
-	err = snd_usb_add_audio_stream(chip, stream, fp);
+	err = snd_usb_add_audio_stream(chip, stream, 0, fp);
 	if (err < 0) {
 		kfree(fp);
 		return err;

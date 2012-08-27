@@ -80,7 +80,7 @@ static void snd_usb_audio_pcm_free(struct snd_pcm *pcm)
  */
 
 static void snd_usb_init_substream(struct snd_usb_stream *as,
-				   int stream,
+				   int stream, u8 terminal_id,
 				   struct audioformat *fp)
 {
 	struct snd_usb_substream *subs = &as->substream[stream];
@@ -104,6 +104,15 @@ static void snd_usb_init_substream(struct snd_usb_stream *as,
 	subs->ep_num = fp->endpoint;
 	if (fp->channels > subs->channels_max)
 		subs->channels_max = fp->channels;
+
+#if 0
+	/* FIXME:
+	 * Is this necessary since the PCM entities are created in the
+	 * ALSA core? Or maybe to link PCM device and input/output terminal
+	 */
+	if (terminal_id > 0)
+		snd_pcm_media_entities_create(as->pcm, stream, terminal_id);
+#endif
 }
 
 /* kctl callbacks for usb-audio channel maps */
@@ -318,7 +327,7 @@ static struct snd_pcm_chmap_elem *convert_chmap(int channels, unsigned int bits,
  * if not, create a new pcm stream.
  */
 int snd_usb_add_audio_stream(struct snd_usb_audio *chip,
-			     int stream,
+			     int stream, u8 terminal_id,
 			     struct audioformat *fp)
 {
 	struct snd_usb_stream *as;
@@ -347,7 +356,7 @@ int snd_usb_add_audio_stream(struct snd_usb_audio *chip,
 		err = snd_pcm_new_stream(as->pcm, stream, 1);
 		if (err < 0)
 			return err;
-		snd_usb_init_substream(as, stream, fp);
+		snd_usb_init_substream(as, stream, terminal_id, fp);
 		return add_chmap(as->pcm, stream, subs);
 	}
 
@@ -375,7 +384,7 @@ int snd_usb_add_audio_stream(struct snd_usb_audio *chip,
 	else
 		strcpy(pcm->name, "USB Audio");
 
-	snd_usb_init_substream(as, stream, fp);
+	snd_usb_init_substream(as, stream, terminal_id, fp);
 
 	list_add(&as->list, &chip->pcm_list);
 	chip->pcm_devs++;
@@ -481,6 +490,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 	int num, protocol, clock = 0;
 	struct uac_format_type_i_continuous_descriptor *fmt;
 	unsigned int chconfig;
+	u8 terminal_id = 0;
 
 	dev = chip->dev;
 
@@ -564,6 +574,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 				chconfig = le16_to_cpu(iterm->wChannelConfig);
 			}
 
+			terminal_id = as->bTerminalLink;
 			break;
 		}
 
@@ -588,6 +599,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 			num_channels = as->bNrChannels;
 			format = le32_to_cpu(as->bmFormats);
 			chconfig = le32_to_cpu(as->bmChannelConfig);
+			terminal_id = as->bTerminalLink;
 
 			/* lookup the terminal associated to this interface
 			 * to extract the clock */
@@ -708,7 +720,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 		fp->chmap = convert_chmap(fp->channels, chconfig, protocol);
 
 		snd_printdd(KERN_INFO "%d:%u:%d: add audio endpoint %#x\n", dev->devnum, iface_no, altno, fp->endpoint);
-		err = snd_usb_add_audio_stream(chip, stream, fp);
+		err = snd_usb_add_audio_stream(chip, stream, terminal_id, fp);
 		if (err < 0) {
 			kfree(fp->rate_table);
 			kfree(fp->chmap);
