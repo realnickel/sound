@@ -431,6 +431,25 @@ static const struct pci_device_id pciidlist[] = {		/* aka */
 MODULE_DEVICE_TABLE(pci, pciidlist);
 #endif
 
+static void simulator_detect_pch(struct drm_device *dev)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	dev_priv->is_simulator = true;
+
+	switch(INTEL_INFO(dev)->gen) {
+	case 7:
+		if (IS_IVYBRIDGE(dev)) {
+			dev_priv->pch_type = PCH_CPT;
+			break;
+		}
+		dev_priv->pch_type = PCH_LPT;
+		break;
+	default:
+		BUG();
+	}
+}
+
 void intel_find_P2SB(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -482,7 +501,10 @@ void intel_detect_pch(struct drm_device *dev)
 			unsigned short id = pch->device & INTEL_PCH_DEVICE_ID_MASK;
 			dev_priv->pch_id = id;
 
-			if (id == INTEL_PCH_IBX_DEVICE_ID_TYPE) {
+			if (id == INTEL_PCH_HAS_DEVICE_ID_TYPE) {
+				simulator_detect_pch(dev);
+				DRM_DEBUG_KMS("Found HAS PCH\n");
+			} else if (id == INTEL_PCH_IBX_DEVICE_ID_TYPE) {
 				dev_priv->pch_type = PCH_IBX;
 				DRM_DEBUG_KMS("Found Ibex Peak PCH\n");
 				WARN_ON(!IS_GEN5(dev));
@@ -501,6 +523,7 @@ void intel_detect_pch(struct drm_device *dev)
 				WARN_ON(!IS_HASWELL(dev));
 				WARN_ON(IS_HSW_ULT(dev));
 			} else if (IS_BROADWELL(dev)) {
+				/* XXX: must be after simulator check */
 				dev_priv->pch_type = PCH_LPT;
 				dev_priv->pch_id =
 					INTEL_PCH_LPT_LP_DEVICE_ID_TYPE;

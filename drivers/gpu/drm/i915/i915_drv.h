@@ -2297,6 +2297,7 @@ struct drm_i915_cmd_table {
 #define INTEL_PCH_LPT_LP_DEVICE_ID_TYPE		0x9c00
 #define INTEL_PCH_SPT_DEVICE_ID_TYPE		0xA100
 #define INTEL_PCH_SPT_LP_DEVICE_ID_TYPE		0x9D00
+#define INTEL_PCH_HAS_DEVICE_ID_TYPE		0x7000
 
 #define INTEL_PCH_TYPE(dev) (to_i915(dev)->pch_type)
 #define HAS_PCH_SPT(dev) (INTEL_PCH_TYPE(dev) == PCH_SPT)
