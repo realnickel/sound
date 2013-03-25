@@ -437,6 +437,9 @@ static void simulator_detect_pch(struct drm_device *dev)
 
 	dev_priv->is_simulator = true;
 
+	if (IS_VALLEYVIEW(dev) || IS_CHERRYVIEW(dev))
+		return;
+
 	switch(INTEL_INFO(dev)->gen) {
 	case 7:
 		if (IS_IVYBRIDGE(dev)) {
