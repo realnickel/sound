@@ -520,6 +520,8 @@ void intel_uncore_forcewake_reset(struct drm_device *dev, bool restore)
 	spin_unlock_irqrestore(&dev_priv->uncore.lock, irqflags);
 }
 
+static void null_wake(struct drm_i915_private *dev_priv, int fw_engine) { }
+
 void intel_uncore_early_sanitize(struct drm_device *dev, bool restore_forcewake)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -1203,7 +1205,10 @@ void intel_uncore_init(struct drm_device *dev)
 
 	intel_uncore_early_sanitize(dev, false);
 
-	if (IS_GEN9(dev)) {
+	if (dev_priv->is_simulator) {
+		dev_priv->uncore.funcs.force_wake_get = null_wake;
+		dev_priv->uncore.funcs.force_wake_put = null_wake;
+	} else if (IS_GEN9(dev)) {
 		dev_priv->uncore.funcs.force_wake_get = __gen9_force_wake_get;
 		dev_priv->uncore.funcs.force_wake_put = __gen9_force_wake_put;
 	} else if (IS_VALLEYVIEW(dev)) {
