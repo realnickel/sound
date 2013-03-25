@@ -6982,7 +6982,11 @@ static void lpt_init_pch_refclk(struct drm_device *dev)
  */
 void intel_init_pch_refclk(struct drm_device *dev)
 {
-	if (HAS_PCH_IBX(dev) || HAS_PCH_CPT(dev))
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	if (dev_priv->is_simulator)
+		return;
+	else if (HAS_PCH_IBX(dev) || HAS_PCH_CPT(dev))
 		ironlake_init_pch_refclk(dev);
 	else if (HAS_PCH_LPT(dev))
 		lpt_init_pch_refclk(dev);
