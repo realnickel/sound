@@ -1352,7 +1352,9 @@ int intel_power_domains_init(struct drm_i915_private *dev_priv)
 	 * The enabling order will be from lower to higher indexed wells,
 	 * the disabling order is reversed.
 	 */
-	if (IS_HASWELL(dev_priv->dev)) {
+	if (dev_priv->is_simulator) {
+		set_power_wells(power_domains, i9xx_always_on_power_well);
+	} else if (IS_HASWELL(dev_priv->dev)) {
 		set_power_wells(power_domains, hsw_power_wells);
 		hsw_pwr = power_domains;
 	} else if (IS_BROADWELL(dev_priv->dev)) {
