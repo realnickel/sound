@@ -1067,6 +1067,8 @@ static void assert_fdi_tx(struct drm_i915_private *dev_priv,
 	bool cur_state;
 	enum transcoder cpu_transcoder = intel_pipe_to_cpu_transcoder(dev_priv,
 								      pipe);
+	if (dev_priv->is_simulator)
+		return;
 
 	if (HAS_DDI(dev_priv->dev)) {
 		/* DDI does not have a specific FDI_TX register */
@@ -1092,6 +1094,9 @@ static void assert_fdi_rx(struct drm_i915_private *dev_priv,
 	u32 val;
 	bool cur_state;
 
+	if (dev_priv->is_simulator)
+		return;
+
 	reg = FDI_RX_CTL(pipe);
 	val = I915_READ(reg);
 	cur_state = !!(val & FDI_RX_ENABLE);
@@ -1116,6 +1121,9 @@ static void assert_fdi_tx_pll_enabled(struct drm_i915_private *dev_priv,
 	if (HAS_DDI(dev_priv->dev))
 		return;
 
+	if (dev_priv->is_simulator)
+		return;
+
 	reg = FDI_TX_CTL(pipe);
 	val = I915_READ(reg);
 	WARN(!(val & FDI_TX_PLL_ENABLE), "FDI TX PLL assertion failure, should be active but is disabled\n");
@@ -1127,6 +1135,9 @@ void assert_fdi_rx_pll(struct drm_i915_private *dev_priv,
 	int reg;
 	u32 val;
 	bool cur_state;
+
+	if (dev_priv->is_simulator)
+		return;
 
 	reg = FDI_RX_CTL(pipe);
 	val = I915_READ(reg);
@@ -1204,6 +1215,9 @@ void assert_pipe(struct drm_i915_private *dev_priv,
 	bool cur_state;
 	enum transcoder cpu_transcoder = intel_pipe_to_cpu_transcoder(dev_priv,
 								      pipe);
+
+	if (dev_priv->is_simulator)
+		return;
 
 	/* if we need the pipe quirk it must be always on */
 	if ((pipe == PIPE_A && dev_priv->quirks & QUIRK_PIPEA_FORCE) ||
@@ -10900,6 +10914,10 @@ static void
 check_connector_state(struct drm_device *dev)
 {
 	struct intel_connector *connector;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	if (dev_priv->is_simulator)
+		return;
 
 	list_for_each_entry(connector, &dev->mode_config.connector_list,
 			    base.head) {
