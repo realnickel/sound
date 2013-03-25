@@ -1390,6 +1390,10 @@ void i915_get_extra_instdone(struct drm_device *dev, uint32_t *instdone)
 	case 7:
 	case 8:
 	case 9:
+		if (dev_priv->is_simulator) {
+			instdone[0] = I915_READ(GEN7_INSTDONE_1);
+			break;
+		}
 		instdone[0] = I915_READ(GEN7_INSTDONE_1);
 		instdone[1] = I915_READ(GEN7_SC_INSTDONE);
 		instdone[2] = I915_READ(GEN7_SAMPLER_INSTDONE);
