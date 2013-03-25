@@ -3816,7 +3816,8 @@ static void lpt_pch_enable(struct drm_crtc *crtc)
 
 	assert_pch_transcoder_disabled(dev_priv, TRANSCODER_A);
 
-	lpt_program_iclkip(crtc);
+	if (!dev_priv->is_simulator)
+		lpt_program_iclkip(crtc);
 
 	/* Set transcoder timing. */
 	ironlake_pch_transcoder_set_timings(intel_crtc, PIPE_A);
