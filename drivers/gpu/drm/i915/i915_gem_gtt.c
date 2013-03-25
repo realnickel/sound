@@ -1808,6 +1808,7 @@ static inline unsigned int gen6_get_total_gtt_size(u16 snb_gmch_ctl)
 
 static inline unsigned int gen8_get_total_gtt_size(u16 bdw_gmch_ctl)
 {
+#if 0
 	bdw_gmch_ctl >>= BDW_GMCH_GGMS_SHIFT;
 	bdw_gmch_ctl &= BDW_GMCH_GGMS_MASK;
 	if (bdw_gmch_ctl)
@@ -1820,6 +1821,9 @@ static inline unsigned int gen8_get_total_gtt_size(u16 bdw_gmch_ctl)
 #endif
 
 	return bdw_gmch_ctl << 20;
+#else
+	return 4<<20;
+#endif
 }
 
 static inline unsigned int chv_get_total_gtt_size(u16 gmch_ctrl)
