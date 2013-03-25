@@ -447,6 +447,7 @@ static void simulator_detect_pch(struct drm_device *dev)
 			break;
 		}
 	case 8:
+	case 9:
 		dev_priv->pch_id = INTEL_PCH_LPT_LP_DEVICE_ID_TYPE;
 		dev_priv->pch_type = PCH_LPT;
 		break;
