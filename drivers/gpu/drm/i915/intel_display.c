@@ -12445,7 +12445,10 @@ static void intel_setup_outputs(struct drm_device *dev)
 
 		/* DDI B, C and D detection is indicated by the SFUSE_STRAP
 		 * register */
-		found = I915_READ(SFUSE_STRAP);
+		if (dev_priv->is_simulator)
+			found = SFUSE_STRAP_DDIB_DETECTED;
+		else
+			found = I915_READ(SFUSE_STRAP);
 
 		if (found & SFUSE_STRAP_DDIB_DETECTED)
 			intel_ddi_init(dev, PORT_B);
