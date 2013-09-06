@@ -104,6 +104,9 @@ static void hsw_reset(struct sst_dsp *sst)
 	sst_dsp_shim_update_bits(sst, SST_CSR,
 		SST_CSR_RST | SST_CSR_STALL, SST_CSR_RST | SST_CSR_STALL);
 
+	/* TODO: find out time - keep in reset for 200us */
+	udelay(200);
+
 	/* take DSP out of reset and keep stalled for FW loading */
 	sst_dsp_shim_update_bits(sst, SST_CSR,
 		SST_CSR_RST | SST_CSR_STALL, SST_CSR_STALL);
