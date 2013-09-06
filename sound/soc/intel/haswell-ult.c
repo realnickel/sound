@@ -384,9 +384,6 @@ static struct snd_soc_card haswell = {
 	.num_links = ARRAY_SIZE(haswell_dais),
 };
 
-
-#if 1
-
 static acpi_status hsw_audio_walk_resources(struct acpi_resource *res,
 	void *context)
 {
@@ -509,87 +506,6 @@ static void __exit haswell_exit(void)
 {
 	acpi_bus_unregister_driver(&hsw_acpi_audio);
 }
-
-#else
-
-static int haswell_pci_probe(struct pci_dev *pci,
-			const struct pci_device_id *pci_id)
-{
-	struct snd_soc_card *card = &haswell;
-	struct haswell_data *pdata;
-	struct sst_hsw_pcm *pcm_plat_data;
-	int ret;
-
-	pdata = devm_kzalloc(&pci->dev, sizeof(*pdata), GFP_KERNEL);
-	if (pdata == NULL)
-		return -ENOMEM;
-
-	/* this is managed by the platform driver core */
-	pcm_plat_data = kzalloc(sizeof(*pcm_plat_data), GFP_KERNEL);
-	if (pcm_plat_data == NULL)
-		return -ENOMEM;
-
-	/* initialise IPC and DSP */
-	pdata->hsw = sst_hsw_dsp_init(&pci->dev, 1, pci);
-	if (pdata->hsw == NULL) {
-		kfree(pcm_plat_data);
-		return -ENODEV;
-	}
-
-	/* register haswell PCM and DAI driver */
-	pcm_plat_data->hsw = pdata->hsw;
-	pdata->hsw_pcm_pdev = platform_device_register_data(&pci->dev,
-		"hsw-pcm-audio", -1, pcm_plat_data, sizeof(*pcm_plat_data));
-	if (IS_ERR(pdata->hsw_pcm_pdev))
-		return PTR_ERR(pdata->hsw_pcm_pdev);
-
-	/* register Haswell card */
-	card->dev = &pci->dev;
-	pci_set_drvdata(pci, card);
-	snd_soc_card_set_drvdata(card, pdata);
-	ret = snd_soc_register_card(card);
-	if (ret) {
-		platform_device_unregister(pdata->hsw_pcm_pdev);
-		dev_err(&pci->dev, "snd_soc_register_card() failed: %d\n", ret);
-	}
-
-	return ret;
-}
-
-static void haswell_pci_remove(struct pci_dev *pci)
-{
-	struct snd_soc_card *card = pci_get_drvdata(pci);
-	struct haswell_data *pdata = snd_soc_card_get_drvdata(card);
-
-	snd_soc_unregister_card(card);
-	platform_device_unregister(pdata->hsw_pcm_pdev);
-	sst_hsw_dsp_free(pdata->hsw);
-}
-
-static DEFINE_PCI_DEVICE_TABLE(hsw_sst_id) = {
-	{ PCI_VDEVICE(INTEL, SST_HSWULT_PCI_ID),},
-	{ 0, }
-};
-MODULE_DEVICE_TABLE(pci, hsw_sst_id);
-
-static struct pci_driver hsw_pci_driver = {
-	.name = "haswell-ult audio",
-	.id_table = hsw_sst_id,
-	.probe = haswell_pci_probe,
-	.remove = haswell_pci_remove,
-};
-
-static int __init haswell_init(void)
-{
-	return pci_register_driver(&hsw_pci_driver);
-}
-
-static void __exit haswell_exit(void)
-{
-	pci_unregister_driver(&hsw_pci_driver);
-}
-
-#endif
 
 module_init(haswell_init);
 module_exit(haswell_exit);
