@@ -94,6 +94,9 @@ static void hsw_boot(struct sst_dsp *sst)
 	sst_dsp_shim_update_bits(sst, SST_HDMC,  SST_HDMC_HDDA0(0x8),
 		SST_HDMC_HDDA0(0x8));
 
+	/* disable all clock gating */
+	writel(0x0, sst->addr.pci_cfg + 0xa8);
+
 	/* set DSP to RUN */
 	sst_dsp_shim_update_bits(sst, SST_CSR, SST_CSR_STALL, 0x0);
 }
