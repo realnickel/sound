@@ -41,6 +41,19 @@
 
 static void hsw_free(struct sst_dsp *sst);
 
+static void dump_shim(struct sst_dsp *sst)
+{
+	int i;
+
+	for (i = 0; i <= 0xF0; i += 4)
+		printk(KERN_ERR "shim 0x%2.2x value 0x%8.8x\n", i,
+			sst_dsp_shim_read_unlocked(sst, i));
+
+	for (i = 0xa0; i <= 0xac; i += 4)
+		printk(KERN_ERR "vendor 0x%2.2x value 0x%8.8x\n", i,
+			readl(sst->addr.pci_cfg + i));
+}
+
 static irqreturn_t hsw_irq(int irq, void *context)
 {
 	struct sst_dsp *sst = (struct sst_dsp *) context;
