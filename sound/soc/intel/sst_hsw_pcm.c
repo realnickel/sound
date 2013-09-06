@@ -37,6 +37,12 @@
 #include "sst_hsw_ipc.h"
 #include "sst_hsw_pcm.h"
 
+/*
+ * Dont build in the compressed support as it's not required for base FW.
+ * We also have to fix an issue on module removal with compressed.
+ */
+#define HSW_COMPR	0
+
 #define HSW_PCM_COUNT		6
 #define HSW_VOLUME_MAX		0x7FFFFFFF	/* 0dB */
 
@@ -694,7 +700,9 @@ static struct snd_soc_dai_driver hsw_dais[] = {
 	{
 		/* PCM and compressed */
 		.name  = "Offload0 Pin",
+#if HSW_COMPR
 		.compress_dai = 1,
+#endif
 		.playback = {
 			.stream_name = "Offload0 Playback",
 			.channels_min = 2,
@@ -706,7 +714,9 @@ static struct snd_soc_dai_driver hsw_dais[] = {
 	{
 		/* PCM and compressed */
 		.name  = "Offload1 Pin",
+#if HSW_COMPR
 		.compress_dai = 1,
+#endif
 		.playback = {
 			.stream_name = "Offload1 Playback",
 			.channels_min = 2,
@@ -823,6 +833,8 @@ static int hsw_pcm_remove(struct snd_soc_platform *platform)
 
 	return 0;
 }
+
+#if HSW_COMPR
 
 static u32 hsw_compr_notify_pointer(struct sst_hsw_stream *stream, void *data)
 {
@@ -1167,12 +1179,15 @@ static struct snd_compr_ops hsw_compr_ops = {
 	.get_codec_caps = hsw_compr_get_codec_caps,
 	.ack = hsw_compr_ack,
 };
+#endif
 
 static struct snd_soc_platform_driver hsw_soc_platform = {
 	.probe		= hsw_pcm_probe,
 	.remove		= hsw_pcm_remove,
 	.ops		= &hsw_pcm_ops,
+#if HSW_COMPR
 	.compr_ops	= &hsw_compr_ops,
+#endif
 	.pcm_new	= hsw_pcm_new,
 	.pcm_free	= hsw_pcm_free,
 	.controls	= hsw_volume_controls,
