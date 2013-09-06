@@ -458,6 +458,7 @@ static int hsw_audio_add(struct acpi_device *acpi)
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		platform_device_unregister(pdata->hsw_pcm_pdev);
+		sst_hsw_dsp_free(pdata->hsw);
 		dev_err(dev, "snd_soc_register_card() failed: %d\n", ret);
 	}
 
