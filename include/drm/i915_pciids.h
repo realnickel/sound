@@ -225,14 +225,18 @@
 
 #define INTEL_BDW_GT12M_IDS(info) \
 	_INTEL_BDW_M_IDS(1, info), \
-	_INTEL_BDW_M_IDS(2, info)
+	_INTEL_BDW_M_IDS(2, info), \
+	INTEL_VGA_DEVICE(0x0BD0, info) /* Simulator GT1 */
 
 #define INTEL_BDW_GT12D_IDS(info) \
 	_INTEL_BDW_D_IDS(1, info), \
 	_INTEL_BDW_D_IDS(2, info)
 
 #define INTEL_BDW_GT3M_IDS(info) \
-	_INTEL_BDW_M_IDS(3, info)
+	_INTEL_BDW_M_IDS(3, info), \
+	INTEL_VGA_DEVICE(0x0BD1, info), /* Simulator GT2 */ \
+	INTEL_VGA_DEVICE(0x0BD2, info)  /*/Simulator GT3 */
+
 
 #define INTEL_BDW_GT3D_IDS(info) \
 	_INTEL_BDW_D_IDS(3, info)
