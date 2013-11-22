@@ -228,4 +228,11 @@ config SND_DMA_SGBUF
 	def_bool y
 	depends on X86
 
+config SND_MEDIA
+	bool "Media Controller API"
+	depends on MEDIA_CONTROLLER
+	help
+	  Say Y here to enable the media controller API, which allows to
+	  retrieve the internal topology of sound devices.
+
 source "sound/core/seq/Kconfig"

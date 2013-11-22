@@ -240,6 +240,12 @@ int snd_card_create(int idx, const char *xid,
 	if (extra_size > 0)
 		card->private_data = (char *)card + sizeof(struct snd_card);
 	*card_ret = card;
+
+#ifdef CONFIG_SND_MEDIA
+	/* initialize media device. user-space can only access after */
+	/* snd_card_register calls media_device_register() */
+	media_device_init(&card->media_dev);
+#endif
 	return 0;
 
       __error_ctl:
@@ -450,6 +456,9 @@ static int snd_card_do_free(struct snd_card *card)
 		snd_printk(KERN_WARNING "unable to free card info\n");
 		/* Not fatal error */
 	}
+#if defined(CONFIG_SND_MEDIA)
+	media_device_unregister(&card->media_dev);
+#endif
 	kfree(card);
 	return 0;
 }
@@ -720,6 +729,18 @@ int snd_card_register(struct snd_card *card)
 	snd_cards[card->number] = card;
 	mutex_unlock(&snd_card_mutex);
 	init_info_for_card(card);
+
+#if defined(CONFIG_SND_MEDIA)
+	card->media_dev.dev = card->dev;
+	strlcpy(card->media_dev.model, card->shortname, sizeof(card->media_dev.model));
+	err = media_device_register(&card->media_dev);
+	if (err < 0) {
+		dev_err(card->dev, "%s: Media device registration failed (%d)\n",
+			__func__, err);
+		return err;
+	}
+#endif
+
 #if defined(CONFIG_SND_MIXER_OSS) || defined(CONFIG_SND_MIXER_OSS_MODULE)
 	if (snd_mixer_oss_notify_callback)
 		snd_mixer_oss_notify_callback(card, SND_MIXER_OSS_NOTIFY_REGISTER);

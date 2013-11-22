@@ -28,6 +28,7 @@
 #include <linux/pm.h>			/* pm_message_t */
 #include <linux/stringify.h>
 #include <linux/printk.h>
+#include <media/media-device.h>
 
 /* number of supported soundcards */
 #ifdef CONFIG_SND_DYNAMIC_MINORS
@@ -97,6 +98,10 @@ struct snd_device {
 /* main structure for soundcard */
 
 struct snd_card {
+
+#if defined(CONFIG_SND_MEDIA)
+	struct media_device media_dev;  /* media device */
+#endif
 	int number;			/* number of soundcard (index to
 								snd_cards) */
 
