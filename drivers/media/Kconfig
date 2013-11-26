@@ -80,12 +80,12 @@ config MEDIA_RC_SUPPORT
 
 config MEDIA_CONTROLLER
 	bool "Media Controller API"
-	depends on MEDIA_CAMERA_SUPPORT
 	---help---
 	  Enable the media controller API used to query media devices internal
 	  topology and configure it dynamically.
 
-	  This API is mostly used by camera interfaces in embedded platforms.
+	  This API is mostly used by sound cards and camera interfaces
+	  in embedded platforms.
 
 #
 # Video4Linux support
