@@ -38,6 +38,10 @@
 #include <sound/pcm_oss.h>
 #endif
 
+#if defined(CONFIG_SND_MEDIA)
+#include <media/media-entity.h>
+#endif
+
 /*
  *  Hardware (lowlevel) section
  */
@@ -407,6 +411,11 @@ struct snd_pcm_substream {
 	/* -- OSS things -- */
 	struct snd_pcm_oss_substream oss;
 #endif
+
+#ifdef CONFIG_SND_MEDIA
+	struct media_entity *m_entity;
+#endif
+
 #ifdef CONFIG_SND_VERBOSE_PROCFS
 	struct snd_info_entry *proc_root;
 	struct snd_info_entry *proc_info_entry;
@@ -486,6 +495,12 @@ int snd_pcm_new_internal(struct snd_card *card, const char *id, int device,
 		int playback_count, int capture_count,
 		struct snd_pcm **rpcm);
 int snd_pcm_new_stream(struct snd_pcm *pcm, int stream, int substream_count);
+#ifdef CONFIG_SND_MEDIA
+int snd_pcm_media_entities_create(struct snd_pcm *pcm, int stream,
+				  unsigned int id);
+#else
+#define snd_pcm_media_entities_create(pcm, stream, id)
+#endif
 
 int snd_pcm_notify(struct snd_pcm_notify *notify, int nfree);
 

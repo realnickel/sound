@@ -25,6 +25,9 @@
 #include <linux/time.h>
 #include <linux/mutex.h>
 #include <linux/device.h>
+#if defined(CONFIG_SND_MEDIA)
+#include <linux/media.h>
+#endif
 #include <sound/core.h>
 #include <sound/minors.h>
 #include <sound/pcm.h>
@@ -701,6 +704,11 @@ int snd_pcm_new_stream(struct snd_pcm *pcm, int stream, int substream_count)
 		atomic_set(&substream->mmap_count, 0);
 		prev = substream;
 	}
+
+#ifdef CONFIG_SND_MEDIA
+	snd_pcm_media_entities_create(pcm, stream, pcm->device);
+#endif
+
 	return 0;
 }				
 
@@ -813,6 +821,12 @@ static void snd_pcm_free_stream(struct snd_pcm_str * pstr)
 	substream = pstr->substream;
 	while (substream) {
 		substream_next = substream->next;
+#if defined(CONFIG_SND_MEDIA)
+		if (substream->m_entity != NULL) {
+			/* unregister() calls release() */
+			media_device_unregister_entity(substream->m_entity);
+		}
+#endif
 		snd_pcm_timer_done(substream);
 		snd_pcm_substream_proc_done(substream);
 		kfree(substream);
@@ -1153,6 +1167,68 @@ int snd_pcm_notify(struct snd_pcm_notify *notify, int nfree)
 }
 
 EXPORT_SYMBOL(snd_pcm_notify);
+
+#ifdef CONFIG_SND_MEDIA
+static int _media_entity_create(struct snd_pcm_substream *substream,
+				unsigned int id,
+				unsigned int capture)
+{
+	struct media_entity *entity;
+	struct media_pad *media_pads;
+	struct snd_card *card = substream->pcm->card;
+	int ret;
+
+	ret = media_entity_create(&entity, 1);
+	if (ret != 0)
+		return ret;
+
+	substream->m_entity = entity;
+	media_pads = entity->pads;
+	media_pads->flags = (capture == 1) ? MEDIA_PAD_FL_SINK : MEDIA_PAD_FL_SOURCE;
+	entity->type = MEDIA_ENT_T_DEVNODE_ALSA;
+	entity->info.alsa.card = card->number;
+	entity->info.alsa.device = substream->pcm->device;
+	entity->info.alsa.subdevice = substream->number;
+
+	if (memcmp(substream->name, "subdevice #", 11))
+		entity->name = substream->name;
+	else
+		entity->name = substream->pcm->name;
+
+	media_entity_init(entity, 1, media_pads, 0);
+	entity->id = 0; /* Media framework allocates id */
+#define PCM_GROUP 0
+	entity->group_id = PCM_GROUP; /* FIXME, add enum somewhere */
+	entity->domain_id = id;
+
+	media_device_register_entity(&card->media_dev, entity);
+
+	return 0;
+}
+
+
+int snd_pcm_media_entities_create(struct snd_pcm *pcm, int stream,
+				  unsigned int id)
+{
+	struct snd_pcm_str *pstr = &pcm->streams[stream];
+	struct snd_pcm_substream *substream;
+	int err;
+
+	for (substream = pstr->substream;
+	     substream;
+	     substream = substream->next) {
+		err = _media_entity_create(
+			substream,
+			id + substream->number,
+			stream == SNDRV_PCM_STREAM_CAPTURE  ? 1 : 0);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(snd_pcm_media_entities_create);
+#endif
 
 #ifdef CONFIG_PROC_FS
 /*
