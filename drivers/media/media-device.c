@@ -363,6 +363,26 @@ static void media_device_release(struct media_devnode *mdev)
 }
 
 /**
+ * media_device_init - init a media device
+ * @mdev:	The media device
+ *
+ * Initialize internal fields for media device. In the typical
+ * use case, the media device is initialized, registered and
+ * media entities added later. Alternatively, the media device can
+ * be registered last without any impact.
+ */
+int __must_check media_device_init(struct media_device *mdev)
+{
+	mdev->entity_id = 1;
+	INIT_LIST_HEAD(&mdev->entities);
+	spin_lock_init(&mdev->lock);
+	mutex_init(&mdev->graph_mutex);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(media_device_init);
+
+/**
  * media_device_register - register a media device
  * @mdev:	The media device
  *
@@ -379,10 +399,8 @@ int __must_check media_device_register(struct media_device *mdev)
 	if (WARN_ON(mdev->dev == NULL || mdev->model[0] == 0))
 		return -EINVAL;
 
-	mdev->entity_id = 1;
-	INIT_LIST_HEAD(&mdev->entities);
-	spin_lock_init(&mdev->lock);
-	mutex_init(&mdev->graph_mutex);
+	if (mdev->entity_id == 0)
+		media_device_init(mdev); /* force initialization */
 
 	/* Register the device node. */
 	mdev->devnode.fops = &media_device_fops;
