@@ -438,6 +438,22 @@ void media_device_unregister(struct media_device *mdev)
 }
 EXPORT_SYMBOL_GPL(media_device_unregister);
 
+/* make sure entities are linked by increasing id, needed for enumeration */
+static void rank_entity(struct media_device *mdev,
+			struct media_entity *new)
+{
+	struct media_entity *entry;
+
+	list_for_each_entry(entry, &mdev->entities, list) {
+		if (entry->id > new->id) {
+			/* only happens with pre-assigned ids */
+			list_add(&new->list, entry->list.prev);
+			return;
+		}
+	}
+	list_add_tail(&new->list, &mdev->entities);
+}
+
 /**
  * media_device_register_entity - Register an entity with a media device
  * @mdev:	The media device
@@ -455,7 +471,7 @@ int __must_check media_device_register_entity(struct media_device *mdev,
 		entity->id = mdev->entity_id++;
 	else
 		mdev->entity_id = max(entity->id + 1, mdev->entity_id);
-	list_add_tail(&entity->list, &mdev->entities);
+	rank_entity(mdev, entity);
 	spin_unlock(&mdev->lock);
 
 	return 0;
