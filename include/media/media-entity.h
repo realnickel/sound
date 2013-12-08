@@ -50,6 +50,11 @@ struct media_entity_operations {
 	int (*link_validate)(struct media_link *link);
 };
 
+#define MEDIA_ENTITY_ALLOCATED_BY_DRIVER    0 /* default for legacy */
+#define MEDIA_ENTITY_ALLOCATED_BY_FRAMEWORK 1
+#define MEDIA_ENTITY_PADS_ALLOCATED_BY_DRIVER    0 /* default for legacy */
+#define MEDIA_ENTITY_PADS_ALLOCATED_BY_FRAMEWORK 1
+
 struct media_entity {
 	struct list_head list;
 	struct media_device *parent;	/* Media device this entity belongs to*/
@@ -78,6 +83,10 @@ struct media_entity {
 	 */
 	int stream_count;		/* Stream count for the entity. */
 	int use_count;			/* Use count for the entity. */
+
+	/* Flag to free entity on release(), caller needs to free otherwise */
+	int allocated;
+	int allocated_pads;
 
 	struct media_pipeline *pipe;	/* Pipeline this entity belongs to. */
 
@@ -126,6 +135,8 @@ struct media_entity_graph {
 	int top;
 };
 
+int media_entity_create(struct media_entity **entity, u16 num_pads);
+void media_entity_release(struct media_entity *entity);
 int media_entity_init(struct media_entity *entity, u16 num_pads,
 		struct media_pad *pads, u16 extra_links);
 void media_entity_cleanup(struct media_entity *entity);

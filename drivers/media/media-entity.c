@@ -27,6 +27,60 @@
 #include <media/media-device.h>
 
 /**
+ * media_entity_create - Create media entity
+ *
+ * @num_pads: Total number of sink and source pads.
+ *
+ * Utility routine to allocate an entity, which will be reclaimed on
+ * media_device_entity_unregister
+ */
+int media_entity_create(struct media_entity **entity, u16 num_pads)
+{
+	struct media_entity *ent;
+	struct media_pad    *pads;
+
+	ent = kzalloc(sizeof(struct media_entity), GFP_KERNEL);
+	if (ent == NULL)
+		goto _no_mem_entity;
+
+	pads = kzalloc(num_pads * sizeof(struct media_pad), GFP_KERNEL);
+	if (pads == NULL)
+		goto _no_mem_pads;
+
+	ent->allocated = MEDIA_ENTITY_ALLOCATED_BY_FRAMEWORK;
+	ent->allocated_pads = MEDIA_ENTITY_PADS_ALLOCATED_BY_FRAMEWORK;
+	ent->pads = pads;
+	*entity = ent;
+	return 0;
+
+_no_mem_pads:
+	kfree(ent);
+_no_mem_entity:
+	return -ENOMEM;
+}
+EXPORT_SYMBOL_GPL(media_entity_create);
+
+/**
+ * media_entity_release - free up media entity if needed
+ *
+ */
+void media_entity_release(struct media_entity *entity)
+{
+	if (entity != NULL) {
+		if ((entity->pads != NULL) &&
+			(entity->allocated_pads ==
+				MEDIA_ENTITY_PADS_ALLOCATED_BY_FRAMEWORK))
+			kfree(entity->pads);
+
+		if (entity->allocated == MEDIA_ENTITY_ALLOCATED_BY_FRAMEWORK) {
+			kfree(entity);
+			entity = NULL;
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(media_entity_release);
+
+/**
  * media_entity_init - Initialize a media entity
  *
  * @num_pads: Total number of sink and source pads.

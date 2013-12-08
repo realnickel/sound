@@ -496,5 +496,7 @@ void media_device_unregister_entity(struct media_entity *entity)
 	list_del(&entity->list);
 	spin_unlock(&mdev->lock);
 	entity->parent = NULL;
+
+	media_entity_release(entity);
 }
 EXPORT_SYMBOL_GPL(media_device_unregister_entity);
