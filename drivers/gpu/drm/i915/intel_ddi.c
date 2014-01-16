@@ -2111,18 +2111,107 @@ static void intel_ddi_destroy(struct drm_encoder *encoder)
 	intel_dp_encoder_destroy(encoder);
 }
 
+/*
+ * The ->detect() vfunc of connectors is usually responsible for setting the
+ * encoder type on intel_digital_ports when a hotplug event happens.
+ *
+ * However we sometimes want to force a modeset on a specific connector:
+ *   - the user can ask the SETCRTC ioctl to use a connector that isn't marked
+ *     as connected (because we never received a hotplug event for it).
+ *     This can be also used in tests to do a modeset without the need of a
+ *     plugged-in monitor.
+ *   - the command line video= option can be used to force modesets, eg.:
+ *     video=HDMI-A-1:1024x768e
+ *
+ * So, before we try to do anything with the DDI encoder as part of a modeset,
+ * we need to ensure that the personality of the encoder matches the selected
+ * connector.
+ */
+static bool
+intel_ddi_ensure_encoder_type(struct intel_encoder *encoder)
+{
+	struct drm_device *dev = encoder->base.dev;
+	struct intel_connector *connector;
+	int connectors = 0;
+
+	list_for_each_entry(connector, &dev->mode_config.connector_list,
+			    base.head) {
+		int connector_type, old_encoder_type, new_encoder_type;
+		int port;
+
+		if (connector->new_encoder != encoder)
+			continue;
+
+		connectors++;
+		if (WARN_ON(connectors > 1))
+			return false;
+
+		connector_type = connector->base.connector_type;
+		old_encoder_type = encoder->type;
+		switch (connector_type) {
+		case DRM_MODE_CONNECTOR_HDMIA:
+		case DRM_MODE_CONNECTOR_HDMIB:
+			new_encoder_type = INTEL_OUTPUT_HDMI;
+			break;
+		case DRM_MODE_CONNECTOR_DisplayPort:
+			new_encoder_type = INTEL_OUTPUT_DISPLAYPORT;
+			break;
+		case DRM_MODE_CONNECTOR_eDP:
+			continue;
+		default:
+			WARN(1, "DRM connector type %d\n", connector_type);
+			continue;
+		}
+
+		if (old_encoder_type == new_encoder_type)
+			continue;
+
+		port = intel_ddi_get_encoder_port(encoder);
+
+		if (old_encoder_type == INTEL_OUTPUT_EDP) {
+			DRM_ERROR("Can't change DDI %c personality to %s, it's an eDP DDI\n",
+				  port_name(port),
+				  intel_output_name(new_encoder_type));
+			return false;
+		}
+
+		if (old_encoder_type != INTEL_OUTPUT_UNKNOWN &&
+		    connector->base.status == connector_status_connected) {
+			DRM_DEBUG_KMS("Can't change DDI %c personality to %s, it has a connected %s device\n",
+				      port_name(port),
+				      intel_output_name(new_encoder_type),
+				      intel_output_name(old_encoder_type));
+			return false;
+		}
+
+		DRM_DEBUG_KMS("Changing DDI %c from %s to %s\n",
+			      port_name(port),
+			      intel_output_name(old_encoder_type),
+			      intel_output_name(new_encoder_type));
+
+		encoder->type = new_encoder_type;
+	}
+
+	return true;
+}
+
 static bool intel_ddi_compute_config(struct intel_encoder *encoder,
 				     struct intel_crtc_config *pipe_config)
 {
-	int type = encoder->type;
 	int port = intel_ddi_get_encoder_port(encoder);
+	int ret;
 
-	WARN(type == INTEL_OUTPUT_UNKNOWN, "compute_config() on unknown output!\n");
+	ret = intel_ddi_ensure_encoder_type(encoder);
+	if (!ret)
+		return false;
+
+	WARN(encoder->type == INTEL_OUTPUT_UNKNOWN,
+	     "compute_config() on unknown output!\n");
 
 	if (port == PORT_A)
 		pipe_config->cpu_transcoder = TRANSCODER_EDP;
 
-	if (type == INTEL_OUTPUT_HDMI)
+	if (encoder->type == INTEL_OUTPUT_HDMI)
 		return intel_hdmi_compute_config(encoder, pipe_config);
 	else
 		return intel_dp_compute_config(encoder, pipe_config);
