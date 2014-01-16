@@ -6272,7 +6272,9 @@ static void intel_gen6_powersave_work(struct work_struct *work)
 
 	mutex_lock(&dev_priv->rps.hw_lock);
 
-	if (IS_CHERRYVIEW(dev)) {
+	if (dev_priv->is_simulator) {
+		/* Don't try to do anything on simulation */
+	} else if (IS_CHERRYVIEW(dev)) {
 		cherryview_enable_rps(dev);
 	} else if (IS_VALLEYVIEW(dev)) {
 		valleyview_enable_rps(dev);
