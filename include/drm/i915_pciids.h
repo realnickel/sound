@@ -283,4 +283,10 @@
 	INTEL_VGA_DEVICE(0x191D, info), /* WKS GT2 */ \
 	INTEL_VGA_DEVICE(0x193D, info)  /* WKS GT4 */
 
+#define INTEL_BXT_IDS(info) \
+	INTEL_VGA_DEVICE(0x0A84, info), \
+	INTEL_VGA_DEVICE(0x0A85, info), \
+	INTEL_VGA_DEVICE(0x0A86, info), \
+	INTEL_VGA_DEVICE(0x0A87, info)
+
 #endif /* _I915_PCIIDS_H */
