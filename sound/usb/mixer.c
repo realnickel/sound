@@ -45,6 +45,7 @@
 #include <linux/bitops.h>
 #include <linux/init.h>
 #include <linux/list.h>
+#include <linux/media.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/usb.h>
@@ -55,6 +56,9 @@
 #include <sound/control.h>
 #include <sound/hwdep.h>
 #include <sound/info.h>
+#ifdef CONFIG_SND_MEDIA
+#include <media/media-entity.h>
+#endif
 #include <sound/tlv.h>
 
 #include "usbaudio.h"
@@ -2085,6 +2089,404 @@ static int snd_usb_mixer_dev_free(struct snd_device *device)
 	return 0;
 }
 
+#ifdef CONFIG_SND_MEDIA
+
+#define UAC_GROUP 1
+#define SND_MEDIA_USB_MIXER_NAME_SIZE 256
+struct snd_media_usb_mixer_private_data {
+	const u8 *desc; /* pointer to descriptor */
+	char name[SND_MEDIA_USB_MIXER_NAME_SIZE]; /* buffer to report name */
+	u8 source_ids_count;
+	const u8 *source_ids;
+	int sources; /* need to keep track of number of sinks and sources */
+	int sinks;
+};
+
+typedef int (*snd_media_entity_get_desc_t)(struct snd_card *card,
+					   void *private_data,
+					   struct media_entity *entity);
+
+static void unit_name(struct media_entity *entity,
+		      const u8 *prv_desc, const char *prefix)
+{
+	/* TODO: read the terminal name from the device */
+	struct snd_media_usb_mixer_private_data *prv_ent = entity->private_data;
+
+	snprintf(prv_ent->name, SND_MEDIA_USB_MIXER_NAME_SIZE, "%s%u",
+		prefix, prv_desc[3]);
+}
+
+static int input_terminal_get_desc(struct snd_card *card,
+				   void *private_data,
+				   struct media_entity *entity)
+{
+	unit_name(entity, private_data, "IT");
+	entity->type = MEDIA_ENT_T_JACK;
+	return 0;
+}
+
+static int output_terminal_get_desc(struct snd_card *card,
+				    void *private_data,
+				    struct media_entity *entity)
+{
+	unit_name(entity, private_data, "OT");
+	entity->type = MEDIA_ENT_T_JACK;
+	return 0;
+}
+
+static int mixer_unit_get_desc(struct snd_card *card,
+			       void *private_data,
+			       struct media_entity *entity)
+{
+	unit_name(entity, private_data, "MU");
+	entity->type = MEDIA_ENT_T_ALSA_MIXER;
+	return 0;
+}
+
+static int selector_unit_get_desc(struct snd_card *card,
+				  void *private_data,
+				  struct media_entity *entity)
+{
+	unit_name(entity, private_data, "SU");
+	entity->type = MEDIA_ENT_T_ALSA_SELECTOR;
+	return 0;
+}
+
+static int feature_unit_get_desc(struct snd_card *card,
+				 void *private_data,
+				 struct media_entity *entity)
+{
+	unit_name(entity, private_data, "FU");
+	entity->type = MEDIA_ENT_T_ALSA_PROCESSING;
+	return 0;
+}
+
+static int processing_unit_get_desc(struct snd_card *card,
+				    void *private_data,
+				    struct media_entity *entity)
+{
+	unit_name(entity, private_data, "PU");
+	entity->type = MEDIA_ENT_T_ALSA_PROCESSING;
+	return 0;
+}
+
+static int extension_unit_get_desc(struct snd_card *card,
+				   void *private_data,
+				   struct media_entity *entity)
+{
+	unit_name(entity, private_data, "XU");
+	entity->type = MEDIA_ENT_T_ALSA_PROCESSING;
+	return 0;
+}
+
+static int effect_unit_v2_get_desc(struct snd_card *card,
+				   void *private_data,
+				   struct media_entity *entity)
+{
+	unit_name(entity, private_data, "EU");
+	entity->type = MEDIA_ENT_T_ALSA_PROCESSING;
+	return 0;
+}
+
+static int src_v2_get_desc(struct snd_card *card,
+			   void *private_data,
+			   struct media_entity *entity)
+{
+	unit_name(entity, private_data, "SRC");
+	entity->type = MEDIA_ENT_T_ALSA_PROCESSING;
+	return 0;
+}
+
+static int snd_usb_mixer_entity(struct mixer_build *state, const u8 *desc)
+{
+	snd_media_entity_get_desc_t get_desc = NULL;
+	unsigned int sinks = 0, sources = 0, source_ids_count = 0, i;
+	const u8 *source_ids = NULL;
+	int err;
+
+	if (desc[0] < 4)
+		return 0;
+
+	if (state->mixer->protocol == UAC_VERSION_1) {
+		switch (desc[2]) {
+		case UAC_INPUT_TERMINAL:
+			/* FIXME: Not sure why this was there
+			   if (desc[0] >= 6 &&
+			   desc[5] != (UAC_TERMINAL_STREAMING >> 8)) {
+			*/
+			if (desc[0] >= 6) {
+				get_desc = &input_terminal_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC_OUTPUT_TERMINAL:
+			if (desc[0] >= 8) {
+				source_ids_count = 1;
+				source_ids = &desc[7];
+				/* FIXME: Not sure why this was there
+				   if (desc[5] != (UAC_TERMINAL_STREAMING >> 8))
+				*/
+				get_desc = &output_terminal_get_desc;
+			}
+			break;
+		case UAC_MIXER_UNIT:
+			if (desc[0] >= 6) {
+				source_ids_count = desc[4]; /* not set in Clemens' code */
+				source_ids = &desc[5];
+				get_desc = &mixer_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC_SELECTOR_UNIT:
+			if (desc[0] >= 6) {
+				source_ids_count = desc[4]; /* not set in Clemens' code */
+				source_ids = &desc[5];
+				get_desc = &selector_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC_FEATURE_UNIT:
+			if (desc[0] >= 5) {
+				source_ids_count = 1;
+				source_ids = &desc[4];
+				get_desc = &feature_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC1_PROCESSING_UNIT:
+			if (desc[0] >= 8) {
+				source_ids_count = desc[6]; /* not set in Clemens' code */
+				source_ids = &desc[7];
+				get_desc = &processing_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC1_EXTENSION_UNIT:
+			if (desc[0] >= 7 && desc[0] >= 7 + desc[6]) {
+				source_ids_count = desc[6];
+				source_ids = &desc[7];
+				get_desc = &extension_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		}
+	} else {
+		switch (desc[2]) {
+		case UAC_INPUT_TERMINAL:
+			/* FIXME: not sure why this was there
+			   if (desc[0] >= 6 &&
+			   desc[5] != (UAC_TERMINAL_STREAMING >> 8)) {
+			*/
+			if (desc[0] >= 6) {
+				get_desc = &input_terminal_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC_OUTPUT_TERMINAL:
+			if (desc[0] >= 8) {
+				source_ids_count = 1;
+				source_ids = &desc[7];
+				/* FIXME: not sure why this was there
+				   if (desc[5] != (UAC_TERMINAL_STREAMING >> 8))
+				*/
+				get_desc = &output_terminal_get_desc;
+			}
+			break;
+		case UAC_MIXER_UNIT:
+			if (desc[0] >= 5 && desc[0] >= 5 + desc[4]) {
+				source_ids_count = desc[4];
+				source_ids = &desc[5];
+				get_desc = &mixer_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC_SELECTOR_UNIT:
+			if (desc[0] >= 5 && desc[0] >= 5 + desc[4]) {
+				source_ids_count = desc[4];
+				source_ids = &desc[5];
+				get_desc = &selector_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC_FEATURE_UNIT:
+			if (desc[0] >= 5) {
+				source_ids_count = 1;
+				source_ids = &desc[4];
+				get_desc = &feature_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC2_EFFECT_UNIT:
+			if (desc[0] >= 7) {
+				source_ids_count = 1;
+				source_ids = &desc[6];
+				get_desc = &effect_unit_v2_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC2_PROCESSING_UNIT_V2:
+			if (desc[0] >= 7 && desc[0] >= 7 + desc[6]) {
+				source_ids_count = desc[6];
+				source_ids = &desc[7];
+				get_desc = &processing_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC2_EXTENSION_UNIT_V2:
+			if (desc[0] >= 7 && desc[0] >= 7 + desc[6]) {
+				source_ids_count = desc[6];
+				source_ids = &desc[7];
+				get_desc = &extension_unit_get_desc;
+				sources = 1;
+			}
+			break;
+		case UAC2_SAMPLE_RATE_CONVERTER:
+			if (desc[0] >= 5) {
+				source_ids_count = 1;
+				source_ids = &desc[4];
+				get_desc = &src_v2_get_desc;
+				sources = 1;
+			}
+			break;
+		}
+	}
+
+	if (source_ids != NULL) {
+
+		/* FIXME: no idea what this code was supposed to do
+		   if (source_ids_count == 0 &&
+		   source_ids + source_ids_count <= desc + desc[0])
+		   source_ids_count = desc + desc[0] - source_ids;
+		*/
+
+		sinks = source_ids_count;
+	}
+
+	if (get_desc) {
+		struct media_entity *entity;
+		struct media_pad    *pads;
+		struct snd_media_usb_mixer_private_data *prv;
+
+		err = media_entity_create(&entity, sinks+sources);
+		if (err < 0)
+			return err;
+
+		prv = kzalloc(sizeof(*prv), GFP_KERNEL);
+		if (prv == NULL)
+			return -ENOMEM;
+
+		entity->private_data = prv;
+		prv->desc = desc; /* keep pointer to descriptor */
+		prv->source_ids_count = source_ids_count;
+		prv->source_ids = source_ids;
+		get_desc(state->chip->card, (void *)desc, entity);
+
+		entity->name = prv->name;
+		pads = entity->pads;
+
+		media_entity_init(entity, sinks+sources, pads, 0);
+
+		entity->id = 0; /* Media framework allocates id */
+		entity->group_id = UAC_GROUP; /* FIXME, add enum somewhere */
+		entity->domain_id = desc[3]; /* used later to create links */
+
+		for (i = 0; i < sinks; i++)
+			pads[i].flags = MEDIA_PAD_FL_SINK;
+		for (i = sinks; i < sinks+sources; i++)
+			pads[i].flags = MEDIA_PAD_FL_SOURCE;
+		prv->sinks = sinks; /* keep track of pads setup */
+		prv->sources = sources;
+
+		media_device_register_entity(&state->chip->card->media_dev, entity);
+
+	}
+
+	return 0;
+}
+
+
+static struct media_entity *find_entity_by_group_domain_id(struct media_device *mdev, u32 group_id, u32 domain_id)
+{
+	struct media_entity *entity;
+
+	media_device_for_each_entity(entity, mdev) {
+		if ((entity->group_id == group_id) &&
+		    (entity->domain_id == domain_id)) {
+			return entity;
+		}
+	}
+	return NULL;
+}
+
+static int snd_usb_mixer_link_entities(struct mixer_build *state)
+{
+	struct media_device *mdev;
+	struct media_entity *entity;
+	struct media_entity *source;
+	struct snd_media_usb_mixer_private_data *prv;
+	struct snd_media_usb_mixer_private_data *prv2;
+	int i;
+	int err;
+
+	mdev = &state->chip->card->media_dev;
+
+	spin_lock(&mdev->lock);
+	media_device_for_each_entity(entity, mdev) {
+
+		if (entity->group_id == UAC_GROUP) {  /* FIXME, add enum somewhere */
+			prv = entity->private_data;
+			if (prv != NULL) {
+				for (i = 0; i < prv->source_ids_count; i++) {
+					source = find_entity_by_group_domain_id(mdev, UAC_GROUP, prv->source_ids[i]);
+					if (source != NULL) {
+						prv2 = source->private_data;
+
+						err = media_entity_create_link(source,
+									prv2->sinks + 0, /* single source only, source pads are just after sinks pads */
+									entity, i,       /* this deals with multiple inputs */
+									MEDIA_LNK_FL_ENABLED | MEDIA_LNK_FL_IMMUTABLE);
+						if (err < 0) {
+							snd_printk(KERN_ERR "usb:media: FAILED TO LINK entity (%d,%d) to source (%d,%d)\n",
+								entity->id, entity->domain_id,
+								source->id, source->domain_id);
+						}
+
+					} else
+						snd_printk(KERN_ERR "usb:media: no source (%d) found for entity (%d,%d)\n",
+							prv->source_ids[i], entity->id, entity->domain_id);
+				}
+			} else {
+				snd_printk(KERN_ERR "usb:media: no private data for entity %d\n", entity->id);
+			}
+		}
+	}
+	spin_unlock(&mdev->lock);
+	return 0;
+}
+
+static int snd_usb_mixer_entities(struct mixer_build *state)
+{
+	void *p;
+	int err;
+
+	p = NULL;
+	while ((p = snd_usb_find_desc(state->mixer->hostif->extra,
+				      state->mixer->hostif->extralen,
+				      p, USB_DT_CS_INTERFACE)) != NULL) {
+		err = snd_usb_mixer_entity(state, p);
+		if (err < 0) {
+			snd_printk(KERN_ERR "usb:media: Error in snd_usb_mixer_entities\n");
+			return err;
+		}
+	}
+
+	err = snd_usb_mixer_link_entities(state);
+	if (err < 0)
+		return err;
+	return 0;
+}
+#endif
+
 /*
  * create mixer controls
  *
@@ -2112,6 +2514,12 @@ static int snd_usb_mixer_controls(struct usb_mixer_interface *mixer)
 			break;
 		}
 	}
+
+#ifdef CONFIG_SND_MEDIA
+	err = snd_usb_mixer_entities(&state);
+	if (err < 0)
+		return err;
+#endif
 
 	p = NULL;
 	while ((p = snd_usb_find_csint_desc(mixer->hostif->extra, mixer->hostif->extralen,
