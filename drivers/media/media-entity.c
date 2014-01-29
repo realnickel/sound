@@ -67,6 +67,7 @@ EXPORT_SYMBOL_GPL(media_entity_create);
 void media_entity_release(struct media_entity *entity)
 {
 	if (entity != NULL) {
+		kfree(entity->private_data);
 		if ((entity->pads != NULL) &&
 			(entity->allocated_pads ==
 				MEDIA_ENTITY_PADS_ALLOCATED_BY_FRAMEWORK))

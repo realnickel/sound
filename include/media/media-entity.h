@@ -84,7 +84,12 @@ struct media_entity {
 	int stream_count;		/* Stream count for the entity. */
 	int use_count;			/* Use count for the entity. */
 
-	/* Flag to free entity on release(), caller needs to free otherwise */
+	/* pointer to data allocated by client driver, freed in release() */
+	void  *private_data;
+
+	/* Flags to free entity on release(), client needs to free-up anything
+	 * that was not allocated by the framework
+	 */
 	int allocated;
 	int allocated_pads;
 
