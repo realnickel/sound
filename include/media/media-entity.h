@@ -60,6 +60,7 @@ struct media_entity {
 	struct media_device *parent;	/* Media device this entity belongs to*/
 	u32 id;				/* Entity ID, unique in the parent media
 					 * device context */
+	u32 domain_id;                  /* Private ID used by client */
 	const char *name;		/* Entity name */
 	u32 type;			/* Entity type (MEDIA_ENT_T_*) */
 	u32 revision;			/* Entity revision, driver specific */
