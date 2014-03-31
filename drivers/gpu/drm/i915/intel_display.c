@@ -4545,6 +4545,27 @@ intel_display_port_power_domain(struct intel_encoder *intel_encoder)
 	}
 }
 
+enum intel_display_power_domain
+intel_display_aux_power_domain(struct intel_encoder *intel_encoder)
+{
+	struct intel_digital_port *intel_dig_port;
+
+	intel_dig_port = enc_to_dig_port(&intel_encoder->base);
+	switch (intel_dig_port->port) {
+	case PORT_A:
+		return POWER_DOMAIN_AUX_A;
+	case PORT_B:
+		return POWER_DOMAIN_AUX_B;
+	case PORT_C:
+		return POWER_DOMAIN_AUX_C;
+	case PORT_D:
+		return POWER_DOMAIN_AUX_D;
+	default:
+		WARN_ON_ONCE(1);
+		return 0;
+	}
+}
+
 static unsigned long get_crtc_power_domains(struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
