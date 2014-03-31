@@ -829,6 +829,40 @@ chv_read##x(struct drm_i915_private *dev_priv, off_t reg, bool trace) { \
 	REG_READ_FOOTER; \
 }
 
+/*
+ * Decoupled MMIO access for only 1 DWORD
+ */
+static void __gen9_decoupled_mmio_access(struct drm_i915_private *dev_priv,
+		off_t reg,
+		u32* ptr_data,
+		int power_domain,
+		int operation)
+{
+	u32 ctrl_reg_data = 0;
+
+	if (operation == GEN9_DECOUPLED_OP_WRITE)
+		__raw_i915_write32(dev_priv,
+				GEN9_DECOUPLED_REG0_DW1,
+				*ptr_data);
+
+	ctrl_reg_data |= reg;
+	ctrl_reg_data |= operation;
+	ctrl_reg_data |= power_domain;
+	__raw_i915_write32(dev_priv, GEN9_DECOUPLED_REG0_DW0, ctrl_reg_data);
+
+	ctrl_reg_data |= (1 << 31);
+	__raw_i915_write32(dev_priv, GEN9_DECOUPLED_REG0_DW0, ctrl_reg_data);
+
+	if (wait_for_atomic((__raw_i915_read32(dev_priv,
+			GEN9_DECOUPLED_REG0_DW0) & 0x80000000) == 0,
+			FORCEWAKE_ACK_TIMEOUT_MS))
+		DRM_ERROR("Decoupled MMIO wait timed out\n");
+
+	if (operation == GEN9_DECOUPLED_OP_READ)
+		*ptr_data = __raw_i915_read32(dev_priv,
+				GEN9_DECOUPLED_REG0_DW1);
+}
+
 #define __gen9_read(x) \
 static u##x \
 gen9_read##x(struct drm_i915_private *dev_priv, off_t reg, bool trace) { \
@@ -838,10 +872,13 @@ gen9_read##x(struct drm_i915_private *dev_priv, off_t reg, bool trace) { \
 		val = __raw_i915_read##x(dev_priv, reg); \
 	} else { \
 		unsigned fwengine = 0; \
+		unsigned power_domain = GEN9_DECOUPLED_PD_ALL; \
 		if (FORCEWAKE_GEN9_RENDER_RANGE_OFFSET(reg)) { \
+			power_domain = GEN9_DECOUPLED_PD_RENDER; \
 			if (dev_priv->uncore.fw_rendercount == 0) \
 				fwengine = FORCEWAKE_RENDER; \
 		} else if (FORCEWAKE_GEN9_MEDIA_RANGE_OFFSET(reg)) { \
+			power_domain = GEN9_DECOUPLED_PD_MEDIA; \
 			if (dev_priv->uncore.fw_mediacount == 0) \
 				fwengine = FORCEWAKE_MEDIA; \
 		} else if (FORCEWAKE_GEN9_COMMON_RANGE_OFFSET(reg)) { \
@@ -850,14 +887,30 @@ gen9_read##x(struct drm_i915_private *dev_priv, off_t reg, bool trace) { \
 			if (dev_priv->uncore.fw_mediacount == 0) \
 				fwengine |= FORCEWAKE_MEDIA; \
 		} else { \
+			power_domain = GEN9_DECOUPLED_PD_BLITTER; \
 			if (dev_priv->uncore.fw_blittercount == 0) \
 				fwengine = FORCEWAKE_BLITTER; \
 		} \
-		if (fwengine) \
-			dev_priv->uncore.funcs.force_wake_get(dev_priv, fwengine); \
-		val = __raw_i915_read##x(dev_priv, reg); \
-		if (fwengine) \
-			dev_priv->uncore.funcs.force_wake_put(dev_priv, fwengine); \
+		if (IS_BROXTON(dev_priv->dev) && x%32 == 0) { \
+			u32 *ptr_data = (u32 *) &val; \
+			unsigned i = 0; \
+			for (i = 0; i < x/32; i++) { \
+				__gen9_decoupled_mmio_access(dev_priv, \
+						reg + i*4, \
+						ptr_data, \
+						power_domain, \
+						GEN9_DECOUPLED_OP_READ); \
+				ptr_data++; \
+			} \
+		} else { \
+			if (fwengine) \
+				dev_priv->uncore.funcs.force_wake_get(dev_priv, \
+						fwengine); \
+			val = __raw_i915_read##x(dev_priv, reg); \
+			if (fwengine) \
+				dev_priv->uncore.funcs.force_wake_put(dev_priv, \
+						fwengine); \
+		} \
 	} \
 	REG_READ_FOOTER; \
 }
@@ -1059,10 +1112,13 @@ gen9_write##x(struct drm_i915_private *dev_priv, off_t reg, u##x val, \
 		__raw_i915_write##x(dev_priv, reg, val); \
 	} else { \
 		unsigned fwengine = 0; \
+		unsigned power_domain = GEN9_DECOUPLED_PD_ALL; \
 		if (FORCEWAKE_GEN9_RENDER_RANGE_OFFSET(reg)) { \
+			power_domain = GEN9_DECOUPLED_PD_RENDER; \
 			if (dev_priv->uncore.fw_rendercount == 0) \
 				fwengine = FORCEWAKE_RENDER; \
 		} else if (FORCEWAKE_GEN9_MEDIA_RANGE_OFFSET(reg)) { \
+			power_domain = GEN9_DECOUPLED_PD_MEDIA; \
 			if (dev_priv->uncore.fw_mediacount == 0) \
 				fwengine = FORCEWAKE_MEDIA; \
 		} else if (FORCEWAKE_GEN9_COMMON_RANGE_OFFSET(reg)) { \
@@ -1071,16 +1127,30 @@ gen9_write##x(struct drm_i915_private *dev_priv, off_t reg, u##x val, \
 			if (dev_priv->uncore.fw_mediacount == 0) \
 				fwengine |= FORCEWAKE_MEDIA; \
 		} else { \
+			power_domain = GEN9_DECOUPLED_PD_BLITTER; \
 			if (dev_priv->uncore.fw_blittercount == 0) \
 				fwengine = FORCEWAKE_BLITTER; \
 		} \
-		if (fwengine) \
-			dev_priv->uncore.funcs.force_wake_get(dev_priv, \
-					fwengine); \
-		__raw_i915_write##x(dev_priv, reg, val); \
-		if (fwengine) \
-			dev_priv->uncore.funcs.force_wake_put(dev_priv, \
-					fwengine); \
+		if (IS_BROXTON(dev_priv->dev) && x%32 == 0) { \
+			u32 *ptr_data = (u32 *) &val; \
+			unsigned i = 0; \
+			for (i = 0; i < x/32; i++) { \
+				__gen9_decoupled_mmio_access(dev_priv, \
+						reg + i*4, \
+						ptr_data, \
+						power_domain, \
+						GEN9_DECOUPLED_OP_WRITE); \
+				ptr_data++; \
+			} \
+		} else { \
+			if (fwengine) \
+				dev_priv->uncore.funcs.force_wake_get(dev_priv, \
+						fwengine); \
+			__raw_i915_write##x(dev_priv, reg, val); \
+			if (fwengine) \
+				dev_priv->uncore.funcs.force_wake_put(dev_priv, \
+						fwengine); \
+		} \
 	} \
 	REG_WRITE_FOOTER; \
 }

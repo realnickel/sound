@@ -3021,6 +3021,12 @@ int vlv_freq_opcode(struct drm_i915_private *dev_priv, int val);
 #define FORCEWAKE_ALL		(FORCEWAKE_RENDER | FORCEWAKE_MEDIA | \
 					FORCEWAKE_BLITTER)
 
+#define GEN9_DECOUPLED_OP_WRITE		(0 << 24)
+#define GEN9_DECOUPLED_OP_READ		(1 << 24)
+#define GEN9_DECOUPLED_PD_BLITTER	(0 << 28)
+#define GEN9_DECOUPLED_PD_RENDER	(1 << 28)
+#define GEN9_DECOUPLED_PD_MEDIA		(2 << 28)
+#define GEN9_DECOUPLED_PD_ALL		(3 << 28)
 
 #define I915_READ8(reg)		dev_priv->uncore.funcs.mmio_readb(dev_priv, (reg), true)
 #define I915_WRITE8(reg, val)	dev_priv->uncore.funcs.mmio_writeb(dev_priv, (reg), (val), true)
