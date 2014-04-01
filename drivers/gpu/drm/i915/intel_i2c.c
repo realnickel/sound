@@ -599,9 +599,12 @@ int intel_setup_gmbus(struct drm_device *dev)
 
 		intel_gpio_setup(bus, port);
 
-		ret = i2c_add_adapter(&bus->adapter);
-		if (ret)
-			goto err;
+		/* Do not register unused gmbus ports as i2c adapter */
+		if (bus->gpio_reg) {
+			ret = i2c_add_adapter(&bus->adapter);
+			if (ret)
+				goto err;
+		}
 	}
 
 	intel_i2c_reset(dev_priv->dev);
@@ -611,7 +614,8 @@ int intel_setup_gmbus(struct drm_device *dev)
 err:
 	while (--i) {
 		struct intel_gmbus *bus = &dev_priv->gmbus[i];
-		i2c_del_adapter(&bus->adapter);
+		if (bus->gpio_reg)
+			i2c_del_adapter(&bus->adapter);
 	}
 	return ret;
 }
@@ -652,6 +656,7 @@ void intel_teardown_gmbus(struct drm_device *dev)
 
 	for (i = 0; i < GMBUS_NUM_PORTS; i++) {
 		struct intel_gmbus *bus = &dev_priv->gmbus[i];
-		i2c_del_adapter(&bus->adapter);
+		if (bus->gpio_reg)
+			i2c_del_adapter(&bus->adapter);
 	}
 }
