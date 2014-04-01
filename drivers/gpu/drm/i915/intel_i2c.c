@@ -619,10 +619,13 @@ err:
 struct i2c_adapter *intel_gmbus_get_adapter(struct drm_i915_private *dev_priv,
 					    unsigned port)
 {
-	WARN_ON(!intel_gmbus_is_port_valid(port));
+	struct drm_device *dev = dev_priv->dev;
+
+	if (WARN_ON(!intel_gmbus_is_port_valid(dev, port)))
+		return NULL;
+
 	/* -1 to map pin pair to gmbus index */
-	return (intel_gmbus_is_port_valid(port)) ?
-		&dev_priv->gmbus[port - 1].adapter : NULL;
+	return &dev_priv->gmbus[port - 1].adapter;
 }
 
 void intel_gmbus_set_speed(struct i2c_adapter *adapter, int speed)

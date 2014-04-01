@@ -496,7 +496,7 @@ void intel_dvo_init(struct drm_device *dev)
 		 * special cases, but otherwise default to what's defined
 		 * in the spec.
 		 */
-		if (intel_gmbus_is_port_valid(dvo->gpio))
+		if (intel_gmbus_is_port_valid(dev, dvo->gpio))
 			gpio = dvo->gpio;
 		else if (dvo->type == INTEL_DVO_CHIP_LVDS)
 			gpio = GMBUS_PORT_SSC;

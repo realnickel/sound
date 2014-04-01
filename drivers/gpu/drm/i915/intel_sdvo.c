@@ -2324,6 +2324,7 @@ intel_sdvo_select_i2c_bus(struct drm_i915_private *dev_priv,
 			  struct intel_sdvo *sdvo, u32 reg)
 {
 	struct sdvo_device_mapping *mapping;
+	struct drm_device *dev = dev_priv->dev;
 	u8 pin;
 
 	if (sdvo->is_sdvob)
@@ -2331,7 +2332,8 @@ intel_sdvo_select_i2c_bus(struct drm_i915_private *dev_priv,
 	else
 		mapping = &dev_priv->sdvo_mappings[1];
 
-	if (mapping->initialized && intel_gmbus_is_port_valid(mapping->i2c_pin))
+	if (mapping->initialized &&
+		intel_gmbus_is_port_valid(dev, mapping->i2c_pin))
 		pin = mapping->i2c_pin;
 	else
 		pin = GMBUS_PORT_DPB;
