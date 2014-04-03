@@ -12410,6 +12410,12 @@ static void intel_setup_outputs(struct drm_device *dev)
 
 		/* Haswell uses DDI functions to detect digital outputs */
 		found = I915_READ(DDI_BUF_CTL_A) & DDI_INIT_DISPLAY_DETECTED;
+
+		/* Skylake initial steppings may not reflect correct
+		state */
+		if (IS_SKYLAKE(dev))
+			found = true;
+
 		/* DDI A only supports eDP */
 		if (found)
 			intel_ddi_init(dev, PORT_A);
