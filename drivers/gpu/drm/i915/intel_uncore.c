@@ -893,7 +893,8 @@ gen9_read##x(struct drm_i915_private *dev_priv, off_t reg, bool trace) { \
 			if (dev_priv->uncore.fw_blittercount == 0) \
 				fwengine = FORCEWAKE_BLITTER; \
 		} \
-		if (IS_BROXTON(dev_priv->dev) && x%32 == 0) { \
+		if (IS_BROXTON(dev_priv->dev) && x%32 == 0 && \
+		    !dev_priv->is_simulator) { \
 			u32 *ptr_data = (u32 *) &val; \
 			unsigned i = 0; \
 			for (i = 0; i < x/32; i++) { \
@@ -1133,7 +1134,8 @@ gen9_write##x(struct drm_i915_private *dev_priv, off_t reg, u##x val, \
 			if (dev_priv->uncore.fw_blittercount == 0) \
 				fwengine = FORCEWAKE_BLITTER; \
 		} \
-		if (IS_BROXTON(dev_priv->dev) && x%32 == 0) { \
+		if (IS_BROXTON(dev_priv->dev) && x%32 == 0 && \
+		    !dev_priv->is_simulator) { \
 			u32 *ptr_data = (u32 *) &val; \
 			unsigned i = 0; \
 			for (i = 0; i < x/32; i++) { \
