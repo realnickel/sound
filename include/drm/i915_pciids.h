@@ -271,12 +271,16 @@
 	INTEL_VGA_DEVICE(0x1912, info), /* DT  GT2 */ \
 	INTEL_VGA_DEVICE(0x1917, info), /* DT  GT1.5 */ \
 	INTEL_VGA_DEVICE(0x1902, info), /* DT  GT1 */ \
+	INTEL_VGA_DEVICE(0x1932, info), /* DT  GT4 */ \
 	INTEL_VGA_DEVICE(0x191B, info), /* Halo GT2 */ \
+	INTEL_VGA_DEVICE(0x193B, info), /* Halo GT4 */ \
 	INTEL_VGA_DEVICE(0x192B, info), /* Halo GT3 */ \
 	INTEL_VGA_DEVICE(0x190B, info), /* Halo GT1 */ \
 	INTEL_VGA_DEVICE(0x191A, info), /* SRV GT2 */ \
 	INTEL_VGA_DEVICE(0x192A, info), /* SRV GT3 */ \
 	INTEL_VGA_DEVICE(0x190A, info), /* SRV GT1 */ \
-	INTEL_VGA_DEVICE(0x191D, info)  /* WKS GT2 */
+	INTEL_VGA_DEVICE(0x193A, info), /* SRV GT4 */ \
+	INTEL_VGA_DEVICE(0x191D, info), /* WKS GT2 */ \
+	INTEL_VGA_DEVICE(0x193D, info)  /* WKS GT4 */
 
 #endif /* _I915_PCIIDS_H */
