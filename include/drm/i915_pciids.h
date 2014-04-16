@@ -261,12 +261,15 @@
 
 #define INTEL_SKL_IDS(info) \
 	INTEL_VGA_DEVICE(0x1916, info), /* ULT GT2 */ \
+	INTEL_VGA_DEVICE(0x1913, info), /* ULT GT1.5 */ \
 	INTEL_VGA_DEVICE(0x1906, info), /* ULT GT1 */ \
 	INTEL_VGA_DEVICE(0x1926, info), /* ULT GT3 */ \
 	INTEL_VGA_DEVICE(0x1921, info), /* ULT GT2F */ \
+	INTEL_VGA_DEVICE(0x1915, info), /* ULX GT1.5 */ \
 	INTEL_VGA_DEVICE(0x190E, info), /* ULX GT1 */ \
 	INTEL_VGA_DEVICE(0x191E, info), /* ULX GT2 */ \
 	INTEL_VGA_DEVICE(0x1912, info), /* DT  GT2 */ \
+	INTEL_VGA_DEVICE(0x1917, info), /* DT  GT1.5 */ \
 	INTEL_VGA_DEVICE(0x1902, info), /* DT  GT1 */ \
 	INTEL_VGA_DEVICE(0x191B, info), /* Halo GT2 */ \
 	INTEL_VGA_DEVICE(0x192B, info), /* Halo GT3 */ \
