@@ -277,6 +277,21 @@ static void hsw_set_power_well(struct drm_i915_private *dev_priv,
 	BIT(POWER_DOMAIN_PORT_DDI_D_2_LANES) |          \
 	BIT(POWER_DOMAIN_PORT_DDI_D_4_LANES) |          \
 	BIT(POWER_DOMAIN_INIT))
+#define SKL_DISPLAY_MISC_IO_POWER_DOMAINS (                       \
+	BIT(POWER_DOMAIN_AUX_A) |                       \
+	BIT(POWER_DOMAIN_AUX_B) |                       \
+	BIT(POWER_DOMAIN_AUX_C) |                       \
+	BIT(POWER_DOMAIN_AUX_D) |                       \
+	BIT(POWER_DOMAIN_PORT_DDI_A_2_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_A_4_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_B_2_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_B_4_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_C_2_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_C_4_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_D_2_LANES) |          \
+	BIT(POWER_DOMAIN_PORT_DDI_D_4_LANES) |          \
+	BIT(POWER_DOMAIN_AUDIO) |                       \
+	BIT(POWER_DOMAIN_INIT))
 #define SKL_DISPLAY_ALWAYS_ON_POWER_DOMAINS (           \
 	(POWER_DOMAIN_MASK & ~(SKL_DISPLAY_POWERWELL_1_POWER_DOMAINS |  \
 	SKL_DISPLAY_POWERWELL_2_POWER_DOMAINS |         \
@@ -314,6 +329,7 @@ static void skl_set_power_well(struct drm_i915_private *dev_priv,
 	case SKL_DISP_PW_DDI_B:
 	case SKL_DISP_PW_DDI_C:
 	case SKL_DISP_PW_DDI_D:
+	case SKL_DISP_PW_MISC_IO:
 		break;
 	default:
 		return;
@@ -1254,6 +1270,12 @@ static struct i915_power_well skl_power_wells[] = {
 		.ops = &skl_power_well_ops,
 		.data = SKL_DISP_PW_DDI_D,
 	},
+	{
+		.name = "MISC IO power well",
+		.domains = SKL_DISPLAY_MISC_IO_POWER_DOMAINS,
+		.ops = &skl_power_well_ops,
+		.data = SKL_DISP_PW_MISC_IO,
+	}
 };
 
 #define set_power_wells(power_domains, __power_wells) ({		\
