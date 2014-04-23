@@ -377,6 +377,7 @@ static const struct intel_device_info intel_broxton_info = {
 	.has_llc = 1,
 	.num_pipes = 3,
 	.has_ddi = 1,
+	.has_fbc = 1,
 	GEN_DEFAULT_PIPEOFFSETS,
 	IVB_CURSOR_OFFSETS,
 };
