@@ -6404,6 +6404,7 @@ enum punit_power_well {
 #define  DPLL_CRTL1_LINK_RATE_1620		3
 #define  DPLL_CRTL1_LINK_RATE_1080		4
 #define  DPLL_CRTL1_LINK_RATE_2160		5
+#define  DPLL_CRTL1_LINK_RATE_SHIFT(id)		((id)*6+1)
 
 /* DPLL control2 */
 #define DPLL_CTRL2				0x6C05C
@@ -6411,6 +6412,7 @@ enum punit_power_well {
 #define  DPLL_CTRL2_DDI_CLK_SEL_MASK(port)	(3<<((port)*3+1))
 #define  DPLL_CTRL2_DDI_CLK_SEL(clk, port)	(clk<<((port)*3+1))
 #define  DPLL_CTRL2_DDI_SEL_OVERRIDE(port)	(1<<(port*3))
+#define  DPLL_CTRL2_DDI_CLK_SEL_SHIFT(port)	(port*3+1)
 
 /* DPLL Status */
 #define DPLL_STATUS	0x6C060
@@ -6436,6 +6438,9 @@ enum punit_power_well {
 #define  DPLL_CFGCR2_PDIV_MASK		(7<<2)
 #define  DPLL_CFGCR2_PDIV(x)		(x<<2)
 #define  DPLL_CFGCR2_CENTRAL_FREQ_MASK	(3)
+
+#define GET_CFG_CR1_REG(id) (DPLL1_CFGCR1 + (id - 1) * 8)
+#define GET_CFG_CR2_REG(id) (DPLL1_CFGCR2 + (id - 1) * 8)
 
 enum central_freq {
 	freq_9600 = 0,
