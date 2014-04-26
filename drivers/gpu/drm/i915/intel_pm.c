@@ -3220,6 +3220,22 @@ static bool skl_ddb_allocation_changed(const struct skl_ddb_allocation *new_ddb,
 	return false;
 }
 
+static unsigned int
+skl_ddb_pipe_allocation_size(const struct skl_ddb_allocation *ddb,
+			     const struct intel_crtc *intel_crtc)
+{
+	struct drm_device *dev = intel_crtc->base.dev;
+	unsigned int size = 0;
+	enum pipe pipe = intel_crtc->pipe;
+	int plane;
+
+	for_each_plane(pipe, plane)
+		size += skl_ddb_entry_size(&ddb->plane[pipe][plane]);
+	size += skl_ddb_entry_size(&ddb->cursor[pipe]);
+
+	return size;
+}
+
 static void skl_compute_wm_global_parameters(struct drm_device *dev,
 					     struct intel_wm_config *config)
 {
@@ -3455,6 +3471,81 @@ static void skl_write_wm_values(struct drm_i915_private *dev_priv,
 	}
 }
 
+static void skl_wm_flush_pipe(struct drm_i915_private *dev_priv, enum pipe pipe)
+{
+	struct drm_device *dev = dev_priv->dev;
+	int plane;
+
+	for_each_plane(pipe, plane) {
+		I915_WRITE(PLANE_SURF(pipe, plane),
+			   I915_READ(PLANE_SURF(pipe, plane)));
+	}
+	I915_WRITE(CURBASE(pipe), I915_READ(CURBASE(pipe)));
+}
+
+static void skl_flush_wm_values(struct drm_i915_private *dev_priv,
+				struct skl_wm_values *new_values)
+{
+	struct drm_device *dev = dev_priv->dev;
+	struct skl_ddb_allocation *cur_ddb, *new_ddb;
+	unsigned int cur_size[I915_MAX_PIPES], new_size[I915_MAX_PIPES];
+	struct intel_crtc *crtc;
+	enum pipe pipe;
+
+	new_ddb = &new_values->ddb;
+	cur_ddb = &dev_priv->wm.skl_hw.ddb;
+
+	/*
+	 * Start by computing the total allocated space for each pipe as we
+	 * need that values for the two passes.
+	 */
+	for_each_intel_crtc(dev, crtc) {
+		pipe = crtc->pipe;
+		new_size[pipe] = skl_ddb_pipe_allocation_size(new_ddb, crtc);
+		cur_size[pipe] = skl_ddb_pipe_allocation_size(cur_ddb, crtc);
+	}
+
+	/*
+	 * First pass: we flush the pipes that had their allocation reduced.
+	 *
+	 * We then have to wait until the pipe stops fetching pixels from the
+	 * previous allocation. This way, pipes that have just been allocated
+	 * more space won't try to fetch pixels belonging to a different pipe.
+	 */
+	for_each_intel_crtc(dev, crtc) {
+		if (!crtc->active)
+			continue;
+
+		pipe = crtc->pipe;
+
+		if (new_size[pipe] < cur_size[pipe]) {
+			skl_wm_flush_pipe(dev_priv, pipe);
+			intel_wait_for_vblank(dev, pipe);
+		}
+	}
+
+	/*
+	 * Second pass: flush the pipes that got more allocated space.
+	 *
+	 * We don't need to actively wait for the update here, next vblank
+	 * will just get more DDB space with the correct WM values.
+	 */
+	for_each_intel_crtc(dev, crtc) {
+		if (!crtc->active)
+			continue;
+
+		pipe = crtc->pipe;
+
+		if (new_size[pipe] < cur_size[pipe])
+			continue;
+
+		if (!skl_ddb_allocation_changed(new_ddb, crtc))
+			continue;
+
+		skl_wm_flush_pipe(dev_priv, pipe);
+	}
+}
+
 static bool skl_update_pipe_wm(struct drm_crtc *crtc,
 			       struct skl_pipe_wm_parameters *params,
 			       struct intel_wm_config *config,
@@ -3546,6 +3637,7 @@ static void skl_update_wm(struct drm_crtc *crtc)
 
 	skl_update_other_pipe_wm(dev, crtc, &config, results);
 	skl_write_wm_values(dev_priv, results);
+	skl_flush_wm_values(dev_priv, results);
 
 	/* store the new configuration */
 	dev_priv->wm.skl_hw = *results;
