@@ -1544,6 +1544,7 @@ struct drm_i915_private {
 
 	struct intel_gmbus gmbus[GMBUS_NUM_PORTS];
 
+	struct pci_dev *p2sbdev;
 
 	/** gmbus_mutex protects against concurrent usage of the single hw gmbus
 	 * controller on different i2c buses. */
@@ -3036,10 +3037,25 @@ int vlv_freq_opcode(struct drm_i915_private *dev_priv, int val);
 #define I915_READ16_NOTRACE(reg)	dev_priv->uncore.funcs.mmio_readw(dev_priv, (reg), false)
 #define I915_WRITE16_NOTRACE(reg, val)	dev_priv->uncore.funcs.mmio_writew(dev_priv, (reg), (val), false)
 
-#define I915_READ(reg)		dev_priv->uncore.funcs.mmio_readl(dev_priv, (reg), true)
-#define I915_WRITE(reg, val)	dev_priv->uncore.funcs.mmio_writel(dev_priv, (reg), (val), true)
-#define I915_READ_NOTRACE(reg)		dev_priv->uncore.funcs.mmio_readl(dev_priv, (reg), false)
-#define I915_WRITE_NOTRACE(reg, val)	dev_priv->uncore.funcs.mmio_writel(dev_priv, (reg), (val), false)
+#define I915_READ(reg) \
+	((dev_priv->p2sbdev && ((reg) > 0xC0000) && ((reg) <= 0xFFFFF)) ? \
+	sbi_read(dev_priv->p2sbdev, (reg)) : \
+	dev_priv->uncore.funcs.mmio_readl(dev_priv, (reg), true))
+
+#define I915_WRITE(reg, val) \
+	((dev_priv->p2sbdev && ((reg) > 0xC0000) && ((reg) <= 0xFFFFF)) ? \
+	sbi_write(dev_priv->p2sbdev, (reg), (val)) : \
+	dev_priv->uncore.funcs.mmio_writel(dev_priv, (reg), (val), true))
+
+#define I915_RAW_WRITE(reg, val)	writel(val, dev_priv->regs + reg)
+#define I915_READ_NOTRACE(reg) \
+	((dev_priv->p2sbdev && ((reg) > 0xC0000) && ((reg) <= 0xFFFFF)) ? \
+	sbi_read(dev_priv->p2sbdev, (reg)) : \
+	dev_priv->uncore.funcs.mmio_readl(dev_priv, (reg), false))
+#define I915_WRITE_NOTRACE(reg, val) \
+	((dev_priv->p2sbdev && ((reg) > 0xC0000) && ((reg) <= 0xFFFFF)) ? \
+	sbi_write(dev_priv->p2sbdev, (reg), (val)) : \
+	dev_priv->uncore.funcs.mmio_writel(dev_priv, (reg), (val), false))
 
 /* Be very careful with read/write 64-bit values. On 32-bit machines, they
  * will be implemented using 2 32-bit writes in an arbitrary order with
@@ -3068,6 +3084,108 @@ int vlv_freq_opcode(struct drm_i915_private *dev_priv, int val);
 #define INTEL_BROADCAST_RGB_AUTO 0
 #define INTEL_BROADCAST_RGB_FULL 1
 #define INTEL_BROADCAST_RGB_LIMITED 2
+
+/* SPT WA */
+static inline uint32_t sbi_read(struct pci_dev *dev, uint32_t addr)
+{
+	uint8_t temp;
+	uint32_t count = 1000;
+	uint32_t val = 0;
+
+	/* Program SBIADDR.DESTID = A0 */
+	/* WritePciCfg(0xD3,0xA0,1) */
+	pci_write_config_byte(dev, 0xD3, 0xA0);
+
+	/* Program SBIADDR.OFFSET with the lower 16 bits of the register
+	 * offset.
+	 * WritePciCfg(0xD0,<lower 16 bits of south display register offset>,2)
+	 */
+	pci_write_config_word(dev, 0xD0, (addr & 0xFFFF));
+
+	/* Program SBIDATA with a garbage value */
+	/* WritePciCfg(0xD4,0x12345678,4) */
+	pci_write_config_dword(dev, 0xD4, 0x12345678);
+
+	/* Program SBISTAT.OPCODE = 00 */
+	/* WritePciCfg(0xD8,0x0000,2) */
+	pci_write_config_word(dev, 0xD8, 0);
+
+	/* Program SBIRID.FBE with the byte enables */
+	/* WritePciCfg(0xDA,0xF000,2) */
+	pci_write_config_word(dev, 0xDA, 0xF000);
+
+	/* Program SBIEXTADDR.ADDR with the upper 16 bits of the transaction,
+	 * padded to 32 bits with 0s in the MSBs.
+	 * WritePciCfg(0xDC,0x0000<upper 16 bits of south display register
+	 * offset>,4) */
+	pci_write_config_dword(dev, 0xDC, (addr>>16));
+
+	/* Program SBISTAT.INITRDY = 1 */
+	/* WritePciCfg(0xD8,0x0001,2) */
+	pci_write_config_word(dev, 0xD8, 0x0001);
+
+	/* Poll for INITRDY = 0 and RESPONSE = 00 */
+	/* ReadPciCfg(0xD8,1) */
+	do {
+		pci_read_config_byte(dev, 0xD8, &temp);
+		count--;
+	} while (temp != 0 && count != 0);
+
+	/* Read the contents of the SBIDATA register to get the value read
+	 * from the south display register. ReadPciCfg(0xD4,4)
+	 */
+	pci_read_config_dword(dev, 0xD4, &val);
+
+	return val;
+}
+
+static inline void sbi_write(struct pci_dev *dev, uint32_t addr, uint32_t data)
+{
+	uint8_t temp;
+	uint32_t count = 1000;
+
+	/* Program SBIADDR.DESTID = A0 */
+	/* WritePciCfg(0xD3,0xA0,1) */
+	pci_write_config_byte(dev, 0xD3, 0xA0);
+
+	/* Program SBIADDR.OFFSET with the lower 16 bits of the register
+	 * offset. WritePciCfg(0xD0,<lower 16 bits of south display register
+	 * offset>,2)
+	 */
+	pci_write_config_word(dev, 0xD0, (addr & 0xFFFF));
+
+	/* Program SBIDATA.DATA with the data that you want to write.
+	 * WritePciCfg(0xD4,<32 bit data to write to south display register>,4)
+	 */
+	pci_write_config_dword(dev, 0xD4, data);
+
+	/* Program SBISTAT.OPCODE = 01 */
+	/* WritePciCfg(0xD8,0x0100,2) */
+	pci_write_config_word(dev, 0xD8, 0x0100);
+
+	/* Program SBIRID.FBE with the byte enables */
+	/* WritePciCfg(0xDA,0xF000,2) */
+	pci_write_config_word(dev, 0xDA, 0xF000);
+
+	/* Program SBIEXTADDR.ADDR with the upper 16 bits of the transaction,
+	 * padded to 32 bits with 0s in the MSBs.
+	 * WritePciCfg(0xDC,0x0000<upper 16 bits of south display register
+	 * ( offset>,4)
+	 */
+	pci_write_config_dword(dev, 0xDC, addr >> 16);
+
+	/* Program SBISTAT.INITRDY = 1 */
+	/* WritePciCfg(0xD8,0x01,1) */
+	pci_write_config_byte(dev, 0xD8, 0x01);
+
+	/* Poll for INITRDY = 0 and RESPONSE = 00 */
+	/* ReadPciCfg(0xD8,1) */
+	do {
+		pci_read_config_byte(dev, 0xD8, &temp);
+		count--;
+	} while (temp != 0 && count > 0);
+
+}
 
 static inline uint32_t i915_vgacntrl_reg(struct drm_device *dev)
 {

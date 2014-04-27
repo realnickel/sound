@@ -431,6 +431,28 @@ static const struct pci_device_id pciidlist[] = {		/* aka */
 MODULE_DEVICE_TABLE(pci, pciidlist);
 #endif
 
+void intel_find_P2SB(struct drm_device *dev)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	struct pci_dev *p2sb = NULL;
+
+	if (!HAS_PCH_SPT(dev)) {
+		DRM_DEBUG_KMS("Not SPT, MMIO WA not required..\n");
+		dev_priv->p2sbdev = NULL;
+		return;
+	}
+
+	p2sb = pci_get_bus_and_slot(0, PCI_DEVFN(31, 1));
+	if (!p2sb) {
+		DRM_INFO("Couldn't find ps2b device\n");
+		return;
+	}
+
+	DRM_DEBUG_KMS("PCH SPT, p2sb device: 0x%04x\n", p2sb->device);
+
+	dev_priv->p2sbdev = p2sb;
+}
+
 void intel_detect_pch(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -507,6 +529,7 @@ void intel_detect_pch(struct drm_device *dev)
 		DRM_DEBUG_KMS("No PCH found.\n");
 
 	pci_dev_put(pch);
+	intel_find_P2SB(dev);
 }
 
 bool i915_semaphore_is_enabled(struct drm_device *dev)
