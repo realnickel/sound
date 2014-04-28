@@ -1125,6 +1125,7 @@ enum skl_disp_power_wells {
 #define GEN6_VERSYNC	(RING_SYNC_1(VEBOX_RING_BASE))
 #define GEN6_VEVSYNC	(RING_SYNC_2(VEBOX_RING_BASE))
 #define GEN6_NOSYNC 0
+#define RING_PSMI_CTRL(base)	((base)+0x50)
 #define RING_MAX_IDLE(base)	((base)+0x54)
 #define RING_HWS_PGA(base)	((base)+0x80)
 #define RING_HWS_PGA_GEN6(base)	((base)+0x2080)
@@ -5936,6 +5937,9 @@ enum skl_disp_power_wells {
 #define GEN6_PMINTRMSK				0xA168
 #define GEN8_PMINTR_REDIRECT_TO_NON_DISP	(1<<31)
 #define VLV_PWRDWNUPCTL				0xA294
+
+#define VCS2_IDLE_MAX_COUNT			0x1c054
+#define GUC_IDLE_MAX_COUNT			0xc3e4
 
 #define GEN6_PMISR				0x44020
 #define GEN6_PMIMR				0x44024 /* rps_lock */

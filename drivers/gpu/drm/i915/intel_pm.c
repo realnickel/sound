@@ -4676,8 +4676,14 @@ static void gen9_enable_rc6(struct drm_device *dev)
 	I915_WRITE(GEN6_RC6_WAKE_RATE_LIMIT, 54 << 16);
 	I915_WRITE(GEN6_RC_EVALUATION_INTERVAL, 125000); /* 12500 * 1280ns */
 	I915_WRITE(GEN6_RC_IDLE_HYSTERSIS, 25); /* 25 * 1280ns */
-	for_each_ring(ring, dev_priv, unused)
+	for_each_ring(ring, dev_priv, unused) {
 		I915_WRITE(RING_MAX_IDLE(ring->mmio_base), 10);
+		I915_WRITE(RING_PSMI_CTRL(ring->mmio_base), 0xffff0000);
+	}
+
+	I915_WRITE(VCS2_IDLE_MAX_COUNT, 10);
+	I915_WRITE(GUC_IDLE_MAX_COUNT, 10);
+
 	I915_WRITE(GEN6_RC_SLEEP, 0);
 	I915_WRITE(GEN6_RC6_THRESHOLD, 37500); /* 37.5/125ms per EI */
 
