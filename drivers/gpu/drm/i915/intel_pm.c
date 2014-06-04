@@ -85,6 +85,10 @@ static void gen9_init_clock_gating(struct drm_device *dev)
 	/* Wa4x4STCOptimizationDisable:skl */
 	I915_WRITE(CACHE_MODE_1,
 		   _MASKED_BIT_ENABLE(GEN8_4x4_STC_OPTIMIZATION_DISABLE));
+
+	/* WaEnableYV12BugFixInHalfSliceChicken7:skl */
+	I915_WRITE(GEN9_HALF_SLICE_CHICKEN7,
+		   _MASKED_BIT_ENABLE(GEN9_ENABLE_YV12_BUGFIX));
 }
 
 static void i8xx_disable_fbc(struct drm_device *dev)
