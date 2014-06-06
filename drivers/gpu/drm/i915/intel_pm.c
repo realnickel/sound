@@ -4628,8 +4628,12 @@ static void parse_rp_state_cap(struct drm_i915_private *dev_priv, u32 rp_state_c
 static void gen9_enable_rps(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
+	u32 rp_state_cap;
 
 	gen6_gt_force_wake_get(dev_priv, FORCEWAKE_ALL);
+
+	rp_state_cap = I915_READ(GEN6_RP_STATE_CAP);
+	parse_rp_state_cap(dev_priv, rp_state_cap);
 
 	I915_WRITE(GEN6_RPNSWREQ, 0xc800000);
 	I915_WRITE(GEN6_RC_VIDEO_FREQ, 0xc800000);
