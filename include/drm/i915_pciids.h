@@ -295,6 +295,9 @@
 	INTEL_VGA_DEVICE(0x0A84, info), \
 	INTEL_VGA_DEVICE(0x0A85, info), \
 	INTEL_VGA_DEVICE(0x0A86, info), \
-	INTEL_VGA_DEVICE(0x0A87, info)
+	INTEL_VGA_DEVICE(0x0A87, info), \
+	INTEL_VGA_DEVICE(0x9906, info),	/* Simulator BXT-A */ \
+	INTEL_VGA_DEVICE(0x9907, info),	/* Simulator BXT-C */ \
+	INTEL_VGA_DEVICE(0x9908, info)	/* Simulator BXT-X */
 
 #endif /* _I915_PCIIDS_H */
