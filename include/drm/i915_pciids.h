@@ -285,7 +285,11 @@
 	INTEL_VGA_DEVICE(0x190A, info), /* SRV GT1 */ \
 	INTEL_VGA_DEVICE(0x193A, info), /* SRV GT4 */ \
 	INTEL_VGA_DEVICE(0x191D, info), /* WKS GT2 */ \
-	INTEL_VGA_DEVICE(0x193D, info)  /* WKS GT4 */
+	INTEL_VGA_DEVICE(0x193D, info), /* WKS GT4 */ \
+	INTEL_VGA_DEVICE(0x0901, info), /* Simulator GT1 */ \
+	INTEL_VGA_DEVICE(0x0902, info), /* Simulator GT2 */ \
+	INTEL_VGA_DEVICE(0x0903, info), /* Simulator GT3 */ \
+	INTEL_VGA_DEVICE(0x0904, info)  /* Simulator GT4 */
 
 #define INTEL_BXT_IDS(info) \
 	INTEL_VGA_DEVICE(0x0A84, info), \
