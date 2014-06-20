@@ -61,6 +61,31 @@ static int i915_gem_object_write(struct drm_i915_gem_object *obj,
 	return 0;
 }
 
+/* Set up the resources needed by the firmware scheduler. Currently this only
+ * requires one object that can be mapped through the GGTT.
+ */
+static int init_guc_scheduler(struct drm_i915_private *dev_priv)
+{
+	struct drm_i915_gem_object *ctx_pool = NULL;
+	int ret;
+
+	if (!HAS_GUC_SCHED(dev_priv->dev))
+		return 0;
+
+	ctx_pool = i915_gem_alloc_object(dev_priv->dev,
+					CONTEXT_POOL_PAGES * PAGE_SIZE);
+	if (!ctx_pool)
+		return PTR_ERR(ctx_pool);
+
+	ret = i915_gem_obj_ggtt_pin(ctx_pool, 0, 0);
+	if (ret) {
+		drm_gem_object_unreference(&ctx_pool->base);
+		return ret;
+	}
+
+	dev_priv->guc.ctx_pool_obj = ctx_pool;
+	return 0;
+}
 
 /* Create and copy the firmware to an object for later consumption by the
  * microcontroller.
@@ -91,10 +116,22 @@ static void finish_guc_load(const struct firmware *fw, void *context)
 	dev_priv->guc.guc_obj = obj;
 	dev_priv->guc.guc_size = fw->size;
 
-	if (intel_guc_load_ucode(dev)) {
+	ret = init_guc_scheduler(dev_priv);
+	if (ret)
+		goto err_obj;
+
+	if (intel_guc_load_ucode(dev) == 0)
+		goto out;
+
+err_obj:
+	DRM_ERROR("Failed to complete uCode load\n");
+	if (dev_priv->guc.ctx_pool_obj) {
+		drm_gem_object_unreference(&dev_priv->guc.ctx_pool_obj->base);
+		dev_priv->guc.ctx_pool_obj = NULL;
+	}
+	if (dev_priv->guc.guc_obj) {
 		drm_gem_object_unreference(&dev_priv->guc.guc_obj->base);
 		dev_priv->guc.guc_obj = NULL;
-		DRM_ERROR("Failed to complete uCode load\n");
 	}
 
 out:
@@ -142,11 +179,23 @@ void intel_guc_ucode_init(struct drm_device *dev)
 		DRM_ERROR("Failed to load %s\n", name);
 }
 
+static void teardown_scheduler(struct drm_i915_private *dev_priv)
+{
+	if (!dev_priv->guc.ctx_pool_obj)
+		return;
+
+	i915_gem_object_ggtt_unpin(dev_priv->guc.ctx_pool_obj);
+	drm_gem_object_unreference(&dev_priv->guc.ctx_pool_obj->base);
+	dev_priv->guc.ctx_pool_obj = NULL;
+}
+
 void intel_guc_ucode_fini(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
 	WARN_ON(!mutex_is_locked(&dev->struct_mutex));
+
+	teardown_scheduler(dev_priv);
 
 	if (dev_priv->guc.guc_obj)
 		drm_gem_object_unreference(&dev_priv->guc.guc_obj->base);
@@ -216,6 +265,24 @@ static int ucode_dma_xfer_sync(struct drm_i915_private *dev_priv)
 	return ret;
 }
 
+static void enable_guc_scheduler(struct drm_i915_private *dev_priv)
+{
+	u32 data;
+	int i;
+
+	if (!dev_priv->guc.ctx_pool_obj)
+		return;
+
+	data = i915_gem_obj_ggtt_offset(dev_priv->guc.ctx_pool_obj);
+	data |= NUM_CONTEXTS >> 4;
+
+	I915_WRITE(SOFT_SCRATCH_1, data);
+
+	/* TODO: Add platform specific scheduler params here */
+	for (i = 1; i < 9; i++)
+		I915_WRITE(SOFT_SCRATCH_1 + (i * 4), 0);
+}
+
 /**
  * Loads the GuC firmware blob in to the MinuteIA.
  */
@@ -240,6 +307,8 @@ int intel_guc_load_ucode(struct drm_device *dev)
 	ret = copy_rsa(dev_priv);
 	if (ret)
 		goto out;
+
+	enable_guc_scheduler(dev_priv);
 
 	ret = ucode_dma_xfer_sync(dev_priv);
 

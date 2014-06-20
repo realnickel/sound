@@ -29,6 +29,7 @@ struct intel_guc {
 	/* Protected by struct mutex */
 	struct completion gem_load_complete;
 	struct drm_i915_gem_object *guc_obj;
+	struct drm_i915_gem_object *ctx_pool_obj;
 	size_t guc_size;
 };
 
@@ -37,6 +38,10 @@ struct intel_guc {
 #define   GUC_STATUS_SUCCESS	(2<<30)
 #define   GUC_STATUS_FAIL	(1<<30)
 #define GUC_WOPCM_SIZE		0xc050
+#define SOFT_SCRATCH_1		0xc184
+#define  NUM_CONTEXTS		1024
+#define  CONTEXT_POOL_PAGES	69
+
 #define UOS_RSA_SCRATCH_0	0xc200
 #define   UOS_RSA_SIG_SIZE	0x100
 #define DMA_ADDR_0_LOW		0xc300
