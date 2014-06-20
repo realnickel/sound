@@ -26,8 +26,8 @@
 #include "intel_guc.h"
 
 /* This is a placeholder for real firmware */
-#define I915_UCODE "i915/guc.bin"
-MODULE_FIRMWARE(I915_UCODE);
+#define I915_UCODE_GEN8 "i915/guc_gen8.bin"
+MODULE_FIRMWARE(I915_UCODE_GEN8);
 
 /* Fill the @obj with the @size amount of @data */
 static int i915_gem_object_write(struct drm_i915_gem_object *obj,
@@ -117,6 +117,7 @@ out:
 void intel_guc_ucode_init(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
+	const char *name;
 	int ret;
 
 	init_completion(&dev_priv->guc.gem_load_complete);
@@ -124,11 +125,18 @@ void intel_guc_ucode_init(struct drm_device *dev)
 	if (!HAS_GUC_UCODE(dev))
 		return;
 
-	ret = request_firmware_nowait(THIS_MODULE, true, I915_UCODE,
+	if (IS_CHERRYVIEW(dev))
+		name = I915_UCODE_GEN8;
+	else {
+		DRM_ERROR("Unexpected: no known firmware for platform\n");
+		return;
+	}
+
+	ret = request_firmware_nowait(THIS_MODULE, true, name,
 				      &dev_priv->dev->pdev->dev,
 				      GFP_KERNEL, dev_priv, finish_guc_load);
 	if (ret)
-		DRM_ERROR("Failed to load %s\n", I915_UCODE);
+		DRM_ERROR("Failed to load %s\n", name);
 }
 
 void intel_guc_ucode_fini(struct drm_device *dev)
