@@ -25,9 +25,10 @@
 #include "i915_drv.h"
 #include "intel_guc.h"
 
-/* This is a placeholder for real firmware */
 #define I915_UCODE_GEN8 "i915/guc_gen8.bin"
+#define I915_UCODE_GEN9 "i915/guc_gen9.bin"
 MODULE_FIRMWARE(I915_UCODE_GEN8);
+MODULE_FIRMWARE(I915_UCODE_GEN9);
 
 /* Fill the @obj with the @size amount of @data */
 static int i915_gem_object_write(struct drm_i915_gem_object *obj,
@@ -127,6 +128,8 @@ void intel_guc_ucode_init(struct drm_device *dev)
 
 	if (IS_CHERRYVIEW(dev))
 		name = I915_UCODE_GEN8;
+	else if (IS_GEN9(dev))
+		name = I915_UCODE_GEN9;
 	else {
 		DRM_ERROR("Unexpected: no known firmware for platform\n");
 		return;
