@@ -310,6 +310,13 @@ int intel_guc_load_ucode(struct drm_device *dev)
 
 	enable_guc_scheduler(dev_priv);
 
+	/* FIXME: !UPSTREAM - I don't have real keys, so we need to disable the
+	 * authentication. This can only work if the part is fused in a special
+	 * configuration. Therefore, even if it leaked externally, it won't be
+	 * detrimental to security
+	 */
+	I915_WRITE(0xc068, 0x3);
+
 	ret = ucode_dma_xfer_sync(dev_priv);
 
 	/* We can free the object pages now, and we would, except we might as
