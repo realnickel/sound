@@ -163,7 +163,7 @@ void intel_guc_ucode_init(struct drm_device *dev)
 	if (!HAS_GUC_UCODE(dev))
 		return;
 
-	if (IS_CHERRYVIEW(dev))
+	if (IS_GEN8(dev))
 		name = I915_UCODE_GEN8;
 	else if (IS_GEN9(dev))
 		name = I915_UCODE_GEN9;
