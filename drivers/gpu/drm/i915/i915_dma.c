@@ -1347,6 +1347,8 @@ static int i915_load_modeset_init(struct drm_device *dev)
 	intel_modeset_init(dev);
 
 	ret = i915_gem_init(dev);
+	dev_priv->guc.gem_init_fail = ret != 0;
+	complete(&dev_priv->guc.gem_load_complete);
 	if (ret)
 		goto cleanup_irq;
 
@@ -1383,6 +1385,7 @@ static int i915_load_modeset_init(struct drm_device *dev)
 
 cleanup_gem:
 	mutex_lock(&dev->struct_mutex);
+	intel_guc_ucode_fini(dev);
 	i915_gem_cleanup_ringbuffer(dev);
 	i915_gem_context_fini(dev);
 	mutex_unlock(&dev->struct_mutex);
@@ -1658,6 +1661,8 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	intel_uncore_init(dev);
 
+	intel_guc_ucode_init(dev);
+
 	ret = i915_gem_gtt_init(dev);
 	if (ret)
 		goto out_regs;
@@ -1886,6 +1891,7 @@ int i915_driver_unload(struct drm_device *dev)
 		flush_workqueue(dev_priv->wq);
 
 		mutex_lock(&dev->struct_mutex);
+		intel_guc_ucode_fini(dev);
 		i915_gem_cleanup_ringbuffer(dev);
 		i915_gem_context_fini(dev);
 		mutex_unlock(&dev->struct_mutex);

@@ -4747,6 +4747,8 @@ i915_gem_init_hw(struct drm_device *dev)
 		}
 	}
 
+	intel_guc_load_ucode(dev);
+
 	i915_gem_init_swizzling(dev);
 
 	ret = dev_priv->gt.init_rings(dev);
