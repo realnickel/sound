@@ -492,7 +492,7 @@ static bool stop_ring(struct intel_engine_cs *ring)
 {
 	struct drm_i915_private *dev_priv = to_i915(ring->dev);
 
-	if (!IS_GEN2(ring->dev)) {
+	if (!IS_GEN2(ring->dev) && !dev_priv->is_simulator) {
 		I915_WRITE_MODE(ring, _MASKED_BIT_ENABLE(STOP_RING));
 		if (wait_for((I915_READ_MODE(ring) & MODE_IDLE) != 0, 1000)) {
 			DRM_ERROR("%s : timed out trying to stop ring\n", ring->name);
@@ -509,7 +509,7 @@ static bool stop_ring(struct intel_engine_cs *ring)
 	I915_WRITE_HEAD(ring, 0);
 	ring->write_tail(ring, 0);
 
-	if (!IS_GEN2(ring->dev)) {
+	if (!IS_GEN2(ring->dev) && !dev_priv->is_simulator) {
 		(void)I915_READ_CTL(ring);
 		I915_WRITE_MODE(ring, _MASKED_BIT_DISABLE(STOP_RING));
 	}
