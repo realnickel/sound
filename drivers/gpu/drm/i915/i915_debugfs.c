@@ -2117,6 +2117,17 @@ static int i915_llc(struct seq_file *m, void *data)
 	return 0;
 }
 
+static int i915_guc_load_status_info(struct seq_file *m, void *data)
+{
+	struct drm_info_node *node = m->private;
+	struct drm_device *dev = node->minor->dev;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	seq_printf(m, "%d\n", dev_priv->guc.guc_load_status);
+
+	return 0;
+}
+
 static int i915_edp_psr_status(struct seq_file *m, void *data)
 {
 	struct drm_info_node *node = m->private;
@@ -4252,6 +4263,7 @@ static const struct drm_info_list i915_debugfs_list[] = {
 	{"i915_gem_hws_blt", i915_hws_info, 0, (void *)BCS},
 	{"i915_gem_hws_bsd", i915_hws_info, 0, (void *)VCS},
 	{"i915_gem_hws_vebox", i915_hws_info, 0, (void *)VECS},
+	{"i915_guc_load_status", i915_guc_load_status_info, 0},
 	{"i915_frequency_info", i915_frequency_info, 0},
 	{"i915_drpc_info", i915_drpc_info, 0},
 	{"i915_emon_status", i915_emon_status, 0},

@@ -97,20 +97,25 @@ static void finish_guc_load(const struct firmware *fw, void *context)
 	struct drm_i915_gem_object *obj;
 	int ret;
 
-	if (!fw)
+	if (!fw) {
+		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_NONE;
 		return;
+	}
 
 	/* Wait for GEM to be bootstrapped before proceeding */
 	wait_for_completion(&dev_priv->guc.gem_load_complete);
 	if (dev_priv->guc.gem_init_fail) {
+		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_FAIL;
 		release_firmware(fw);
 		return;
 	}
 
 	mutex_lock(&dev->struct_mutex);
 	obj = i915_gem_alloc_object(dev, round_up(fw->size, PAGE_SIZE));
-	if (!obj)
+	if (!obj) {
+		ret = -ENOMEM;
 		goto out;
+	}
 
 	ret = i915_gem_object_write(obj, fw->data, fw->size);
 	if (ret) {
@@ -125,7 +130,8 @@ static void finish_guc_load(const struct firmware *fw, void *context)
 	if (ret)
 		goto err_obj;
 
-	if (intel_guc_load_ucode(dev) == 0)
+	ret = intel_guc_load_ucode(dev);
+	if (ret == 0)
 		goto out;
 
 err_obj:
@@ -140,6 +146,9 @@ err_obj:
 	}
 
 out:
+	if (ret)
+		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_FAIL;
+
 	mutex_unlock(&dev->struct_mutex);
 	release_firmware(fw);
 }
@@ -165,6 +174,8 @@ void intel_guc_ucode_init(struct drm_device *dev)
 
 	init_completion(&dev_priv->guc.gem_load_complete);
 
+	dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_NONE;
+
 	if (!HAS_GUC_UCODE(dev))
 		return;
 
@@ -182,6 +193,8 @@ void intel_guc_ucode_init(struct drm_device *dev)
 				      GFP_KERNEL, dev_priv, finish_guc_load);
 	if (ret)
 		DRM_ERROR("Failed to load %s\n", name);
+	else
+		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_PENDING;
 }
 
 static void teardown_scheduler(struct drm_i915_private *dev_priv)
@@ -329,6 +342,9 @@ int intel_guc_load_ucode(struct drm_device *dev)
 	 * DMA to complete, and unpin the object
 	 */
 out:
+	dev_priv->guc.guc_load_status = (ret == 0) ?
+		INTEL_GUC_LOAD_STATUS_SUCCESS : INTEL_GUC_LOAD_STATUS_FAIL;
+
 	i915_gem_object_ggtt_unpin(dev_priv->guc.guc_obj);
 
 	return ret;

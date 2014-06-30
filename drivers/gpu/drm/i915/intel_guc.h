@@ -24,8 +24,15 @@
 #ifndef _INTEL_GUC_H_
 #define _INTEL_GUC_H_
 
+/* NONE indicates no firmware binary found */
+#define INTEL_GUC_LOAD_STATUS_NONE 0
+#define INTEL_GUC_LOAD_STATUS_PENDING -1
+#define INTEL_GUC_LOAD_STATUS_SUCCESS 1
+#define INTEL_GUC_LOAD_STATUS_FAIL 2
+
 struct intel_guc {
 	bool gem_init_fail;
+	int guc_load_status;
 	/* Protected by struct mutex */
 	struct completion gem_load_complete;
 	struct drm_i915_gem_object *guc_obj;
