@@ -87,6 +87,19 @@ static int init_guc_scheduler(struct drm_i915_private *dev_priv)
 	return 0;
 }
 
+static void fail_guc_load(struct drm_i915_private *dev_priv)
+{
+	WARN_ON(!mutex_is_locked(&dev_priv->dev->struct_mutex));
+
+	dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_FAIL;
+
+	if (i915.enable_guc_scheduling) {
+		DRM_ERROR("Failed to initialize GuC, declaring GPU wedged\n");
+		atomic_set_mask(I915_WEDGED,
+				&dev_priv->gpu_error.reset_counter);
+	}
+}
+
 /* Create and copy the firmware to an object for later consumption by the
  * microcontroller.
  */
@@ -98,19 +111,27 @@ static void finish_guc_load(const struct firmware *fw, void *context)
 	int ret;
 
 	if (!fw) {
-		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_NONE;
+		mutex_lock(&dev->struct_mutex);
+		fail_guc_load(dev_priv);
+		mutex_unlock(&dev->struct_mutex);
+
+		if (!i915.enable_guc_scheduling)
+			dev_priv->guc.guc_load_status =
+				INTEL_GUC_LOAD_STATUS_NONE;
+
 		return;
 	}
 
 	/* Wait for GEM to be bootstrapped before proceeding */
 	wait_for_completion(&dev_priv->guc.gem_load_complete);
-	if (dev_priv->guc.gem_init_fail) {
-		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_FAIL;
-		release_firmware(fw);
-		return;
-	}
 
 	mutex_lock(&dev->struct_mutex);
+
+	if (dev_priv->guc.gem_init_fail) {
+		ret = -ENODEV;
+		goto out;
+	}
+
 	obj = i915_gem_alloc_object(dev, round_up(fw->size, PAGE_SIZE));
 	if (!obj) {
 		ret = -ENOMEM;
@@ -147,7 +168,7 @@ err_obj:
 
 out:
 	if (ret)
-		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_FAIL;
+		fail_guc_load(dev_priv);
 
 	mutex_unlock(&dev->struct_mutex);
 	release_firmware(fw);
@@ -352,8 +373,10 @@ int intel_guc_load_ucode(struct drm_device *dev)
 	 * DMA to complete, and unpin the object
 	 */
 out:
-	dev_priv->guc.guc_load_status = (ret == 0) ?
-		INTEL_GUC_LOAD_STATUS_SUCCESS : INTEL_GUC_LOAD_STATUS_FAIL;
+	if (ret)
+		fail_guc_load(dev_priv);
+	else
+		dev_priv->guc.guc_load_status = INTEL_GUC_LOAD_STATUS_SUCCESS;
 
 	i915_gem_object_ggtt_unpin(dev_priv->guc.guc_obj);
 
