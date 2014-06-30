@@ -69,7 +69,7 @@ static int init_guc_scheduler(struct drm_i915_private *dev_priv)
 	struct drm_i915_gem_object *ctx_pool = NULL;
 	int ret;
 
-	if (!HAS_GUC_SCHED(dev_priv->dev))
+	if (!i915.enable_guc_scheduling)
 		return 0;
 
 	ctx_pool = i915_gem_alloc_object(dev_priv->dev,
@@ -153,6 +153,14 @@ out:
 	release_firmware(fw);
 }
 
+static bool sanitize_enable_guc_scheduling(struct drm_device *dev)
+{
+	if (!HAS_GUC_UCODE(dev) || !HAS_GUC_SCHED(dev))
+		return false;
+
+	return i915.enable_guc_scheduling;
+}
+
 /*
  * Initialize known firmware devices on the platform.
  *
@@ -171,6 +179,8 @@ void intel_guc_ucode_init(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	const char *name;
 	int ret;
+
+	i915.enable_guc_scheduling = sanitize_enable_guc_scheduling(dev);
 
 	init_completion(&dev_priv->guc.gem_load_complete);
 
@@ -199,7 +209,7 @@ void intel_guc_ucode_init(struct drm_device *dev)
 
 static void teardown_scheduler(struct drm_i915_private *dev_priv)
 {
-	if (!dev_priv->guc.ctx_pool_obj)
+	if (!i915.enable_guc_scheduling)
 		return;
 
 	i915_gem_object_ggtt_unpin(dev_priv->guc.ctx_pool_obj);
@@ -288,7 +298,7 @@ static void enable_guc_scheduler(struct drm_i915_private *dev_priv)
 	u32 data;
 	int i;
 
-	if (!dev_priv->guc.ctx_pool_obj)
+	if (!i915.enable_guc_scheduling)
 		return;
 
 	data = i915_gem_obj_ggtt_offset(dev_priv->guc.ctx_pool_obj);
