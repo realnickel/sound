@@ -38,7 +38,7 @@ struct intel_guc {
 #define   GUC_STATUS_SUCCESS	(2<<30)
 #define   GUC_STATUS_FAIL	(1<<30)
 #define GUC_WOPCM_SIZE		0xc050
-#define SOFT_SCRATCH_1		0xc184
+#define SOFT_SCRATCH(n)		(0xc180 + ((n) * 4))
 #define  NUM_CONTEXTS		1024
 #define  CONTEXT_POOL_PAGES	69
 

@@ -276,11 +276,11 @@ static void enable_guc_scheduler(struct drm_i915_private *dev_priv)
 	data = i915_gem_obj_ggtt_offset(dev_priv->guc.ctx_pool_obj);
 	data |= NUM_CONTEXTS >> 4;
 
-	I915_WRITE(SOFT_SCRATCH_1, data);
+	I915_WRITE(SOFT_SCRATCH(1), data);
 
 	/* TODO: Add platform specific scheduler params here */
-	for (i = 1; i < 9; i++)
-		I915_WRITE(SOFT_SCRATCH_1 + (i * 4), 0);
+	for (i = 2; i < 10; i++)
+		I915_WRITE(SOFT_SCRATCH(i), 0);
 }
 
 /**
