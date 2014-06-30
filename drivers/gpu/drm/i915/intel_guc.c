@@ -97,10 +97,15 @@ static void finish_guc_load(const struct firmware *fw, void *context)
 	struct drm_i915_gem_object *obj;
 	int ret;
 
+	if (!fw)
+		return;
+
 	/* Wait for GEM to be bootstrapped before proceeding */
 	wait_for_completion(&dev_priv->guc.gem_load_complete);
-	if (dev_priv->guc.gem_init_fail || !fw)
+	if (dev_priv->guc.gem_init_fail) {
+		release_firmware(fw);
 		return;
+	}
 
 	mutex_lock(&dev->struct_mutex);
 	obj = i915_gem_alloc_object(dev, round_up(fw->size, PAGE_SIZE));
