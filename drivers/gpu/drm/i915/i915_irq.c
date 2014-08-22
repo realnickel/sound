@@ -2364,7 +2364,13 @@ static irqreturn_t gen8_irq_handler(int irq, void *arg)
 			DRM_ERROR("The master control interrupt lied (DE PIPE)!\n");
 	}
 
-	if (!HAS_PCH_NOP(dev) && master_ctl & GEN8_DE_PCH_IRQ) {
+	/*
+	 * Todo: BXT doesnt have a PCH, so GEN8_DE_PCH_IRQ shouldn't
+	 * be set. But until this part is confirmed, going paranoid, and adding
+	 * a IS_BROXTON check here.
+	 */
+	if (!IS_BROXTON(dev) && !HAS_PCH_NOP(dev) &&
+			master_ctl & GEN8_DE_PCH_IRQ) {
 		/*
 		 * FIXME(BDW): Assume for now that the new interrupt handling
 		 * scheme also closed the SDE interrupt handling race we've seen
@@ -3102,7 +3108,7 @@ static void ibx_irq_reset(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
-	if (HAS_PCH_NOP(dev))
+	if (HAS_PCH_NOP(dev) || !HAS_PCH_SPLIT(dev))
 		return;
 
 	GEN5_IRQ_RESET(SDE);
@@ -3123,7 +3129,7 @@ static void ibx_irq_pre_postinstall(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
-	if (HAS_PCH_NOP(dev))
+	if (HAS_PCH_NOP(dev) || !HAS_PCH_SPLIT(dev))
 		return;
 
 	WARN_ON(I915_READ(SDEIER) != 0);
@@ -3332,7 +3338,7 @@ static void ibx_irq_postinstall(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	u32 mask;
 
-	if (HAS_PCH_NOP(dev))
+	if (HAS_PCH_NOP(dev) || !HAS_PCH_SPLIT(dev))
 		return;
 
 	if (HAS_PCH_IBX(dev))
