@@ -5043,6 +5043,14 @@ enum skl_disp_power_wells {
 #define  GEN9_AUX_CHANNEL_B		(1 << 25)
 #define  GEN8_AUX_CHANNEL_A		(1 << 0)
 
+/* Gen 9 BXT DDI Hotplug */
+#define BXT_DE_PORT_HP_DDIC		(1 << 5)
+#define BXT_DE_PORT_HP_DDIB		(1 << 4)
+#define BXT_DE_PORT_HP_DDIA		(1 << 3)
+#define BXT_DE_PORT_HOTPLUG_MASK	(BXT_DE_PORT_HP_DDIA | \
+					BXT_DE_PORT_HP_DDIB | \
+					BXT_DE_PORT_HP_DDIC)
+
 #define GEN8_DE_MISC_ISR 0x44460
 #define GEN8_DE_MISC_IMR 0x44464
 #define GEN8_DE_MISC_IIR 0x44468
@@ -5053,6 +5061,23 @@ enum skl_disp_power_wells {
 #define GEN8_PCU_IMR 0x444e4
 #define GEN8_PCU_IIR 0x444e8
 #define GEN8_PCU_IER 0x444ec
+
+/* BXT hotplug control */
+#define BXT_HOTPLUG_CTL		0xC4030
+#define BXT_DDIA_HPD_ENABLE		(1 << 28)
+#define BXT_DDIB_HPD_ENABLE		(1 << 4)
+#define BXT_DDIC_HPD_ENABLE		(1 << 12)
+#define BXT_HOTPLUG_CTL_MASK		(BXT_DDIA_HPD_ENABLE | \
+					BXT_DDIB_HPD_ENABLE | \
+					BXT_DDIC_HPD_ENABLE)
+
+/* Hot plug status */
+#define BXT_DDIA_HPD_STATUS		(3 << 24)
+#define BXT_DDIB_HPD_STATUS		(3 << 0)
+#define BXT_DDIC_HPD_STATUS		(3 << 8)
+#define BXT_HPD_STATUS_MASK		(BXT_DDIA_HPD_STATUS | \
+					BXT_DDIB_HPD_STATUS | \
+					BXT_DDIC_HPD_STATUS)
 
 #define ILK_DISPLAY_CHICKEN2	0x42004
 /* Required on all Ironlake and Sandybridge according to the B-Spec. */
