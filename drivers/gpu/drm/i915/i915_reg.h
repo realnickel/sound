@@ -5051,6 +5051,9 @@ enum skl_disp_power_wells {
 					BXT_DE_PORT_HP_DDIB | \
 					BXT_DE_PORT_HP_DDIC)
 
+/* BXT GMBUS */
+#define BXT_DE_PORT_GMBUS	(1 << 1)
+
 #define GEN8_DE_MISC_ISR 0x44460
 #define GEN8_DE_MISC_IMR 0x44464
 #define GEN8_DE_MISC_IIR 0x44468
