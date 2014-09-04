@@ -320,7 +320,7 @@ int i915_gem_context_init(struct drm_device *dev)
 	if (WARN_ON(dev_priv->ring[RCS].default_context))
 		return 0;
 
-	if (i915.enable_execlists) {
+	if (INTEL_INFO(dev)->gen >= 9 || i915.enable_execlists) {
 		/* NB: intentionally left blank. We will allocate our own
 		 * backing objects as we need them, thank you very much */
 		dev_priv->hw_context_size = 0;
