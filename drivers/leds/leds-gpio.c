@@ -234,6 +234,13 @@ static const struct of_device_id of_gpio_leds_match[] = {
 
 MODULE_DEVICE_TABLE(of, of_gpio_leds_match);
 
+static const struct acpi_device_id acpi_gpio_leds_match[] = {
+	{ "PRP0001" }, /* Device Tree shoehorned into ACPI */
+	{},
+};
+
+MODULE_DEVICE_TABLE(acpi, acpi_gpio_leds_match);
+
 static int gpio_led_probe(struct platform_device *pdev)
 {
 	struct gpio_led_platform_data *pdata = dev_get_platdata(&pdev->dev);
@@ -289,6 +296,7 @@ static struct platform_driver gpio_led_driver = {
 		.name	= "leds-gpio",
 		.owner	= THIS_MODULE,
 		.of_match_table = of_gpio_leds_match,
+		.acpi_match_table = acpi_gpio_leds_match,
 	},
 };
 
