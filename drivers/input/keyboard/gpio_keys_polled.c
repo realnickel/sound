@@ -189,6 +189,12 @@ static const struct of_device_id gpio_keys_polled_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, gpio_keys_polled_of_match);
 
+static const struct acpi_device_id gpio_keys_polled_acpi_match[] = {
+	{ "PRP0001" }, /* Device Tree shoehorned into ACPI */
+	{ },
+};
+MODULE_DEVICE_TABLE(acpi, gpio_keys_polled_acpi_match);
+
 static int gpio_keys_polled_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -317,6 +323,7 @@ static struct platform_driver gpio_keys_polled_driver = {
 		.name	= DRV_NAME,
 		.owner	= THIS_MODULE,
 		.of_match_table = gpio_keys_polled_of_match,
+		.acpi_match_table = gpio_keys_polled_acpi_match,
 	},
 };
 module_platform_driver(gpio_keys_polled_driver);
