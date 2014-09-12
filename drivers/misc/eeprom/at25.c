@@ -459,11 +459,18 @@ static const struct of_device_id at25_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, at25_of_match);
 
+static const struct acpi_device_id at25_acpi_match[] = {
+	{ "PRP0001" },
+	{ }
+};
+MODULE_DEVICE_TABLE(acpi, at25_acpi_match);
+
 static struct spi_driver at25_driver = {
 	.driver = {
 		.name		= "at25",
 		.owner		= THIS_MODULE,
 		.of_match_table = at25_of_match,
+		.acpi_match_table = at25_acpi_match,
 	},
 	.probe		= at25_probe,
 	.remove		= at25_remove,
