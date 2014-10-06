@@ -123,6 +123,10 @@ static struct radeon_px_quirk radeon_px_quirk_list[] = {
 	 * https://bugzilla.kernel.org/show_bug.cgi?id=51381
 	 */
 	{ PCI_VENDOR_ID_ATI, 0x6741, 0x1043, 0x108c, RADEON_PX_QUIRK_DISABLE_PX },
+	/* Asus K53TK laptop with AMD A6-3420M APU and Radeon 7670m GPU
+	 * https://bugzilla.kernel.org/show_bug.cgi?id=51381
+	 */
+	{ PCI_VENDOR_ID_ATI, 0x6840, 0x1043, 0x2122, RADEON_PX_QUIRK_DISABLE_PX },
 	/* macbook pro 8.2 */
 	{ PCI_VENDOR_ID_ATI, 0x6741, PCI_VENDOR_ID_APPLE, 0x00e2, RADEON_PX_QUIRK_LONG_WAKEUP },
 	{ 0, 0, 0, 0, 0 },
@@ -1396,7 +1400,7 @@ int radeon_device_init(struct radeon_device *rdev,
 
 	r = radeon_init(rdev);
 	if (r)
-		return r;
+		goto failed;
 
 	r = radeon_gem_debugfs_init(rdev);
 	if (r) {
@@ -1412,7 +1416,7 @@ int radeon_device_init(struct radeon_device *rdev,
 		radeon_agp_disable(rdev);
 		r = radeon_init(rdev);
 		if (r)
-			return r;
+			goto failed;
 	}
 
 	r = radeon_ib_ring_tests(rdev);
@@ -1438,6 +1442,11 @@ int radeon_device_init(struct radeon_device *rdev,
 			DRM_INFO("radeon: acceleration disabled, skipping benchmarks\n");
 	}
 	return 0;
+
+failed:
+	if (runtime)
+		vga_switcheroo_fini_domain_pm_ops(rdev->dev);
+	return r;
 }
 
 static void radeon_debugfs_remove_files(struct radeon_device *rdev);
@@ -1458,6 +1467,8 @@ void radeon_device_fini(struct radeon_device *rdev)
 	radeon_bo_evict_vram(rdev);
 	radeon_fini(rdev);
 	vga_switcheroo_unregister_client(rdev->pdev);
+	if (rdev->flags & RADEON_IS_PX)
+		vga_switcheroo_fini_domain_pm_ops(rdev->dev);
 	vga_client_register(rdev->pdev, NULL, NULL, NULL);
 	if (rdev->rio_mem)
 		pci_iounmap(rdev->pdev, rdev->rio_mem);
