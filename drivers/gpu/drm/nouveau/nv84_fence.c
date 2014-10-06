@@ -120,11 +120,12 @@ nv84_fence_context_del(struct nouveau_channel *chan)
 		nouveau_bo_vma_del(bo, &fctx->dispc_vma[i]);
 	}
 
+	nouveau_bo_wr32(priv->bo, chan->chid * 16 / 4, fctx->base.sequence);
 	nouveau_bo_vma_del(priv->bo, &fctx->vma_gart);
 	nouveau_bo_vma_del(priv->bo, &fctx->vma);
 	nouveau_fence_context_del(&fctx->base);
 	chan->fence = NULL;
-	kfree(fctx);
+	nouveau_fence_context_free(&fctx->base);
 }
 
 int
@@ -158,8 +159,6 @@ nv84_fence_context_new(struct nouveau_channel *chan)
 		struct nouveau_bo *bo = nv50_display_crtc_sema(chan->drm->dev, i);
 		ret = nouveau_bo_vma_add(bo, cli->vm, &fctx->dispc_vma[i]);
 	}
-
-	nouveau_bo_wr32(priv->bo, chan->chid * 16/4, 0x00000000);
 
 	if (ret)
 		nv84_fence_context_del(chan);
@@ -233,7 +232,7 @@ nv84_fence_create(struct nouveau_drm *drm)
 	priv->base.uevent = true;
 
 	ret = nouveau_bo_new(drm->dev, 16 * priv->base.contexts, 0,
-			     TTM_PL_FLAG_VRAM, 0, 0, NULL, &priv->bo);
+			     TTM_PL_FLAG_VRAM, 0, 0, NULL, NULL, &priv->bo);
 	if (ret == 0) {
 		ret = nouveau_bo_pin(priv->bo, TTM_PL_FLAG_VRAM);
 		if (ret == 0) {
@@ -247,7 +246,7 @@ nv84_fence_create(struct nouveau_drm *drm)
 
 	if (ret == 0)
 		ret = nouveau_bo_new(drm->dev, 16 * priv->base.contexts, 0,
-				     TTM_PL_FLAG_TT, 0, 0, NULL,
+				     TTM_PL_FLAG_TT, 0, 0, NULL, NULL,
 				     &priv->bo_gart);
 	if (ret == 0) {
 		ret = nouveau_bo_pin(priv->bo_gart, TTM_PL_FLAG_TT);
