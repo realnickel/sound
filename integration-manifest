@@ -1,0 +1,14 @@
+origin/drm-intel-next-queued 8b3e14c9ebebfa13029c0a3ffd30848c6e17ddfb
+	drm/i915: Remove IS_ULT()
+origin/drm-intel-next-fixes ebb69c95175609990af708ec90c46530f5a2c819
+	drm/i915: Enable pixel replicated modes on BDW and HSW.
+origin/drm-intel-fixes bfe01a5ba2490f299e1d2d5508cbbbadd897bbe9
+	Linux 3.17
+drm-upstream/drm-next 7a42e83d36d2d0a68622320900dc4e880b1d920a
+	Merge branch 'for-airlied-next' of git://people.freedesktop.org/~mlankhorst/linux into drm-next
+drm-upstream/drm-fixes eee0815dabbdd7d584bea8275f5758d25c97cb9b
+	Merge tag 'drm-intel-fixes-2014-10-02' of git://anongit.freedesktop.org/drm-intel into drm-fixes
+origin/topic/core-stuff 1bcecfacde6269dc6cee9a098bc454222d441ff9
+	drm/core: use helper to check driver features
+sound-upstream/for-next 8df22a4d6f5b81c9c1703579d4907b57002689ed
+	Merge tag 'asoc-v3.18' of git://git.kernel.org/pub/scm/linux/kernel/git/broonie/sound into for-next
