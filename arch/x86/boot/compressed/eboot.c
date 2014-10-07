@@ -1105,6 +1105,10 @@ struct boot_params *make_boot_params(struct efi_config *c)
 
 	memset(sdt, 0, sizeof(*sdt));
 
+	status = efi_parse_options(cmdline_ptr);
+	if (status != EFI_SUCCESS)
+		goto fail2;
+
 	status = handle_cmdline_files(sys_table, image,
 				      (char *)(unsigned long)hdr->cmd_line_ptr,
 				      "initrd=", hdr->initrd_addr_max,
