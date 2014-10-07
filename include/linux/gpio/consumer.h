@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 
 struct device;
+struct fw_dev_node;
 
 /**
  * Opaque descriptor for a GPIO. These are obtained using gpiod_get() and are
@@ -94,6 +95,12 @@ int gpiod_to_irq(const struct gpio_desc *desc);
 struct gpio_desc *gpio_to_desc(unsigned gpio);
 int desc_to_gpio(const struct gpio_desc *desc);
 
+/* Firmware node interface */
+struct gpio_desc *dev_node_get_named_gpiod(struct fw_dev_node *fdn,
+					   const char *propname, int index);
+struct gpio_desc *devm_node_get_named_gpiod(struct device *dev,
+					    struct fw_dev_node *fdn,
+					    const char *propname, int index);
 #else /* CONFIG_GPIOLIB */
 
 static inline struct gpio_desc *__must_check __gpiod_get(struct device *dev,

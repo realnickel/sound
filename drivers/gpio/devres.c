@@ -109,6 +109,41 @@ struct gpio_desc *__must_check __devm_gpiod_get_index(struct device *dev,
 EXPORT_SYMBOL(__devm_gpiod_get_index);
 
 /**
+ * devm_node_get_named_gpiod - resource-managed dev_node_get_named_gpiod()
+ * @dev:	GPIO consumer
+ * @fdn:	firmware device node
+ * @propname:	name of the firmware property
+ * @idx:	index of the GPIO in the property value in case of many
+ *
+ * Managed dev_node_get_named_gpiod(). GPIO descriptors returned from
+ * this function are automatically disposed on driver detach.
+ */
+struct gpio_desc *devm_node_get_named_gpiod(struct device *dev,
+					    struct fw_dev_node *fdn,
+					    const char *propname, int index)
+{
+	struct gpio_desc **dr;
+	struct gpio_desc *desc;
+
+	dr = devres_alloc(devm_gpiod_release, sizeof(struct gpio_desc *),
+			  GFP_KERNEL);
+	if (!dr)
+		return ERR_PTR(-ENOMEM);
+
+	desc = dev_node_get_named_gpiod(fdn, propname, index);
+	if (IS_ERR(desc)) {
+		devres_free(dr);
+		return desc;
+	}
+
+	*dr = desc;
+	devres_add(dev, dr);
+
+	return desc;
+}
+EXPORT_SYMBOL(devm_node_get_named_gpiod);
+
+/**
  * devm_gpiod_get_index_optional - Resource-managed gpiod_get_index_optional()
  * @dev: GPIO consumer
  * @con_id: function within the GPIO consumer
