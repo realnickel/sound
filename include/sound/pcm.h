@@ -61,6 +61,9 @@ struct snd_pcm_hardware {
 
 struct snd_pcm_substream;
 
+struct snd_pcm_audio_tstamp_config; /* definitions further down */
+struct snd_pcm_audio_tstamp_report;
+
 struct snd_pcm_ops {
 	int (*open)(struct snd_pcm_substream *substream);
 	int (*close)(struct snd_pcm_substream *substream);
@@ -276,6 +279,61 @@ struct snd_pcm_hw_constraint_list {
 
 struct snd_pcm_hwptr_log;
 
+/*
+ * userspace-provided audio timestamp config to kernel,
+ * structure is for internal use only and filled with dedicated unpack routine
+ */
+struct snd_pcm_audio_tstamp_config {
+	/* 5 of max 8 bits used */
+	u32 type_requested:4;
+	u32 report_delay:1; /* add total delay to A/D or D/A */
+};
+
+static inline void snd_pcm_unpack_audio_tstamp_config(__u32 data,
+						struct snd_pcm_audio_tstamp_config *config)
+{
+	config->type_requested = data & 0xFF;
+	config->report_delay = (data >> 4) & 1;
+}
+
+/*
+ * kernel-provided audio timestamp report to user-space
+ * structure is for internal use only and read by dedicated pack routine
+ */
+struct snd_pcm_audio_tstamp_report {
+	/* 17 of 24 bits max used*/
+
+	/* for backwards compatibility */
+	u32 valid:1;
+
+	/* actual type if hardware could not support requested timestamp */
+	u32 actual_type:4;
+
+	/* accuracy represented in mantissa/exponent form */
+	u32 accuracy_report:1; /* 0 if accuracy unknown, 1 if rest of structure is valid */
+	u32 accuracy_m:7; /* 0..127, ~3 significant digit for mantissa */
+	u32 accuracy_e:4; /* base10 exponent, 0 for ns, 3 for us, 6 for ms, 9 for s */
+};
+
+static inline void snd_pcm_pack_audio_tstamp_report(__u32 *data,
+						struct snd_pcm_audio_tstamp_report *report)
+{
+	u32 tmp;
+
+	tmp = report->accuracy_e;
+	tmp <<= 7;
+	tmp |= report->accuracy_m;
+	tmp <<= 1;
+	tmp |= report->accuracy_report;
+	tmp <<= 4;
+	tmp |= report->actual_type;
+	tmp <<= 1;
+	tmp |= report->valid;
+
+	*data |= (tmp << 8);
+}
+
+
 struct snd_pcm_runtime {
 	/* -- Status -- */
 	struct snd_pcm_substream *trigger_master;
@@ -356,6 +414,10 @@ struct snd_pcm_runtime {
 	size_t dma_bytes;		/* size of DMA area */
 
 	struct snd_dma_buffer *dma_buffer_p;	/* allocated buffer */
+
+	/* -- audio timestamp config -- */
+	struct snd_pcm_audio_tstamp_config audio_tstamp_config;
+	struct snd_pcm_audio_tstamp_report audio_tstamp_report;
 
 #if defined(CONFIG_SND_PCM_OSS) || defined(CONFIG_SND_PCM_OSS_MODULE)
 	/* -- OSS things -- */
