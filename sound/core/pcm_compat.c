@@ -195,7 +195,7 @@ struct snd_pcm_status32 {
 	u32 avail_max;
 	u32 overrange;
 	s32 suspended_state;
-	u32 reserved_alignment;
+	u32 audio_tstamp_data;
 	struct compat_timespec audio_tstamp;
 	unsigned char reserved[56-sizeof(struct compat_timespec)];
 } __attribute__((packed));
@@ -206,6 +206,15 @@ static int snd_pcm_status_user_compat(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_status status;
 	int err;
+	u32  audio_tstamp_data;
+	u32  __user *_audio_tstamp_data;
+
+	/* get audio_tstamp_data from user, ignore rest of status structure */
+	_audio_tstamp_data = (u32 __user *)(&src->audio_tstamp_data);
+	if (get_user(audio_tstamp_data, _audio_tstamp_data))
+		return -EFAULT;
+	memset(&status, 0, sizeof(status));
+	status.audio_tstamp_data = audio_tstamp_data;
 
 	err = snd_pcm_status(substream, &status);
 	if (err < 0)
@@ -223,6 +232,7 @@ static int snd_pcm_status_user_compat(struct snd_pcm_substream *substream,
 	    put_user(status.avail_max, &src->avail_max) ||
 	    put_user(status.overrange, &src->overrange) ||
 	    put_user(status.suspended_state, &src->suspended_state) ||
+	    put_user(status.audio_tstamp_data, &src->audio_tstamp_data) ||
 	    compat_put_timespec(&status.audio_tstamp, &src->audio_tstamp))
 		return -EFAULT;
 
