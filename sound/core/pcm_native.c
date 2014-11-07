@@ -757,8 +757,16 @@ static int snd_pcm_status_user(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_status status;
 	int res;
-	
+	u32  audio_tstamp_data;
+	u32  __user *_audio_tstamp_data;
+
+	/* get audio_tstamp_data from user, ignore rest of status structure */
+	_audio_tstamp_data = (u32 __user *)(&_status->audio_tstamp_data);
+	if (get_user(audio_tstamp_data, _audio_tstamp_data))
+		return -EFAULT;
 	memset(&status, 0, sizeof(status));
+	status.audio_tstamp_data = audio_tstamp_data;
+
 	res = snd_pcm_status(substream, &status);
 	if (res < 0)
 		return res;
