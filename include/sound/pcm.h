@@ -44,6 +44,7 @@
 
 struct snd_pcm_hardware {
 	unsigned int info;		/* SNDRV_PCM_INFO_* */
+	unsigned int info_ext;		/* SNDRV_PCM_INFO_EXT* */
 	u64 formats;			/* SNDRV_PCM_FMTBIT_* */
 	unsigned int rates;		/* SNDRV_PCM_RATE_* */
 	unsigned int rate_min;		/* min rate */

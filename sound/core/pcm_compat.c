@@ -87,7 +87,8 @@ struct snd_pcm_hw_params32 {
 	u32 rate_num;
 	u32 rate_den;
 	u32 fifo_size;
-	unsigned char reserved[64];
+	u32 info_ext;
+	unsigned char reserved[60];
 };
 
 struct snd_pcm_sw_params32 {
