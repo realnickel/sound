@@ -286,7 +286,7 @@ struct snd_pcm_hwptr_log;
  * structure is for internal use only and filled with dedicated unpack routine
  */
 struct snd_pcm_audio_tstamp_config {
-	/* 5 of max 8 bits used */
+	/* 5 of max 16 bits used */
 	u32 type_requested:4;
 	u32 report_delay:1; /* add total delay to A/D or D/A */
 };
@@ -303,7 +303,7 @@ static inline void snd_pcm_unpack_audio_tstamp_config(__u32 data,
  * structure is for internal use only and read by dedicated pack routine
  */
 struct snd_pcm_audio_tstamp_report {
-	/* 17 of 24 bits max used*/
+	/* 6 of max 16 bits used for bit-fields */
 
 	/* for backwards compatibility */
 	u32 valid:1;
@@ -311,28 +311,24 @@ struct snd_pcm_audio_tstamp_report {
 	/* actual type if hardware could not support requested timestamp */
 	u32 actual_type:4;
 
-	/* accuracy represented in mantissa/exponent form */
-	u32 accuracy_report:1; /* 0 if accuracy unknown, 1 if rest of structure is valid */
-	u32 accuracy_m:7; /* 0..127, ~3 significant digit for mantissa */
-	u32 accuracy_e:4; /* base10 exponent, 0 for ns, 3 for us, 6 for ms, 9 for s */
+	/* accuracy represented in ns units */
+	u32 accuracy_report:1; /* 0 if accuracy unknown, 1 if accuracy field is valid */
+	u32 accuracy; /* up to 4.29s, will be packed in separate field  */
 };
 
-static inline void snd_pcm_pack_audio_tstamp_report(__u32 *data,
+static inline void snd_pcm_pack_audio_tstamp_report(__u32 *data, __u32 *accuracy,
 						struct snd_pcm_audio_tstamp_report *report)
 {
 	u32 tmp;
 
-	tmp = report->accuracy_e;
-	tmp <<= 7;
-	tmp |= report->accuracy_m;
-	tmp <<= 1;
-	tmp |= report->accuracy_report;
+	tmp = report->accuracy_report;
 	tmp <<= 4;
 	tmp |= report->actual_type;
 	tmp <<= 1;
 	tmp |= report->valid;
 
 	*data |= (tmp << 8);
+	*accuracy = report->accuracy;
 }
 
 

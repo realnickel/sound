@@ -107,12 +107,36 @@ appropriate decisions are made:
   codec includes variable-latency DSP processing or a chain of
   hardware components the delay is typically not known with precision.
 
-The accuracy is reported with a mantissa and base10 exponent to cover
-the wide range of precision from 10s of ns to 10s of ms. The exponent is set
-to zero for ns, 3 for us, 6 for ms, 9 for s.
+The accuracy is reported in nanosecond units (using an unsigned 32-bit
+word), which gives a max precision of 4.29s, more than enough for
+audio applications...
 
 Due to the varied nature of timestamping needs, even for a single
-application, the audio_tstamp_config can be changed dynamically.
+application, the audio_tstamp_config can be changed dynamically. In
+the STATUS ioctl, the parameters are read-only and do not allow for
+any application selection. To work around this limitation without
+impacting legacy applications, a new STATUS_EXT ioctl is introduced
+with read/write parameters. ALSA-lib will be modified to make use of
+STATUS_EXT and effectively deprecate STATUS.
+
+The ALSA API only allows for a single audio timestamp to be reported
+at a time. This is a conscious design decision, reading the audio
+timestamps from hardware registers or from IPC takes time, the more
+timestamps are read the more imprecise the combined measurements
+are. To avoid any interpretation issues, a single (system, audio)
+timestamp is reported. Applications that need different timestamps
+will be required to issue multiple queries and perform an
+interpolation of the results
+
+In some hardware-specific configuration, the system timestamp is
+latched by a low-level audio subsytem, and the information provided
+back to the driver. Due to potential delays in the communication with
+the hardware, there is a risk of misalignment with the avail and delay
+information. To make sure applications are not confused, a
+driver_timestamp field is added in the snd_pcm_status structure; this
+timestamp shows when the information is put together by the driver
+before returning from the STATUS and STATUS_EXT ioctl. in most cases
+this driver_timestamp will be identical to the regular system tstamp.
 
 Examples of typestamping with HDaudio:
 

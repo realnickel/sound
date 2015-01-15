@@ -444,7 +444,9 @@ struct snd_pcm_status {
 	snd_pcm_state_t suspended_state; /* suspended stream state */
 	__u32 audio_tstamp_data;	 /* needed for 64-bit alignment, used for configs/report to/from userspace */
 	struct timespec audio_tstamp;	/* sample counter, wall clock, PHC or on-demand sync'ed */
-	unsigned char reserved[56-sizeof(struct timespec)]; /* must be filled with zero */
+	struct timespec driver_tstamp;	/* useful in case reference system tstamp is reported with delay */
+	__u32 audio_tstamp_accuracy;	/* in ns units, only valid if indicated in audio_tstamp_data */
+	unsigned char reserved[52-2*sizeof(struct timespec)]; /* must be filled with zero */
 };
 
 struct snd_pcm_mmap_status {
@@ -557,6 +559,7 @@ enum {
 #define SNDRV_PCM_IOCTL_DELAY		_IOR('A', 0x21, snd_pcm_sframes_t)
 #define SNDRV_PCM_IOCTL_HWSYNC		_IO('A', 0x22)
 #define SNDRV_PCM_IOCTL_SYNC_PTR	_IOWR('A', 0x23, struct snd_pcm_sync_ptr)
+#define SNDRV_PCM_IOCTL_STATUS_EXT	_IOWR('A', 0x24, struct snd_pcm_status)
 #define SNDRV_PCM_IOCTL_CHANNEL_INFO	_IOR('A', 0x32, struct snd_pcm_channel_info)
 #define SNDRV_PCM_IOCTL_PREPARE		_IO('A', 0x40)
 #define SNDRV_PCM_IOCTL_RESET		_IO('A', 0x41)
