@@ -1840,7 +1840,7 @@ static int hdmi_audio_probe(struct platform_device *devptr)
 	 * thus using same argument for max & size
 	 */
 	retval = snd_pcm_lib_preallocate_pages_for_all(pcm,
-			SNDRV_DMA_TYPE_DEV, card->dev,
+			SNDRV_DMA_TYPE_DEV, NULL,
 			HAD_MAX_BUFFER, HAD_MAX_BUFFER);
 
 	if (card->dev == NULL)

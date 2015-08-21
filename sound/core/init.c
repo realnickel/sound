@@ -226,7 +226,7 @@ int snd_card_new(struct device *parent, int idx, const char *xid,
 	if (idx >= snd_ecards_limit)
 		snd_ecards_limit = idx + 1; /* increase the limit */
 	mutex_unlock(&snd_card_mutex);
-	// card->dev = parent;
+	card->dev = parent;
 	card->number = idx;
 	card->module = module;
 	INIT_LIST_HEAD(&card->devices);
