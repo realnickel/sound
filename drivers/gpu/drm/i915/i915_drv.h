@@ -45,6 +45,7 @@
 #include <linux/intel-iommu.h>
 #include <linux/kref.h>
 #include <linux/pm_qos.h>
+#include "hdmi_audio_if.h"
 
 /* General customization:
  */
@@ -919,6 +920,18 @@ struct intel_gen6_power_mgmt {
 	struct mutex hw_lock;
 };
 
+/* Runtime power management related */
+struct intel_gen7_rpm {
+	/* To track (num of get calls - num of put calls)
+	 * made by procfs
+	 */
+	atomic_t procfs_count;
+	/* To make sure ring get/put are in pair */
+	bool ring_active;
+	struct proc_dir_entry *i915_proc_dir;
+	struct proc_dir_entry *i915_proc_file;
+};
+
 /* defined intel_pm.c */
 extern spinlock_t mchdev_lock;
 
@@ -1407,6 +1420,10 @@ struct drm_i915_private {
 	} hpd_stats[HPD_NUM_PINS];
 	u32 hpd_event_bits;
 	struct timer_list hotplug_reenable_timer;
+	u32 hotplug_status;
+
+	/* Runtime power management related */
+	struct intel_gen7_rpm rpm;
 
 	struct i915_fbc fbc;
 	struct i915_drrs drrs;
@@ -1551,6 +1568,13 @@ struct drm_i915_private {
 	struct i915_dri1_state dri1;
 	/* Old ums support infrastructure, same warning applies. */
 	struct i915_ums_state ums;
+	/* Added for HDMI Audio */
+	had_event_call_back had_event_callbacks;
+	struct snd_intel_had_interface *had_interface;
+	void *had_pvt_data;
+	int tmds_clock_speed;
+	int hdmi_audio_interrupt_mask;
+	struct work_struct hdmi_audio_wq;
 
 	/*
 	 * NOTE: This is the dri1/ums dungeon, don't add stuff here. Your patch
@@ -2694,6 +2718,11 @@ int vlv_freq_opcode(struct drm_i915_private *dev_priv, int val);
 			WARN_ON(I915_READ(upper_reg) != upper);		\
 		}							\
 		(u64)upper << 32 | lower; })
+
+int i915_rpm_get_disp(struct drm_device *dev);
+int i915_rpm_put_disp(struct drm_device *dev);
+
+bool i915_is_device_active(struct drm_device *dev);
 
 #define POSTING_READ(reg)	(void)I915_READ_NOTRACE(reg)
 #define POSTING_READ16(reg)	(void)I915_READ16_NOTRACE(reg)
