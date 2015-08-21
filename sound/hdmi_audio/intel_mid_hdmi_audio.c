@@ -1152,7 +1152,7 @@ static int snd_intelhad_open(struct snd_pcm_substream *substream)
 	struct had_pvt_data *had_stream;
 	int retval;
 
-	printk("snd_intelhad_open called\n");
+	pr_debug("snd_intelhad_open called\n");
 	intelhaddata = snd_pcm_substream_chip(substream);
 	had_stream = intelhaddata->private_data;
 	runtime = substream->runtime;
@@ -1231,7 +1231,7 @@ static void had_period_elapsed(void *had_substream)
 	struct snd_pcm_substream *substream = had_substream;
 	struct had_stream_pvt *stream;
 
-	// printk("had_period_elapsed called\n");
+	// pr_debug("had_period_elapsed called\n");
 
 	if (!substream || !substream->runtime)
 		return;
@@ -1254,7 +1254,7 @@ static int snd_intelhad_init_stream(struct snd_pcm_substream *substream)
 {
 	struct snd_intelhad *intelhaddata = snd_pcm_substream_chip(substream);
 
-	printk("snd_intelhad_init_stream called\n");
+	pr_debug("snd_intelhad_init_stream called\n");
 
 	pr_debug("setting buffer ptr param\n");
 	intelhaddata->stream_info.period_elapsed = had_period_elapsed;
@@ -1277,7 +1277,7 @@ static int snd_intelhad_close(struct snd_pcm_substream *substream)
 	struct snd_intelhad *intelhaddata;
 	struct snd_pcm_runtime *runtime;
 
-	printk("snd_intelhad_close called\n");
+	pr_debug("snd_intelhad_close called\n");
 
 	intelhaddata = snd_pcm_substream_chip(substream);
 	runtime = substream->runtime;
@@ -1317,7 +1317,7 @@ static int snd_intelhad_hw_params(struct snd_pcm_substream *substream,
 	unsigned long addr;
 	int pages, buf_size, retval;
 
-	printk("snd_intelhad_hw_params called\n");
+	pr_debug("snd_intelhad_hw_params called\n");
 
 	BUG_ON(!hw_params);
 
@@ -1353,7 +1353,7 @@ static int snd_intelhad_hw_free(struct snd_pcm_substream *substream)
 	unsigned long addr;
 	u32 pages;
 
-	printk("snd_intelhad_hw_free called\n");
+	pr_debug("snd_intelhad_hw_free called\n");
 
 	/* mark back the pages as cached/writeback region before the free */
 	if (substream->runtime->dma_area != NULL) {
@@ -1381,7 +1381,7 @@ static int snd_intelhad_pcm_trigger(struct snd_pcm_substream *substream,
 	struct had_stream_pvt *stream;
 	struct had_pvt_data *had_stream;
 
-	printk("snd_intelhad_pcm_trigger called\n");
+	pr_debug("snd_intelhad_pcm_trigger called\n");
 
 	intelhaddata = snd_pcm_substream_chip(substream);
 	stream = substream->runtime->private_data;
@@ -1389,7 +1389,7 @@ static int snd_intelhad_pcm_trigger(struct snd_pcm_substream *substream,
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
-		printk("Trigger Start\n");
+		pr_debug("Trigger Start\n");
 
 		/* Disable local INTRs till register prgmng is done */
 		if (had_get_hwstate(intelhaddata)) {
@@ -1412,12 +1412,12 @@ static int snd_intelhad_pcm_trigger(struct snd_pcm_substream *substream,
 		retval = had_set_caps(HAD_SET_ENABLE_AUDIO, NULL);
 		intelhaddata->ops->enable_audio(substream, 1);
 
-		printk("Processed _Start\n");
+		pr_debug("Processed _Start\n");
 
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
-		printk("Trigger Stop\n");
+		pr_debug("Trigger Stop\n");
 		spin_lock_irqsave(&intelhaddata->had_spinlock, flag_irq);
 		intelhaddata->stream_info.str_id = 0;
 		intelhaddata->curr_buf = 0;
@@ -1461,7 +1461,7 @@ static int snd_intelhad_pcm_prepare(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime;
 	struct had_pvt_data *had_stream;
 
-	printk("snd_intelhad_pcm_prepare called\n");
+	pr_debug("snd_intelhad_pcm_prepare called\n");
 
 	intelhaddata = snd_pcm_substream_chip(substream);
 	runtime = substream->runtime;
@@ -1543,7 +1543,7 @@ static snd_pcm_uframes_t snd_intelhad_pcm_pointer(
 	struct snd_intelhad *intelhaddata;
 	u32 bytes_rendered = 0;
 
-	// printk("snd_intelhad_pcm_pointer called\n");
+	// pr_debug("snd_intelhad_pcm_pointer called\n");
 
 	intelhaddata = snd_pcm_substream_chip(substream);
 
@@ -1576,7 +1576,7 @@ static int snd_intelhad_pcm_mmap(struct snd_pcm_substream *substream,
 	struct vm_area_struct *vma)
 {
 
-	printk("snd_intelhad_pcm_mmap called\n");
+	pr_debug("snd_intelhad_pcm_mmap called\n");
 
 	pr_debug("entry with prot:%s\n", __func__);
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
@@ -1775,7 +1775,7 @@ static int hdmi_audio_probe(struct platform_device *devptr)
 
 	pr_debug("Enter %s\n", __func__);
 
-	printk("hdmi_audio_probe dma_mask: %d\n", devptr->dev.dma_mask);
+	pr_debug("hdmi_audio_probe dma_mask: %d\n", devptr->dev.dma_mask);
 
 	/* allocate memory for saving internal context and working */
 	intelhaddata = kzalloc(sizeof(*intelhaddata), GFP_KERNEL);
@@ -1844,11 +1844,11 @@ static int hdmi_audio_probe(struct platform_device *devptr)
 			HAD_MAX_BUFFER, HAD_MAX_BUFFER);
 
 	if (card->dev == NULL)
-		printk("card->dev is NULL!!!!! Should not be this case\n");
+		pr_debug("card->dev is NULL!!!!! Should not be this case\n");
 	else if (card->dev->dma_mask == NULL)
-		printk("hdmi_audio_probe dma_mask is NULL!!!!!\n");
+		pr_debug("hdmi_audio_probe dma_mask is NULL!!!!!\n");
 	else
-		printk("hdmi_audio_probe dma_mask is : %d\n", card->dev->dma_mask);
+		pr_debug("hdmi_audio_probe dma_mask is : %d\n", card->dev->dma_mask);
 
 	if (retval)
 		goto err;
