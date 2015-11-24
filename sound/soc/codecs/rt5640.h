@@ -145,6 +145,9 @@
 
 
 /* Index of Codec Private Register definition */
+#define RT5640_BIAS_CUR1			0x12
+#define RT5640_BIAS_CUR3			0x14
+#define RT5640_BIAS_CUR4			0x15
 #define RT5640_CHPUMP_INT_REG1			0x24
 #define RT5640_MAMP_INT_REG2			0x37
 #define RT5640_3D_SPK				0x63
@@ -192,6 +195,14 @@
 #define RT5640_R_VOL_MASK			(0x3f)
 #define RT5640_R_VOL_SFT			0
 
+/* MIC Over current threshold scale factor (0x15) */
+#define RT5640_MIC_OVCD_SF_MASK                 (0x3 << 8)
+#define RT5640_MIC_OVCD_SF_SFT                  8
+#define RT5640_MIC_OVCD_SF_0P5                  (0x0 << 8)
+#define RT5640_MIC_OVCD_SF_0P75                 (0x1 << 8)
+#define RT5640_MIC_OVCD_SF_1P0                  (0x2 << 8)
+#define RT5640_MIC_OVCD_SF_1P5                  (0x3 << 8)
+
 /* SW Reset & Device ID (0x00) */
 #define RT5640_ID_MASK				(0x3 << 1)
 #define RT5640_ID_5639				(0x0 << 1)
@@ -201,7 +212,9 @@
 
 /* IN1 and IN2 Control (0x0d) */
 /* IN3 and IN4 Control (0x0e) */
+#define RT5640_BST_MASK1			(0xf<<12)
 #define RT5640_BST_SFT1				12
+#define RT5640_BST_MASK2			(0xf<<8)
 #define RT5640_BST_SFT2				8
 #define RT5640_IN_DF1				(0x1 << 7)
 #define RT5640_IN_SFT1				7
@@ -2084,6 +2097,15 @@ enum {
 	RT5640_DMIC2,
 };
 
+enum {
+	RT5640_J_IN_EVENT, /* Jack insert */
+	RT5640_J_OUT_EVENT, /* Jack evulse */
+	RT5640_BP_EVENT, /* Button Press */
+	RT5640_BR_EVENT, /* Button Release */
+	RT5640_UN_EVENT, /* Unknown */
+};
+
+
 /* filter mask */
 enum {
 	RT5640_DA_STEREO_FILTER = 0x1,
@@ -2109,10 +2131,21 @@ struct rt5640_priv {
 	int pll_in;
 	int pll_out;
 
+	int jack_type;
+
+	unsigned int ovcd_th_base; /* OVCD threshold base value*/
+	unsigned int ovcd_th_sf; /* OVCD threshold scale factor */
+
 	bool hp_mute;
 	bool asrc_en;
 };
 
+int rt5640_detect_hs_type(struct snd_soc_codec *codec, int jack_insert);
+int rt5640_check_jd_status(struct snd_soc_codec *codec);
+int rt5640_check_bp_status(struct snd_soc_codec *codec);
+void rt5640_enable_ovcd_interrupt(struct snd_soc_codec *codec, bool enable);
+void rt5640_config_ovcd_thld(struct snd_soc_codec *codec,
+						int base, int scale_factor);
 int rt5640_dmic_enable(struct snd_soc_codec *codec,
 		       bool dmic1_data_pin, bool dmic2_data_pin);
 int rt5640_sel_asrc_clk_src(struct snd_soc_codec *codec,

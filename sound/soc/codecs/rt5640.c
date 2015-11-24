@@ -34,6 +34,9 @@
 #include "rl6231.h"
 #include "rt5640.h"
 
+#define HEADSET_DET_DELAY    20 /* Delay(ms) before reading over current
+				    status for headset detection */
+
 #define RT5640_DEVICE_ID 0x6231
 
 #define RT5640_PR_RANGE_BASE (0xff + 1)
@@ -169,6 +172,38 @@ static const struct reg_default rt5640_reg[] = {
 static int rt5640_reset(struct snd_soc_codec *codec)
 {
 	return snd_soc_write(codec, RT5640_RESET, 0);
+}
+
+/**
+ * rt5640_index_write - Write private register.
+ * @codec: SoC audio codec device.
+ * @reg: Private register index.
+ * @value: Private register Data.
+ *
+ * Modify private register for advanced setting. It can be written through
+ * private index (0x6a) and data (0x6c) register.
+ *
+ * Returns 0 for success or negative error code.
+ */
+static int rt5640_index_write(struct snd_soc_codec *codec,
+			      unsigned int reg, unsigned int value)
+{
+	int ret;
+
+	ret = snd_soc_write(codec, RT5640_PRIV_INDEX, reg);
+	if (ret < 0) {
+		dev_err(codec->dev, "Failed to set private addr: %d\n", ret);
+		goto err;
+	}
+	ret = snd_soc_write(codec, RT5640_PRIV_DATA, value);
+	if (ret < 0) {
+		dev_err(codec->dev, "Failed to set private value: %d\n", ret);
+		goto err;
+	}
+	return 0;
+
+err:
+	return ret;
 }
 
 static bool rt5640_volatile_register(struct device *dev, unsigned int reg)
@@ -1989,6 +2024,117 @@ static int rt5640_set_bias_level(struct snd_soc_codec *codec,
 
 	return 0;
 }
+
+int rt5640_check_jd_status(struct snd_soc_codec *codec)
+{
+	return snd_soc_read(codec, RT5640_INT_IRQ_ST) & 0x0010;
+}
+EXPORT_SYMBOL(rt5640_check_jd_status);
+
+int rt5640_check_bp_status(struct snd_soc_codec *codec)
+{
+	return  snd_soc_read(codec, RT5640_IRQ_CTRL2) & 0x8;
+}
+EXPORT_SYMBOL(rt5640_check_bp_status);
+
+/* Function to enable/disable overcurrent detection(OVCD) and button
+   press interrupts (based on OVCD) in the codec*/
+void rt5640_enable_ovcd_interrupt(struct snd_soc_codec *codec,
+							bool enable)
+{
+	unsigned int ovcd_en; /* OVCD circuit enable/disable */
+	unsigned int bp_en;/* Button interrupt enable/disable*/
+	if (enable) {
+		pr_debug("enabling ovc detection and button intr");
+		ovcd_en = RT5640_MIC1_OVCD_EN;
+		bp_en = RT5640_IRQ_MB1_OC_NOR;
+	} else {
+		pr_debug("disabling ovc detection and button intr");
+		ovcd_en = RT5640_MIC1_OVCD_DIS;
+		bp_en = RT5640_IRQ_MB1_OC_BP;
+	}
+	snd_soc_update_bits(codec, RT5640_MICBIAS,
+			RT5640_MIC1_OVCD_MASK, ovcd_en);
+	snd_soc_update_bits(codec, RT5640_IRQ_CTRL2,
+			RT5640_IRQ_MB1_OC_MASK, bp_en);
+	return;
+}
+EXPORT_SYMBOL(rt5640_enable_ovcd_interrupt);
+
+/* Function to set the overcurrent detection threshold base and scale
+   factor. The codec uses these values to set an internal value of
+   effective threshold = threshold base * scale factor*/
+void rt5640_config_ovcd_thld(struct snd_soc_codec *codec,
+				int base, int scale_factor)
+{
+	struct rt5640_priv *rt5640 = snd_soc_codec_get_drvdata(codec);
+	rt5640->ovcd_th_base = base;
+	rt5640->ovcd_th_sf = scale_factor;
+}
+EXPORT_SYMBOL(rt5640_config_ovcd_thld);
+
+/**
+ * rt5640_detect_hs_type - Detect accessory as headset/headphone/none .
+ * @codec: SoC audio codec device.
+ * @jack_insert: Jack insert or not.
+ *
+ * Returns detect status.
+ */
+int rt5640_detect_hs_type(struct snd_soc_codec *codec, int jack_insert)
+{
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
+	struct rt5640_priv *rt5640 = snd_soc_codec_get_drvdata(codec);
+	unsigned int ovcd_th_base;
+	unsigned int ovcd_th_sf;
+	if (jack_insert) {
+		if (SND_SOC_BIAS_OFF == dapm->bias_level)
+			snd_soc_write(codec, RT5640_PWR_ANLG1, 0xa814);
+		/* Use the ovcd threshold base and scale factor from context
+		   stucture to configure the threshold */
+		ovcd_th_base = rt5640->ovcd_th_base & RT5640_MIC1_OVTH_MASK;
+		ovcd_th_sf =  rt5640->ovcd_th_sf & RT5640_MIC_OVCD_SF_MASK;
+		rt5640_index_write(codec, RT5640_BIAS_CUR4, 0xa800 | ovcd_th_sf);
+
+		snd_soc_update_bits(codec, RT5640_PWR_ANLG1,
+			RT5640_PWR_LDO2, RT5640_PWR_LDO2);
+		snd_soc_update_bits(codec, RT5640_PWR_ANLG2,
+			RT5640_PWR_MB1, RT5640_PWR_MB1);
+		snd_soc_update_bits(codec, RT5640_MICBIAS,
+				    RT5640_MIC1_OVCD_MASK | RT5640_MIC1_OVTH_MASK
+				    | RT5640_PWR_CLK25M_MASK,
+				    RT5640_MIC1_OVCD_EN | ovcd_th_base
+				    | RT5640_PWR_CLK25M_PU);
+		snd_soc_update_bits(codec, RT5640_DUMMY1, 0x1, 0x1);
+		/* After turning on over current detection, wait for a while before
+		   checking the status. */
+		msleep(HEADSET_DET_DELAY);
+		/* Make sure jack is still connected at this point before checking for HS*/
+		if (rt5640_check_bp_status(codec)) {
+			/*Over current detected;i.e there is a  short between mic and
+			  ground ring. i.e the accessory does not have mic. i.e accessory
+			  is Headphone*/
+			rt5640->jack_type = RT5640_HEADPHO_DET;
+			pr_debug("%s:detected headphone", __func__);
+		} else {
+			rt5640->jack_type = RT5640_HEADSET_DET;
+			pr_debug("%s:detected headset", __func__);
+		}
+		snd_soc_update_bits(codec, RT5640_IRQ_CTRL2,
+				    RT5640_MB1_OC_CLR, 0);
+
+		/* Disable overcurrent detection. If headset was detected, let the
+		   machine driver enable the overcurrent detection for button events */
+		rt5640_enable_ovcd_interrupt(codec, false);
+	} else {
+		rt5640_enable_ovcd_interrupt(codec, false);
+		pr_debug("%s:NO Jack detected", __func__);
+		rt5640->jack_type = RT5640_NO_JACK;
+	}
+
+	return rt5640->jack_type;
+}
+EXPORT_SYMBOL(rt5640_detect_hs_type);
+
 
 int rt5640_dmic_enable(struct snd_soc_codec *codec,
 		       bool dmic1_data_pin, bool dmic2_data_pin)
