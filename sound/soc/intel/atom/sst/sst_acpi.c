@@ -253,8 +253,8 @@ static int sst_acpi_probe(struct platform_device *pdev)
 		return PTR_ERR(plat_dev);
 	}
 
-	/* Create platform device for sst machine driver */
-	mdev = platform_device_register_data(dev, mach->drv_name, -1, NULL, 0);
+	/* Create platform device for sst machine driver, pass machine info as pdata */
+	mdev = platform_device_register_data(dev, mach->drv_name, -1, (const void *)mach, sizeof(*mach));
 	if (IS_ERR(mdev)) {
 		dev_err(dev, "Failed to create machine device: %s\n", mach->drv_name);
 		return PTR_ERR(mdev);
