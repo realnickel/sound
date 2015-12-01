@@ -402,6 +402,13 @@ static int sst_acpi_remove(struct platform_device *pdev)
  * of Baytrail CR platform
  */
 static struct sst_acpi_mach sst_acpi_bytcr[] = {
+#if IS_ENABLED(CONFIG_SND_SOC_INTEL_BYTCR_NOCODEC_MACH)
+	{"10EC5640", "bytcr_nocodec", "intel/fw_sst_0f28", "bytcr_nocodec", NULL,
+						&byt_rvp_platform_data },
+	{"10EC5651", "bytcr_nocodec", "intel/fw_sst_0f28", "bytcr_nocodec", NULL,
+						&byt_rvp_platform_data },
+#endif
+
 	{"10EC5640", "bytcr_rt5640", "intel/fw_sst_0f28", "bytcr_rt5640", NULL,
 						&byt_rvp_platform_data },
 	{"10EC5642", "bytcr_rt5640", "intel/fw_sst_0f28", "bytcr_rt5640", NULL,
