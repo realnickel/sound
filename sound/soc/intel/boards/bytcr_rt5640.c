@@ -32,21 +32,7 @@
 #include "../../codecs/rt5640.h"
 #include "../atom/sst-atom-controls.h"
 #include "../common/sst-acpi.h"
-
-enum {
-	BYT_RT5640_DMIC1_MAP,
-	BYT_RT5640_DMIC2_MAP,
-	BYT_RT5640_IN1_MAP,
-};
-
-#define BYT_RT5640_MAP(quirk)	((quirk) & 0xff)
-#define BYT_RT5640_DMIC_EN	BIT(16)
-#define BYT_RT5640_MCLK_EN	BIT(17)
-#define BYT_RT5640_MCLK_25MHZ	BIT(18)
-
-
-static unsigned long byt_rt5640_quirk = BYT_RT5640_DMIC1_MAP |
-					BYT_RT5640_DMIC_EN;
+#include "byt_cr_board_configs.h"
 
 #define BYT_CODEC_DAI	"rt5640-aif1"
 
@@ -222,53 +208,6 @@ static int byt_rt5640_aif1_hw_params(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-
-static int byt_rt5640_quirk_cb(const struct dmi_system_id *id)
-{
-	byt_rt5640_quirk = (unsigned long)id->driver_data;
-	return 1;
-}
-
-static const struct dmi_system_id byt_rt5640_quirk_table[] = {
-	{
-		.callback = byt_rt5640_quirk_cb,
-		.matches = {
-			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "ASUSTeK COMPUTER INC."),
-			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "T100TA"),
-		},
-		.driver_data = (unsigned long *)(BYT_RT5640_IN1_MAP |
-						 BYT_RT5640_MCLK_EN),
-	},
-	{
-		.callback = byt_rt5640_quirk_cb,
-		.matches = {
-			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "ASUSTeK COMPUTER INC."),
-			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "T100TAF"),
-		},
-		.driver_data = (unsigned long *)(BYT_RT5640_IN1_MAP |
-						 BYT_RT5640_MCLK_EN),
-	},
-	{
-		.callback = byt_rt5640_quirk_cb,
-		.matches = {
-			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "DellInc."),
-			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "Venue 8 Pro 5830"),
-		},
-		.driver_data = (unsigned long *)(BYT_RT5640_DMIC2_MAP |
-						 BYT_RT5640_DMIC_EN   |
-						 BYT_RT5640_MCLK_EN),
-	},
-	{
-		.callback = byt_rt5640_quirk_cb,
-		.matches = {
-			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "Hewlett-Packard"),
-			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "HP ElitePad 1000 G2"),
-		},
-		.driver_data = (unsigned long *)(BYT_RT5640_IN1_MAP |
-						 BYT_RT5640_MCLK_EN),
-	},
-	{}
-};
 
 static int byt_rt5640_init(struct snd_soc_pcm_runtime *runtime)
 {
