@@ -96,6 +96,7 @@ config SND_SOC_INTEL_BYTCR_RT5640_MACH
 	select SND_SOC_RT5640
 	select SND_SST_MFLD_PLATFORM
 	select SND_SST_IPC_ACPI
+	select VLV2_PLAT_CLK
 	help
           This adds support for ASoC machine driver for Intel(R) Baytrail and Baytrail-CR
           platforms with RT5640 audio codec.
@@ -108,6 +109,7 @@ config SND_SOC_INTEL_BYTCR_RT5651_MACH
 	select SND_SOC_RT5651
 	select SND_SST_MFLD_PLATFORM
 	select SND_SST_IPC_ACPI
+	select VLV2_PLAT_CLK
 	help
           This adds support for ASoC machine driver for Intel(R) Baytrail and Baytrail-CR
           platforms with RT5651 audio codec.
@@ -119,6 +121,7 @@ config SND_SOC_INTEL_BYTCR_NOCODEC_MACH
 	depends on X86 && I2C
 	select SND_SST_MFLD_PLATFORM
 	select SND_SST_IPC_ACPI
+	select VLV2_PLAT_CLK
 	help
           This adds support for ASoC machine driver for the MinnowBoard Max
 	  and provides access to I2S signals on the Low-Speed connector
