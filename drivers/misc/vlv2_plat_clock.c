@@ -32,14 +32,9 @@
 
 #define CLK_CONFG_BIT_POS		0
 #define CLK_CONFG_BIT_LEN		2
-#define CLK_CONFG_D3_GATED		0
-#define CLK_CONFG_FORCE_ON		1
-#define CLK_CONFG_FORCE_OFF		2
 
 #define CLK_FREQ_TYPE_BIT_POS		2
 #define CLK_FREQ_TYPE_BIT_LEN		1
-#define CLK_FREQ_TYPE_XTAL		0	/* 25 MHz */
-#define CLK_FREQ_TYPE_PLL		1	/* 19.2 MHz */
 
 #define MAX_CLK_COUNT			5
 
@@ -71,8 +66,8 @@ int vlv2_plat_set_clock_freq(int clk_num, int freq_type)
 		return -EINVAL;
 	}
 
-	if (freq_type != CLK_FREQ_TYPE_XTAL &&
-	    freq_type != CLK_FREQ_TYPE_PLL) {
+	if (freq_type != VLV2_PLT_CLK_FREQ_TYPE_XTAL &&
+	    freq_type != VLV2_PLT_CLK_FREQ_TYPE_PLL) {
 		pr_err("wrong clock type\n");
 		return -EINVAL;
 	}
@@ -137,9 +132,9 @@ int vlv2_plat_configure_clock(int clk_num, u32 conf)
 		return -EINVAL;
 	}
 
-	if (conf != CLK_CONFG_D3_GATED &&
-	    conf != CLK_CONFG_FORCE_ON &&
-	    conf != CLK_CONFG_FORCE_OFF) {
+	if (conf != VLV2_PLT_CLK_CONFG_D3_GATED &&
+	    conf != VLV2_PLT_CLK_CONFG_FORCE_ON &&
+	    conf != VLV2_PLT_CLK_CONFG_FORCE_OFF) {
 		pr_err("Invalid clock configuration requested\n");
 		return -EINVAL;
 	}

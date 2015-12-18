@@ -21,6 +21,15 @@
 #ifndef __VLV2_PLAT_CLOCK_H
 #define __VLV2_PLAT_CLOCK_H
 
+#define VLV2_PLT_CLK_CONFG_D3_GATED		0
+#define VLV2_PLT_CLK_CONFG_FORCE_ON		1
+#define VLV2_PLT_CLK_CONFG_FORCE_OFF		2
+
+#define VLV2_PLT_CLK_FREQ_TYPE_XTAL		0	/* 25 MHz */
+#define VLV2_PLT_CLK_FREQ_TYPE_PLL		1	/* 19.2 MHz */
+
+#define VLV2_PLT_CLK_AUDIO                      3
+
 int vlv2_plat_set_clock_freq(int clock_num, int freq_type);
 int vlv2_plat_get_clock_freq(int clock_num);
 
