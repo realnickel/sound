@@ -61,6 +61,9 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "T100TA"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN1_MAP |
+						 BYT_RT5640_JACK_DET_EN |
+						 BYT_RT5640_JACK_INT1 |
+						 BYT_RT5640_JACK_BP_MICBIAS |
 						 BYT_RT5640_MCLK_EN),
 	},
 	{
@@ -98,6 +101,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "MRD 7"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
 						 BYT_RT5640_MCLK_EN),
@@ -110,6 +114,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -122,6 +127,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "2"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -134,6 +140,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "2"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -146,6 +153,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -158,6 +166,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "1"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -170,6 +179,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -182,6 +192,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
@@ -194,6 +205,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT2 |
 						 BYT_RT5640_JACK_BP_CODEC |
@@ -207,6 +219,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
@@ -219,6 +232,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
@@ -231,6 +245,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
@@ -243,6 +258,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
@@ -255,6 +271,7 @@ static const struct dmi_system_id byt_rt5640_quirk_table[] = {
 			DMI_MATCH(DMI_BOARD_VERSION, "0"),
 		},
 		.driver_data = (unsigned long *)(BYT_RT5640_IN3_MAP |
+						 BYT_RT5640_JACK_DET_EN |
 						 BYT_RT5640_JACK_ACTIVE_LOW |
 						 BYT_RT5640_JACK_INT1 |
 						 BYT_RT5640_JACK_BP_MICBIAS |
