@@ -110,6 +110,8 @@ static struct sst_acpi_mach *sst_acpi_find_machine(
 	return NULL;
 }
 
+struct platform_device *hdmi_dev = NULL;
+
 static int sst_acpi_probe(struct platform_device *pdev)
 {
 	const struct acpi_device_id *id;
@@ -120,6 +122,14 @@ static int sst_acpi_probe(struct platform_device *pdev)
 	struct sst_acpi_desc *desc;
 	struct resource *mmio;
 	int ret = 0;
+
+	printk(KERN_ERR "registering hdmi-audio\n");
+	hdmi_dev = platform_device_register_data(dev, "hdmi-audio", -1,
+						 NULL, 0);
+	if (IS_ERR(hdmi_dev))
+		return PTR_ERR(hdmi_dev);
+
+	printk(KERN_ERR "registration of hdmi-audio succeeded \n");
 
 	sst_acpi = devm_kzalloc(dev, sizeof(*sst_acpi), GFP_KERNEL);
 	if (sst_acpi == NULL)
