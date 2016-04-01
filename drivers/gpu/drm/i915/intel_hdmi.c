@@ -2414,7 +2414,17 @@ void intel_hdmi_init(struct drm_device *dev,
 		pr_err("failed to allocate memory");
 	} else {
 		hdmi_priv->dev = dev;
-		hdmi_priv->hdmib_reg = HDMIB;
+		if (IS_CHERRYVIEW(dev)) { 
+			// FIXME: plb: looks wrong
+			// mapping between stream and Hdmi port ?
+			hdmi_priv->hdmi_reg = HDMIC;
+			hdmi_priv->hdmi_lpe_audio_reg =
+					I915_HDMI_AUDIO_LPE_C_CONFIG;
+		} else {
+			hdmi_priv->hdmi_reg = HDMIB;
+			hdmi_priv->hdmi_lpe_audio_reg =
+					I915_HDMI_AUDIO_LPE_A_CONFIG;
+		}
 		hdmi_priv->monitor_type = MONITOR_TYPE_HDMI;
 		hdmi_priv->is_hdcp_supported = true;
 		i915_hdmi_audio_init(hdmi_priv);
