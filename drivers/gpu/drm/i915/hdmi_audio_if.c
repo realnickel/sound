@@ -63,6 +63,11 @@ static inline int android_hdmi_get_eld(struct drm_device *dev, void *eld)
 	return 0;
 }
 
+struct hdmi_audio_priv *get_hdmi_priv()
+{
+	return hdmi_priv;
+}
+
 /*
  * return whether HDMI audio device is busy.
  */
@@ -247,6 +252,16 @@ static int hdmi_audio_get_caps(enum had_caps_list get_element,
 }
 
 /**
+ * hdmi_audio_get_register_base
+ * used to get the current hdmi base address
+ */
+int hdmi_audio_get_register_base(uint32_t *reg_base)
+{
+	*reg_base = hdmi_priv->hdmi_lpe_audio_reg;
+	return 0;
+}
+
+/**
  * hdmi_audio_set_caps:
  * used to set the HDMI audio capabilities.
  * e.g. Audio INT.
@@ -258,25 +273,25 @@ static int hdmi_audio_set_caps(enum had_caps_list set_element,
 	struct drm_i915_private *dev_priv =
 		(struct drm_i915_private *) dev->dev_private;
 	int ret = 0;
-	u32 hdmib;
+	u32 hdmi_reg;
 	u32 int_masks = 0;
 
 	DRM_DEBUG_DRIVER("\n");
 
 	switch (set_element) {
 	case HAD_SET_ENABLE_AUDIO:
-		hdmib = I915_READ(_MMIO(hdmi_priv->hdmib_reg));
-		if (hdmib & PORT_ENABLE)
-			hdmib |= SDVO_AUDIO_ENABLE;
+		hdmi_reg = I915_READ(_MMIO(hdmi_priv->hdmi_reg));
+		if (hdmi_reg & PORT_ENABLE)
+			hdmi_reg |= SDVO_AUDIO_ENABLE;
 
-		I915_WRITE(_MMIO(hdmi_priv->hdmib_reg), hdmib);
-		I915_READ(_MMIO(hdmi_priv->hdmib_reg));
+		I915_WRITE(_MMIO(hdmi_priv->hdmi_reg), hdmi_reg);
+		I915_READ(_MMIO(hdmi_priv->hdmi_reg));
 		break;
 	case HAD_SET_DISABLE_AUDIO:
-		hdmib = I915_READ(_MMIO(hdmi_priv->hdmib_reg)) &
+		hdmi_reg = I915_READ(_MMIO(hdmi_priv->hdmi_reg)) &
 			~SDVO_AUDIO_ENABLE;
-		I915_WRITE(_MMIO(hdmi_priv->hdmib_reg), hdmib);
-		I915_READ(_MMIO(hdmi_priv->hdmib_reg));
+		I915_WRITE(_MMIO(hdmi_priv->hdmi_reg), hdmi_reg);
+		I915_READ(_MMIO(hdmi_priv->hdmi_reg));
 		break;
 
 	case HAD_SET_ENABLE_AUDIO_INT:
@@ -303,6 +318,7 @@ static int hdmi_audio_set_caps(enum had_caps_list set_element,
 }
 
 static struct  hdmi_audio_registers_ops hdmi_audio_reg_ops = {
+	.hdmi_audio_get_register_base = hdmi_audio_get_register_base,
 	.hdmi_audio_read_register = hdmi_audio_read,
 	.hdmi_audio_write_register = hdmi_audio_write,
 	.hdmi_audio_read_modify = hdmi_audio_rmw,
@@ -325,6 +341,8 @@ int mid_hdmi_audio_setup(
 
 	DRM_DEBUG_DRIVER("%s: called\n", __func__);
 
+	reg_ops->hdmi_audio_get_register_base =
+		(hdmi_audio_reg_ops.hdmi_audio_get_register_base);
 	reg_ops->hdmi_audio_read_register =
 		(hdmi_audio_reg_ops.hdmi_audio_read_register);
 	reg_ops->hdmi_audio_write_register =
@@ -345,10 +363,15 @@ EXPORT_SYMBOL(mid_hdmi_audio_setup);
 int mid_hdmi_audio_register(struct snd_intel_had_interface *driver,
 				void *had_data)
 {
-	struct drm_device *dev = hdmi_priv->dev;
-	struct drm_i915_private *dev_priv =
-		(struct drm_i915_private *) dev->dev_private;
+	struct drm_device *dev;
+	struct drm_i915_private *dev_priv;
+
 	DRM_DEBUG_DRIVER("%s: called\n", __func__);
+	if (!hdmi_priv)
+		return -ENODEV;
+
+	dev = hdmi_priv->dev;
+	dev_priv = (struct drm_i915_private *) dev->dev_private;
 	dev_priv->had_pvt_data = had_data;
 	dev_priv->had_interface = driver;
 
