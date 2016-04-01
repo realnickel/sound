@@ -2064,10 +2064,23 @@ enum skl_disp_power_wells {
 #define I915_ASLE_INTERRUPT				(1<<0)
 #define I915_LPE_AUDIO_HDMI_STATUS_A	_MMIO(dev_priv->info.display_mmio_offset + 0x65064)
 #define I915_LPE_AUDIO_HDMI_STATUS_B	_MMIO(dev_priv->info.display_mmio_offset + 0x65864)
+#define I915_LPE_AUDIO_HDMI_STATUS_C	_MMIO(dev_priv->info.display_mmio_offset + 0x65964)
 #define I915_HDMI_AUDIO_UNDERRUN			(1UL<<31)
 #define I915_HDMI_AUDIO_BUFFER_DONE			(1UL<<29)
 #define I915_BSD_USER_INTERRUPT				(1<<25)
 #define I915_HDMI_AUDIO_UNDERRUN_ENABLE			(1UL<<15)
+
+#define I915_HDMI_AUDIO_LPE_C_CONFIG			0x65900
+#define I915_HDMI_AUDIO_LPE_B_CONFIG			0x65800
+#define I915_HDMI_AUDIO_LPE_A_CONFIG			0x65000
+
+#define HDMI_LPE_AUDIO_PIPE_OFFSET			0x100
+#define HDMI_LPE_AUDIO_PIPE_BC_OFFSET(pipe) \
+	(I915_LPE_AUDIO_HDMI_STATUS_B + \
+	(pipe - 1) * HDMI_LPE_AUDIO_PIPE_OFFSET)
+#define I915_LPE_AUDIO_HDMI_STATUS(pipe) \
+	(pipe ? (HDMI_LPE_AUDIO_PIPE_BC_OFFSET(pipe)) : \
+	I915_LPE_AUDIO_HDMI_STATUS_A)
 
 #define GEN6_BSD_RNCID			_MMIO(0x12198)
 
@@ -3370,6 +3383,8 @@ enum skl_disp_power_wells {
 #define GEN3_SDVOB	_MMIO(_GEN3_SDVOB)
 #define GEN3_SDVOC	_MMIO(_GEN3_SDVOC)
 #define HDMIB	(dev_priv->info.display_mmio_offset + 0x61140)
+#define HDMIC	(dev_priv->info.display_mmio_offset + 0x61160)
+#define HDMID	(dev_priv->info.display_mmio_offset + 0x6116C)
 #define GEN4_HDMIB	GEN3_SDVOB
 #define GEN4_HDMIC	GEN3_SDVOC
 #define VLV_HDMIB	_MMIO(VLV_DISPLAY_BASE + 0x61140)
