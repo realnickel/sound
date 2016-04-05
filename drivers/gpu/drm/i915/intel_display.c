@@ -8109,11 +8109,13 @@ static int i9xx_crtc_compute_clock(struct intel_crtc *crtc,
 	}
 
 	/* Added for HDMI Audio */
-	if (IS_VALLEYVIEW(dev) && intel_pipe_has_type(crtc,
-		INTEL_OUTPUT_HDMI)) {
-		dev_priv->tmds_clock_speed = crtc_state->port_clock;
-		mid_hdmi_audio_signal_event(dev_priv->dev,
-			HAD_EVENT_MODE_CHANGING);
+	if ((IS_CHERRYVIEW(dev)) || (IS_VALLEYVIEW(dev))) {
+		if(intel_pipe_has_type(crtc, INTEL_OUTPUT_HDMI)) {
+			dev_priv->tmds_clock_speed = crtc_state->port_clock;
+
+			mid_hdmi_audio_signal_event(dev_priv->dev,
+				HAD_EVENT_MODE_CHANGING);
+		}
 	}
 
 	return 0;
