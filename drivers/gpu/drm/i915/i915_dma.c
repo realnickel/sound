@@ -1311,7 +1311,37 @@ static void i915_driver_register(struct drm_i915_private *dev_priv)
 	if (IS_GEN5(dev_priv))
 		intel_gpu_ips_init(dev_priv);
 
-	i915_audio_component_init(dev_priv);
+	dev_priv->lpe_audio_enable = false;
+	if (HAS_LPE_AUDIO(dev)) {
+		static const struct pci_device_id atom_hdaudio_ids[] = {
+			{PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x0f04)},/* Baytrail */
+			{PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2284)},/* Braswell */
+			{}
+		};
+
+		if (!pci_dev_present(atom_hdaudio_ids)) {
+			DRM_INFO("HDaudio controller not detected, "
+				"using LPE audio instead\n");
+			dev_priv->lpe_audio_enable = true;
+		}
+	}
+
+	if (dev_priv->lpe_audio_enable) {
+		int ret = lpe_audio_setup(dev);
+
+		if (ret < 0) {
+			DRM_ERROR("failed to setup LPE Audio bridge: %d\n",
+				ret);
+			/*
+			 * keep going anyways, no reason to block graphics
+			 * from working if audio init fails somehow
+			 */
+			dev_priv->lpe_audio_enable = false;
+		}
+	}
+
+	if (!dev_priv->lpe_audio_enable)
+		i915_audio_component_init(dev_priv);
 }
 
 /**
@@ -1320,7 +1350,11 @@ static void i915_driver_register(struct drm_i915_private *dev_priv)
  */
 static void i915_driver_unregister(struct drm_i915_private *dev_priv)
 {
-	i915_audio_component_cleanup(dev_priv);
+	if (dev_priv->lpe_audio_enable)
+		lpe_audio_teardown(dev_priv);
+	else
+		i915_audio_component_cleanup(dev_priv);
+
 	intel_gpu_ips_teardown();
 	acpi_video_unregister();
 	intel_opregion_fini(dev_priv->dev);
