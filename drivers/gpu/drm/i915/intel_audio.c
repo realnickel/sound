@@ -24,6 +24,7 @@
 #include <linux/kernel.h>
 #include <linux/component.h>
 #include <drm/i915_component.h>
+#include <drm/i915_hdmi_lpe_audio.h>
 #include "intel_drv.h"
 
 #include <drm/drmP.h>
@@ -503,6 +504,8 @@ void intel_audio_codec_enable(struct intel_encoder *intel_encoder)
 	struct intel_digital_port *intel_dig_port = enc_to_dig_port(encoder);
 	enum port port = intel_dig_port->port;
 
+	printk(KERN_ERR "Enter %s \n",__func__);
+
 	connector = drm_select_eld(encoder);
 	if (!connector)
 		return;
@@ -531,8 +534,25 @@ void intel_audio_codec_enable(struct intel_encoder *intel_encoder)
 	dev_priv->dig_port_map[port] = intel_encoder;
 	mutex_unlock(&dev_priv->av_mutex);
 
-	if (acomp && acomp->audio_ops && acomp->audio_ops->pin_eld_notify)
+	printk(KERN_ERR "before pin_eld_notify\n");
+	if (acomp && acomp->audio_ops && acomp->audio_ops->pin_eld_notify) {
 		acomp->audio_ops->pin_eld_notify(acomp->audio_ops->audio_ptr, (int) port);
+		printk(KERN_ERR "done with pin_eld_notify\n");
+	}
+
+	if (dev_priv->lpe_audio_enable && dev_priv->lpe_audio.platdev) {
+		struct i915_hdmi_lpe_audio_ops *pdata = dev_get_platdata(
+			&(dev_priv->lpe_audio.platdev->dev));
+
+		printk(KERN_ERR "before notification\n");
+		if (pdata && pdata->pin_eld_notify) {
+
+			pdata->pin_eld_notify(NULL, port);
+			printk(KERN_ERR "after notification\n");
+		} else {
+			printk(KERN_ERR "no notification\n");
+		}
+	}
 }
 
 /**
