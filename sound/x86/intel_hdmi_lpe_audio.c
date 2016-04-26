@@ -33,7 +33,7 @@
 #include <sound/initval.h>
 #include <sound/control.h>
 #include <sound/initval.h>
-
+#include <drm/i915_hdmi_lpe_audio.h>
 #include "intel_hdmi_lpe_audio.h"
 
 struct hdmi_lpe_audio_ctx {
@@ -44,6 +44,17 @@ struct hdmi_lpe_audio_ctx {
 static irqreturn_t display_pipe_interrupt_handler(int irq, void *dev_id)
 {
     return IRQ_HANDLED;
+}
+
+static void pin_eld_notify(void *audio_ptr, int port)
+{
+	/* audio_ptr is not used here */
+
+	/* we assume only from port-B to port-D */
+	if (port < 1 || port > 3)
+		return;
+
+	printk(KERN_ERR "ELD notification received for port %d\n", port);
 }
 
 /**
@@ -57,6 +68,7 @@ static int hdmi_lpe_audio_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct hdmi_lpe_audio_ctx *ctx;
+	struct i915_hdmi_lpe_audio_ops *pdata;
 	int irq;
 	struct resource *res_mmio;
 	void __iomem* mmio_start;
@@ -98,14 +110,29 @@ static int hdmi_lpe_audio_probe(struct platform_device *pdev)
 	/* alloc and save context */
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (ctx == NULL) {
-		dev_dbg(dev, "out of memory\n");
-		iounmap(mmio_start);
+		dev_dbg(dev, "out of memory for ctx\n");
 		free_irq(irq, NULL);
+		iounmap(mmio_start);
 		return -ENOMEM;
 	}
 
 	ctx->irq = irq;
 	ctx->mmio_start = mmio_start;
+
+	/* assign pdata for ELD notification */
+	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+	if (pdata == NULL) {
+		dev_dbg(dev, "out of memory for pdata\n");
+		kfree(ctx);
+		free_irq(irq, NULL);
+		iounmap(mmio_start);
+		return -ENOMEM;
+	}
+
+	printk(KERN_ERR "hdmi lpe audio: setting pin eld notify callback\n");
+	pdata->pin_eld_notify = pin_eld_notify;
+	pdev->dev.platform_data = pdata;
+
 	platform_set_drvdata(pdev, ctx);
 
 	return 0;
@@ -121,6 +148,7 @@ static int hdmi_lpe_audio_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct hdmi_lpe_audio_ctx *ctx;
+	struct i915_hdmi_lpe_audio_ops *pdata = dev_get_platdata(&pdev->dev);
 
 	dev_dbg(dev, "Enter %s\n", __func__);
 
@@ -129,7 +157,8 @@ static int hdmi_lpe_audio_remove(struct platform_device *pdev)
 	iounmap(ctx->mmio_start);
 	free_irq(ctx->irq, NULL);
 	kfree(ctx);
-
+	pdev->dev.platform_data = NULL;
+	kfree(pdata);
 	return 0;
 }
 

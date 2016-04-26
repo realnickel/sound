@@ -8,7 +8,7 @@ if SND_X86
 
 config HDMI_LPE_AUDIO
         tristate "HDMI audio without HDaudio on Intel Atom platforms"
-        depends on DRM_I915
+	select SND_HDA_I915
         default n
         help
           Choose this option to support HDMI LPE Audio mode
