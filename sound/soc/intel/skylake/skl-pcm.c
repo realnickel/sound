@@ -35,7 +35,8 @@ static const struct snd_pcm_hardware azx_pcm_hw = {
 				 SNDRV_PCM_INFO_SYNC_START |
 				 SNDRV_PCM_INFO_HAS_WALL_CLOCK | /* legacy */
 				 SNDRV_PCM_INFO_HAS_LINK_ATIME |
-				 SNDRV_PCM_INFO_NO_PERIOD_WAKEUP),
+				 SNDRV_PCM_INFO_NO_PERIOD_WAKEUP |
+				 SNDRV_PCM_INFO_NO_STATUS_MMAP),
 	.formats =		SNDRV_PCM_FMTBIT_S16_LE |
 				SNDRV_PCM_FMTBIT_S32_LE |
 				SNDRV_PCM_FMTBIT_S24_LE,
@@ -127,6 +128,7 @@ int skl_pcm_host_dma_prepare(struct device *dev, struct skl_pipe_params *params)
 	unsigned int format_val;
 	struct hdac_stream *hstream;
 	struct hdac_ext_stream *stream;
+	struct snd_pcm_runtime *runtime;
 	int err;
 
 	hstream = snd_hdac_get_stream(bus, params->stream,
@@ -162,6 +164,11 @@ int skl_pcm_host_dma_prepare(struct device *dev, struct skl_pipe_params *params)
 
 	if (err < 0)
 		return err;
+
+	runtime = hdac_stream(stream)->substream->runtime;
+	/* enable SPIB if no_rewinds flag is set */
+	if (runtime->no_rewinds)
+		snd_hdac_ext_stream_spbcap_enable(bus, 1, hstream->index);
 
 	hdac_stream(stream)->prepared = 1;
 
@@ -377,6 +384,8 @@ static int skl_pcm_hw_free(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct hdac_ext_stream *stream = get_hdac_ext_stream(substream);
+	struct hdac_bus *bus = dev_get_drvdata(dai->dev);
+	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct skl_dev *skl = get_skl_ctx(dai->dev);
 	struct skl_module_cfg *mconfig;
 	int ret;
@@ -385,6 +394,10 @@ static int skl_pcm_hw_free(struct snd_pcm_substream *substream,
 
 	mconfig = skl_tplg_fe_get_cpr_module(dai, substream->stream);
 
+	if (runtime->no_rewinds) {
+		snd_hdac_ext_stream_set_spib(bus, stream, 0);
+		snd_hdac_ext_stream_spbcap_enable(bus, 0, stream->index);
+	}
 	if (mconfig) {
 		ret = skl_reset_pipe(skl, mconfig->pipe);
 		if (ret < 0)
@@ -465,6 +478,7 @@ static int skl_pcm_trigger(struct snd_pcm_substream *substream, int cmd,
 	struct skl_module_cfg *mconfig;
 	struct hdac_bus *bus = get_bus_ctx(substream);
 	struct hdac_ext_stream *stream = get_hdac_ext_stream(substream);
+	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_dapm_widget *w;
 	int ret;
 
@@ -487,6 +501,9 @@ static int skl_pcm_trigger(struct snd_pcm_substream *substream, int cmd,
 			snd_hdac_ext_stream_set_dpibr(bus, stream,
 							stream->lpib);
 			snd_hdac_ext_stream_set_lpib(stream, stream->lpib);
+			if (runtime->no_rewinds)
+				snd_hdac_ext_stream_set_spib(bus,
+						stream, stream->spib);
 		}
 		fallthrough;
 
@@ -1166,6 +1183,32 @@ static int skl_platform_soc_trigger(struct snd_soc_component *component,
 	return 0;
 }
 
+/* update SPIB register with appl position */
+static int skl_platform_soc_ack(struct snd_soc_component *component,
+				struct snd_pcm_substream *substream)
+{
+	struct hdac_bus *bus = get_bus_ctx(substream);
+	struct hdac_ext_stream *hstream = get_hdac_ext_stream(substream);
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	ssize_t appl_pos, buf_size;
+	u32 spib;
+
+	/* Use spib mode only if no_rewind mode is set */
+	if (runtime->no_rewinds == 0)
+		return 0;
+
+	appl_pos = frames_to_bytes(runtime, runtime->control->appl_ptr);
+	buf_size = frames_to_bytes(runtime, runtime->buffer_size);
+
+	spib = appl_pos % buf_size;
+
+	/* Allowable value for SPIB is 1 byte to max buffer size */
+	spib = (spib == 0) ? buf_size : spib;
+	snd_hdac_ext_stream_set_spib(bus, hstream, spib);
+
+	return 0;
+}
+
 static snd_pcm_uframes_t skl_platform_soc_pointer(
 	struct snd_soc_component *component,
 	struct snd_pcm_substream *substream)
@@ -1459,6 +1502,7 @@ static const struct snd_soc_component_driver skl_component  = {
 	.open		= skl_platform_soc_open,
 	.trigger	= skl_platform_soc_trigger,
 	.pointer	= skl_platform_soc_pointer,
+	.ack		= skl_platform_soc_ack,
 	.get_time_info	= skl_platform_soc_get_time_info,
 	.mmap		= skl_platform_soc_mmap,
 	.pcm_construct	= skl_platform_soc_new,
