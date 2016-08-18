@@ -720,6 +720,7 @@ static int snd_byt_rt5640_mc_probe(struct platform_device *pdev)
 	int i;
 	int dai_index;
 	struct byt_rt5640_private *priv;
+	bool is_bytcr = false;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_ATOMIC);
 	if (!priv)
@@ -758,6 +759,7 @@ static int snd_byt_rt5640_mc_probe(struct platform_device *pdev)
 
 		/* TODO: use CHAN package info from BIOS to detect AIF1/AIF2 */
 		if (res_info->acpi_ipc_irq_index == 0) {
+			is_bytcr = true;
 			byt_rt5640_quirk |= BYT_RT5640_SSP0_AIF2;
 		}
 	}
@@ -796,7 +798,21 @@ static int snd_byt_rt5640_mc_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"Failed to get MCLK from pmc_plt_clk_3: %ld\n",
 				PTR_ERR(priv->mclk));
-			return PTR_ERR(priv->mclk);
+
+			if (is_bytcr) {
+				/*
+				 * Audio output on Baytrail CR only works
+				 * with MCLK enabled
+				 */
+				return PTR_ERR(priv->mclk);
+			} else {
+				/*
+				 * Audio output can work with bitclock only
+				 * on Baytrail, with a limited audio quality
+				 * degradation
+				 */
+				byt_rt5640_quirk &= ~BYT_RT5640_MCLK_EN;
+			}
 		}
 	}
 
