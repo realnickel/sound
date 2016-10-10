@@ -1,0 +1,20 @@
+origin/drm-intel-fixes c8d2bc9bc39ebea8437fd974fdbc21847bb897a3
+	Linux 4.8
+drm-upstream/drm-fixes 90fd68dcf9a763f7e575c8467415bd8a66d073f4
+	drm/udl: fix line iterator in damage handling
+origin/drm-intel-next-fixes c45eb4fed12d278d3619f1904885bd0d7bcbf036
+	drm/i915/fbdev: Check for the framebuffer before use
+origin/drm-intel-next-queued 738bb80e3e3d7d8c0109c796ca5e7c4b6f1f558f
+	drm/i915: Update DRIVER_DATE to 20161010
+drm-upstream/drm-next b89857852656f016328d2d7ccec5fff57445fa85
+	Merge branch 'drm-next-4.9' of git://people.freedesktop.org/~agd5f/linux into drm-next
+sound-upstream/for-next eeea8b40cd2866ca24f25e5ef09225edb076ae45
+	Merge tag 'asoc-v4.9' of git://git.kernel.org/pub/scm/linux/kernel/git/broonie/sound into for-next
+sound-upstream/for-linus eeea8b40cd2866ca24f25e5ef09225edb076ae45
+	Merge tag 'asoc-v4.9' of git://git.kernel.org/pub/scm/linux/kernel/git/broonie/sound into for-next
+origin/topic/drm-fixes c6935931c1894ff857616ff8549b61236a19148f
+	Linux 4.8-rc5
+origin/topic/drm-misc 56fe8b6f499167e3f9e0aafc0909efe9fb673323
+	drm/bridge: Add RGB to VGA bridge support
+origin/topic/core-for-CI d0245f6bbeb63fcc07974be1ffbb8ba7b2e6ae13
+	locking/mutex: Prevent lock starvation when spinning is disabled
