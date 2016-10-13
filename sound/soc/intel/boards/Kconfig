@@ -146,6 +146,16 @@ config SND_SOC_INTEL_BYT_CHT_ES8316_MACH
 	  Say Y or m if you have such a device. This is a recommended option.
 	  If unsure select "N".
 
+config SND_SOC_INTEL_BYTCR_AIC3100_MACH
+        tristate "Baytrail & Cherrytrail with TLV320AIC31XX codec"
+	depends on X86_INTEL_LPSS && I2C && ACPI
+	select SND_SOC_TLV320AIC31XX
+	help
+          This adds support for ASoC machine driver for Intel(R) Baytrail
+	  and Cherrytrail platforms with TLV320AIC31XX audio codec.
+          Say Y if you have such a device.
+          If unsure select "N".
+
 config SND_SOC_INTEL_BYT_CHT_NOCODEC_MACH
 	tristate "Baytrail & Cherrytrail platform with no codec (MinnowBoard MAX, Up)"
 	depends on X86_INTEL_LPSS && I2C && ACPI
