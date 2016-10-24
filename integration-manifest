@@ -1,0 +1,26 @@
+drm-intel/drm-intel-fixes 1001354ca34179f3db924eb66672442a173147dc
+	Linux 4.9-rc1
+drm-upstream/drm-fixes 26beaee9bb07be20cc641c1251152e280e80f54e
+	Merge branch 'drm-etnaviv-fixes' of git://git.pengutronix.de/lst/linux into drm-fixes
+drm-intel/drm-intel-next-fixes 105f1a65b04a8f4f7abec11b200b1fb54f3d4b46
+	drm/i915: Fix conflict resolution from backmerge of v4.8-rc8 to drm-next
+drm-intel/drm-intel-next-queued 9558e74c26d2d63b9395f4d4153faa05f9de84f8
+	drm/i915: Update DRIVER_DATE to 20161024
+drm-upstream/drm-next fa860a1751e388385a7f249dd3f24a6c76db0ba9
+	drm: Print device information again in debugfs
+sound-upstream/for-next 6aecd8715802d23dc6a0859b50c62d2b0a99de3a
+	ALSA: hda - Fix headset mic detection problem for two Dell laptops
+sound-upstream/for-linus 6aecd8715802d23dc6a0859b50c62d2b0a99de3a
+	ALSA: hda - Fix headset mic detection problem for two Dell laptops
+drm-intel/topic/drm-fixes c6935931c1894ff857616ff8549b61236a19148f
+	Linux 4.8-rc5
+drm-intel/topic/drm-misc 8a5bbf327aa16025c78491266a6425807c7fbee0
+	drm: Use u64 for intermediate dotclock calculations
+drm-misc/drm-misc-next 7fb71c8f4f45afe73d307181be87c877447d0e47
+	drm/i915: Handle early failure during intel_get_load_detect_pipe
+drm-intel/topic/core-for-CI 3eaef151efa39196d5559162ab09c518fec17528
+	kbuild: Disable PIE by default
+drm-misc/drm-misc-next-fixes 1001354ca34179f3db924eb66672442a173147dc
+	Linux 4.9-rc1
+drm-misc/drm-misc-fixes 1001354ca34179f3db924eb66672442a173147dc
+	Linux 4.9-rc1
