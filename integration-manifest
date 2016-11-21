@@ -1,0 +1,26 @@
+drm-intel drm-intel-fixes bc9db5ad3253c8e17969bd802c47b73e63f125ab
+	drm/i915: Assume non-DP++ port if dvo_port is HDMI and there's no AUX ch specified in the VBT
+drm-upstream drm-fixes c2ee69d83b2b14d68ad7ee1773fc1d40e97f201d
+	Merge tag 'drm-intel-fixes-2016-11-17' of ssh://git.freedesktop.org/git/drm-intel into drm-fixes
+drm-intel drm-intel-next-fixes 105f1a65b04a8f4f7abec11b200b1fb54f3d4b46
+	drm/i915: Fix conflict resolution from backmerge of v4.8-rc8 to drm-next
+drm-intel drm-intel-next-queued e9cbc4bd0140e1d4e0172e2fe8fe07ba278e5980
+	drm/i915: Update DRIVER_DATE to 20161121
+drm-upstream drm-next b7c0e47d98249c2ddf21ea197b651093c6aaee00
+	Merge tag 'drm-vc4-next-2016-11-16' of https://github.com/anholt/linux into drm-next
+sound-upstream for-next 2e57069c869f3009ae70a429d6719a545de43522
+	ALSA: bebob: compare whole string for model name so that readers are not confused
+sound-upstream for-linus 6ff1a25318ebf688ef9593fe09cd449f6fb4ad31
+	ALSA: usb-audio: Fix use-after-free of usb_device at disconnect
+drm-intel topic/drm-fixes c6935931c1894ff857616ff8549b61236a19148f
+	Linux 4.8-rc5
+drm-intel topic/drm-misc cf590b8732701778c067ed4dff579fa2d7ac251e
+	vgaarb: Downgrade userspace-triggerable messages to debug
+drm-intel topic/core-for-CI 15bdcbcc55853f70237aca4baa4152f8396799d4
+	kbuild: Disable PIE by default
+drm-misc drm-misc-next cf590b8732701778c067ed4dff579fa2d7ac251e
+	vgaarb: Downgrade userspace-triggerable messages to debug
+drm-misc drm-misc-next-fixes 1001354ca34179f3db924eb66672442a173147dc
+	Linux 4.9-rc1
+drm-misc drm-misc-fixes 4da5caa6a6f82cda3193bca855235b87debf78bd
+	drm/dp/mst: Check peer device type before attempting EDID read
