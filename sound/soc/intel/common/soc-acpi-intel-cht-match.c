@@ -174,6 +174,16 @@ struct snd_soc_acpi_mach  snd_soc_acpi_intel_cherrytrail_machines[] = {
 		.sof_tplg_filename = "intel/reef-cht-rt5651.tplg",
 		.asoc_plat_name = "sst-mfld-platform",
 	},
+	{
+		.id = "14F10720",
+		.drv_name = "cht-cx2072x",
+		.fw_filename = "intel/fw_sst_22a8.bin",
+		.board = "cht-bsw",
+		.sof_fw_filename = "intel/reef-cht.ri",
+		.sof_tplg_filename = "intel/reef-cht-cx2072x.tplg",
+		.asoc_plat_name = "sst-mfld-platform",
+	},
+
 #if IS_ENABLED(CONFIG_SND_SOC_INTEL_BYT_CHT_NOCODEC_MACH)
 	/*
 	 * This is always last in the table so that it is selected only when

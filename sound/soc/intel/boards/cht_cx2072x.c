@@ -262,12 +262,20 @@ static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 	 */
 	ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
 				SND_SOC_DAIFMT_I2S     |
-				SND_SOC_DAIFMT_NB_IF   |
+				SND_SOC_DAIFMT_NB_NF   |
 				SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0) {
 		dev_err(rtd->dev, "can't set format to I2S, err %d\n", ret);
 		return ret;
 	}
+
+	ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0x3, 0x3, 2, 24);
+	if (ret < 0) {
+		dev_err(rtd->dev,
+			"can't set I2S config, err %d\n", ret);
+		return ret;
+	}
+	
 
 	return 0;
 }
@@ -338,7 +346,7 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.no_pcm = 1,
 		.codec_dai_name = "cx2072x-hifi",
 		.codec_name = "i2c-14F10720:00",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_IF
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
 		                              | SND_SOC_DAIFMT_CBS_CFS,
 		.init = cht_codec_init,
 		.be_hw_params_fixup = cht_codec_fixup,
