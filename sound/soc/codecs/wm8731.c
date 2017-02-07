@@ -23,6 +23,7 @@
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/spi/spi.h>
+#include <linux/acpi.h>
 #include <linux/of_device.h>
 #include <linux/mutex.h>
 #include <linux/clk.h>
@@ -642,12 +643,22 @@ static const struct snd_soc_codec_driver soc_codec_dev_wm8731 = {
 	},
 };
 
+#if defined(CONFIG_OF)
 static const struct of_device_id wm8731_of_match[] = {
 	{ .compatible = "wlf,wm8731", },
 	{ }
 };
 
 MODULE_DEVICE_TABLE(of, wm8731_of_match);
+#endif
+
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id wm8731_acpi_match[] = {
+	{ "1AEC8731", 0 },
+	{ },
+};
+MODULE_DEVICE_TABLE(acpi, wm8731_acpi_match);
+#endif
 
 static const struct regmap_config wm8731_regmap = {
 	.reg_bits = 7,
@@ -723,7 +734,7 @@ static int wm8731_spi_remove(struct spi_device *spi)
 static struct spi_driver wm8731_spi_driver = {
 	.driver = {
 		.name	= "wm8731",
-		.of_match_table = wm8731_of_match,
+		.of_match_table = of_match_ptr(wm8731_of_match),
 	},
 	.probe		= wm8731_spi_probe,
 	.remove		= wm8731_spi_remove,
@@ -800,7 +811,8 @@ MODULE_DEVICE_TABLE(i2c, wm8731_i2c_id);
 static struct i2c_driver wm8731_i2c_driver = {
 	.driver = {
 		.name = "wm8731",
-		.of_match_table = wm8731_of_match,
+		.of_match_table = of_match_ptr(wm8731_of_match),
+		.acpi_match_table = ACPI_PTR(wm8731_acpi_match),
 	},
 	.probe =    wm8731_i2c_probe,
 	.remove =   wm8731_i2c_remove,
