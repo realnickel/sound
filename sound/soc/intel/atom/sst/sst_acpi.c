@@ -488,6 +488,8 @@ static struct sst_acpi_mach sst_acpi_bytcr[] = {
 						&byt_rvp_platform_data },
 	{"104C5124", "bytcht-pcm512x", "intel/fw_sst_0f28.bin", "bytcht-pcm512x", NULL,
 						&byt_rvp_platform_data },
+	{"1AEC8731", "bytcht-wm8731", "intel/fw_sst_0f28.bin", "bytcht-wm8731", NULL,
+						&byt_rvp_platform_data },
 	/* some Baytrail platforms rely on RT5645, use CHT machine driver */
 	{"10EC5645", "cht-bsw-rt5645", "intel/fw_sst_0f28.bin", "cht-bsw", NULL,
 						&byt_rvp_platform_data },
@@ -519,6 +521,8 @@ static struct sst_acpi_mach sst_acpi_chv[] = {
 	{"104C5123", "bytcht-pcm512x", "intel/fw_sst_22a8.bin", "bytcht-pcm512x", NULL,
 						&chv_platform_data },
 	{"104C5124", "bytcht-pcm512x", "intel/fw_sst_22a8.bin", "bytcht-pcm512x", NULL,
+						&chv_platform_data },
+	{"1AEC8731", "bytcht-wm8731", "intel/fw_sst_22a8.bin", "bytcht-wm8731", NULL,
 						&chv_platform_data },
 	/* some CHT-T platforms rely on RT5640, use Baytrail machine driver */
 	{"10EC5640", "bytcr_rt5640", "intel/fw_sst_22a8.bin", "bytcr_rt5640", cht_quirk,
