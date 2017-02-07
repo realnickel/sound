@@ -214,6 +214,18 @@ config SND_SOC_INTEL_BYT_CHT_PCM512x_MACH
 	  platforms with PCM512X audio codec.
 	  If unsure select "N".
 
+config SND_SOC_INTEL_BYT_CHT_WM8731_MACH
+	tristate "ASoC Audio driver for Intel Baytrail & Cherrytrail with Wolfson WM8731 codec"
+	depends on X86_INTEL_LPSS && I2C && ACPI
+	select SND_SOC_WM8731
+	select SND_SST_ATOM_HIFI2_PLATFORM
+	select SND_SST_IPC_ACPI
+	select SND_SOC_INTEL_SST_MATCH if ACPI
+	help
+	  This adds support for ASoC machine driver for Intel(R) Baytrail and Cherrytrail
+	  platforms with WM8731 audio codec.
+	  If unsure select "N".
+
 
 config SND_SOC_INTEL_SKYLAKE
 	tristate
