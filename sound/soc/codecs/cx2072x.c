@@ -429,7 +429,7 @@ static int cx2072x_reg_bulk_write(struct snd_soc_codec *codec,
 	if (val_count > MAC_EQ_COEFF) {
 		dev_err(dev,
 			"cx2072x_reg_bulk_write failed, writing count = %d\n",
-			val_count);
+			(int)val_count);
 		return -EINVAL;
 	}
 
