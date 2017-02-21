@@ -168,7 +168,7 @@ config SND_SOC_INTEL_CHT_CX2072X_MACH
         tristate "ASoC Audio driver for Intel Baytrail and Cherrytrail with CX2072X codec"
         depends on X86_INTEL_LPSS && I2C && ACPI
         select SND_SOC_CX2072X
-        select SND_SST_MFLD_PLATFORM
+        select SND_SST_ATOM_HIFI2_PLATFORM
         select SND_SST_IPC_ACPI
 	select SND_SOC_INTEL_SST_MATCH if ACPI
         help
