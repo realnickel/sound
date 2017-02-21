@@ -1658,6 +1658,7 @@ static int cx2072x_probe(struct snd_soc_codec *codec)
 		if (ret == -ENOENT) {
 			cx2072x->mclk = NULL;
 			dev_warn(codec->dev, "Assuming static MCLK\n");
+			ret = 0;
 		} else {
 			dev_err(codec->dev, "Failed to get MCLK: %d\n", ret);
 			return ret;
