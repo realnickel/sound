@@ -1193,7 +1193,7 @@ int cx2072x_hs_jack_report(struct snd_soc_codec *codec)
 	/* clear interrupt */
 	regmap_write(cx2072x->regmap, CX2072X_UM_INTERRUPT_CRTL_E, 0x12 << 24);
 
-	dev_err(codec->dev, "CX2072X_HSDETECT type=0x%X,Jack state = %x\n",
+	dev_dbg(codec->dev, "CX2072X_HSDETECT type=0x%X,Jack state = %x\n",
 		type, state);
 	return state;
 }
