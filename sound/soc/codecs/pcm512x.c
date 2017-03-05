@@ -532,7 +532,7 @@ static int pcm512x_dai_startup_master(struct snd_pcm_substream *substream,
 	struct snd_ratnum *rats_no_pll;
 
 	if (IS_ERR(pcm512x->sclk)) {
-		dev_err(dev, "Need SCLK for master mode: %ld\n",
+		printk(KERN_ERR "Need SCLK for master mode: %ld\n",
 			PTR_ERR(pcm512x->sclk));
 		return PTR_ERR(pcm512x->sclk);
 	}
@@ -668,11 +668,11 @@ static unsigned long pcm512x_find_sck(struct snd_soc_dai *dai,
 			break;
 	}
 	if (!pow2) {
-		dev_err(dev, "Impossible to generate a suitable SCK\n");
+		printk(KERN_ERR "Impossible to generate a suitable SCK\n");
 		return 0;
 	}
 
-	dev_dbg(dev, "sck_rate %lu\n", sck_rate);
+	printk(KERN_ERR "sck_rate %lu\n", sck_rate);
 	return sck_rate;
 }
 
@@ -703,7 +703,7 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 	unsigned long den;
 
 	common = gcd(pll_rate, pllin_rate);
-	dev_dbg(dev, "pll %lu pllin %lu common %lu\n",
+	printk(KERN_ERR "pll %lu pllin %lu common %lu\n",
 		pll_rate, pllin_rate, common);
 	num = pll_rate / common;
 	den = pllin_rate / common;
@@ -713,7 +713,7 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 		num *= DIV_ROUND_UP(pllin_rate / den, 20000000);
 		den *= DIV_ROUND_UP(pllin_rate / den, 20000000);
 	}
-	dev_dbg(dev, "num / den = %lu / %lu\n", num, den);
+	printk(KERN_ERR "num / den = %lu / %lu\n", num, den);
 
 	P = den;
 	if (den <= 15 && num <= 16 * 63
@@ -728,7 +728,7 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 			if (J == 0 || J > 63)
 				continue;
 
-			dev_dbg(dev, "R * J / P = %d * %d / %d\n", R, J, P);
+			printk(KERN_ERR "R * J / P = %d * %d / %d\n", R, J, P);
 			pcm512x->real_pll = pll_rate;
 			goto done;
 		}
@@ -744,7 +744,7 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 	common = gcd(10000 * num, den);
 	num = 10000 * num / common;
 	den /= common;
-	dev_dbg(dev, "num %lu den %lu common %lu\n", num, den, common);
+	printk(KERN_ERR "num %lu den %lu common %lu\n", num, den, common);
 
 	for (P = den; P <= 15; P++) {
 		if (pllin_rate / P < 6667000 || 200000000 < pllin_rate / P)
@@ -758,7 +758,7 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 
 		J = K / 10000;
 		D = K % 10000;
-		dev_dbg(dev, "J.D / P = %d.%04d / %d\n", J, D, P);
+		printk(KERN_ERR "J.D / P = %d.%04d / %d\n", J, D, P);
 		pcm512x->real_pll = pll_rate;
 		goto done;
 	}
@@ -771,11 +771,11 @@ fallback:
 	if (!P)
 		P = 1;
 	else if (P > 15) {
-		dev_err(dev, "Need a slower clock as pll-input\n");
+		printk(KERN_ERR "Need a slower clock as pll-input\n");
 		return -EINVAL;
 	}
 	if (pllin_rate / P < 6667000) {
-		dev_err(dev, "Need a faster clock as pll-input\n");
+		printk(KERN_ERR "Need a faster clock as pll-input\n");
 		return -EINVAL;
 	}
 	K = DIV_ROUND_CLOSEST_ULL(10000ULL * pll_rate * P, pllin_rate);
@@ -786,7 +786,7 @@ fallback:
 		K = 120000;
 	J = K / 10000;
 	D = K % 10000;
-	dev_dbg(dev, "J.D / P ~ %d.%04d / %d\n", J, D, P);
+	printk(KERN_ERR "J.D / P ~ %d.%04d / %d\n", J, D, P);
 	pcm512x->real_pll = DIV_ROUND_DOWN_ULL((u64)K * pllin_rate, 10000 * P);
 
 done:
@@ -856,7 +856,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 
 	lrclk_div = snd_soc_params_to_frame_size(params);
 	if (lrclk_div == 0) {
-		dev_err(dev, "No LRCLK?\n");
+		printk(KERN_ERR "No LRCLK?\n");
 		return -EINVAL;
 	}
 
@@ -869,11 +869,11 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 	} else {
 		ret = snd_soc_params_to_bclk(params);
 		if (ret < 0) {
-			dev_err(dev, "Failed to find suitable BCLK: %d\n", ret);
+			printk(KERN_ERR "Failed to find suitable BCLK: %d\n", ret);
 			return ret;
 		}
 		if (ret == 0) {
-			dev_err(dev, "No BCLK?\n");
+			printk(KERN_ERR "No BCLK?\n");
 			return -EINVAL;
 		}
 		bclk_rate = ret;
@@ -892,35 +892,35 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		ret = regmap_write(pcm512x->regmap,
 				   PCM512x_PLL_COEFF_0, pcm512x->pll_p - 1);
 		if (ret != 0) {
-			dev_err(dev, "Failed to write PLL P: %d\n", ret);
+			printk(KERN_ERR "Failed to write PLL P: %d\n", ret);
 			return ret;
 		}
 
 		ret = regmap_write(pcm512x->regmap,
 				   PCM512x_PLL_COEFF_1, pcm512x->pll_j);
 		if (ret != 0) {
-			dev_err(dev, "Failed to write PLL J: %d\n", ret);
+			printk(KERN_ERR "Failed to write PLL J: %d\n", ret);
 			return ret;
 		}
 
 		ret = regmap_write(pcm512x->regmap,
 				   PCM512x_PLL_COEFF_2, pcm512x->pll_d >> 8);
 		if (ret != 0) {
-			dev_err(dev, "Failed to write PLL D msb: %d\n", ret);
+			printk(KERN_ERR "Failed to write PLL D msb: %d\n", ret);
 			return ret;
 		}
 
 		ret = regmap_write(pcm512x->regmap,
 				   PCM512x_PLL_COEFF_3, pcm512x->pll_d & 0xff);
 		if (ret != 0) {
-			dev_err(dev, "Failed to write PLL D lsb: %d\n", ret);
+			printk(KERN_ERR "Failed to write PLL D lsb: %d\n", ret);
 			return ret;
 		}
 
 		ret = regmap_write(pcm512x->regmap,
 				   PCM512x_PLL_COEFF_4, pcm512x->pll_r - 1);
 		if (ret != 0) {
-			dev_err(dev, "Failed to write PLL R: %d\n", ret);
+			printk(KERN_ERR "Failed to write PLL R: %d\n", ret);
 			return ret;
 		}
 
@@ -930,7 +930,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 	}
 
 	if (bclk_div > 128) {
-		dev_err(dev, "Failed to find BCLK divider\n");
+		printk(KERN_ERR "Failed to find BCLK divider\n");
 		return -EINVAL;
 	}
 
@@ -948,7 +948,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		 * output clock since the pll will introduce jitter and thus
 		 * noise.
 		 */
-		dev_dbg(dev, "using pll input as dac input\n");
+		printk(KERN_ERR "using pll input as dac input\n");
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_DAC_REF,
 					 PCM512x_SDAC, PCM512x_SDAC_GPIO);
 		if (ret != 0) {
@@ -979,12 +979,12 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 				break;
 		}
 		if (!dac_mul) {
-			dev_err(dev, "Failed to find DAC rate\n");
+			printk(KERN_ERR "Failed to find DAC rate\n");
 			return -EINVAL;
 		}
 
 		dac_rate = dac_mul * osr_rate;
-		dev_dbg(dev, "dac_rate %lu sample_rate %lu\n",
+		printk(KERN_ERR "dac_rate %lu sample_rate %lu\n",
 			dac_rate, sample_rate);
 
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_DAC_REF,
@@ -1000,13 +1000,13 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 
 	osr_div = DIV_ROUND_CLOSEST(dac_rate, osr_rate);
 	if (osr_div > 128) {
-		dev_err(dev, "Failed to find OSR divider\n");
+		printk(KERN_ERR "Failed to find OSR divider\n");
 		return -EINVAL;
 	}
 
 	dac_div = DIV_ROUND_CLOSEST(dacsrc_rate, dac_rate);
 	if (dac_div > 128) {
-		dev_err(dev, "Failed to find DAC divider\n");
+		printk(KERN_ERR "Failed to find DAC divider\n");
 		return -EINVAL;
 	}
 	dac_rate = dacsrc_rate / dac_div;
@@ -1017,7 +1017,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		/* run NCP no faster than 2048000 Hz, but why? */
 		ncp_div = DIV_ROUND_UP(dac_rate, 2048000);
 		if (ncp_div > 128) {
-			dev_err(dev, "Failed to find NCP divider\n");
+			printk(KERN_ERR "Failed to find NCP divider\n");
 			return -EINVAL;
 		}
 	}
@@ -1026,51 +1026,51 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 
 	ret = regmap_write(pcm512x->regmap, PCM512x_DSP_CLKDIV, dsp_div - 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write DSP divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write DSP divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap, PCM512x_DAC_CLKDIV, dac_div - 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write DAC divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write DAC divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap, PCM512x_NCP_CLKDIV, ncp_div - 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write NCP divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write NCP divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap, PCM512x_OSR_CLKDIV, osr_div - 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write OSR divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write OSR divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap,
 			   PCM512x_MASTER_CLKDIV_1, bclk_div - 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write BCLK divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write BCLK divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap,
 			   PCM512x_MASTER_CLKDIV_2, lrclk_div - 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write LRCLK divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write LRCLK divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap, PCM512x_IDAC_1, idac >> 8);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write IDAC msb divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write IDAC msb divider: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_write(pcm512x->regmap, PCM512x_IDAC_2, idac & 0xff);
 	if (ret != 0) {
-		dev_err(dev, "Failed to write IDAC lsb divider: %d\n", ret);
+		printk(KERN_ERR "Failed to write IDAC lsb divider: %d\n", ret);
 		return ret;
 	}
 
@@ -1401,7 +1401,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(pcm512x->supplies),
 				      pcm512x->supplies);
 	if (ret != 0) {
-		dev_err(dev, "Failed to get supplies: %d\n", ret);
+		printk(KERN_ERR "Failed to get supplies: %d\n", ret);
 		return ret;
 	}
 
@@ -1422,7 +1422,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	ret = regulator_bulk_enable(ARRAY_SIZE(pcm512x->supplies),
 				    pcm512x->supplies);
 	if (ret != 0) {
-		dev_err(dev, "Failed to enable supplies: %d\n", ret);
+		printk(KERN_ERR "Failed to enable supplies: %d\n", ret);
 		return ret;
 	}
 
@@ -1430,13 +1430,13 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	ret = regmap_write(regmap, PCM512x_RESET,
 			   PCM512x_RSTM | PCM512x_RSTR);
 	if (ret != 0) {
-		dev_err(dev, "Failed to reset device: %d\n", ret);
+		printk(KERN_ERR "Failed to reset device: %d\n", ret);
 		goto err;
 	}
 
 	ret = regmap_write(regmap, PCM512x_RESET, 0);
 	if (ret != 0) {
-		dev_err(dev, "Failed to reset device: %d\n", ret);
+		printk(KERN_ERR "Failed to reset device: %d\n", ret);
 		goto err;
 	}
 
@@ -1446,7 +1446,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	if (!IS_ERR(pcm512x->sclk)) {
 		ret = clk_prepare_enable(pcm512x->sclk);
 		if (ret != 0) {
-			dev_err(dev, "Failed to enable SCLK: %d\n", ret);
+			printk(KERN_ERR "Failed to enable SCLK: %d\n", ret);
 			return ret;
 		}
 	}
@@ -1455,7 +1455,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_POWER,
 				 PCM512x_RQST, PCM512x_RQST);
 	if (ret != 0) {
-		dev_err(dev, "Failed to request standby: %d\n",
+		printk(KERN_ERR "Failed to request standby: %d\n",
 			ret);
 		goto err_clk;
 	}
@@ -1471,7 +1471,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 
 		if (of_property_read_u32(np, "pll-in", &val) >= 0) {
 			if (val > 6) {
-				dev_err(dev, "Invalid pll-in\n");
+				printk(KERN_ERR "Invalid pll-in\n");
 				ret = -EINVAL;
 				goto err_clk;
 			}
@@ -1480,7 +1480,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 
 		if (of_property_read_u32(np, "pll-out", &val) >= 0) {
 			if (val > 6) {
-				dev_err(dev, "Invalid pll-out\n");
+				printk(KERN_ERR "Invalid pll-out\n");
 				ret = -EINVAL;
 				goto err_clk;
 			}
@@ -1494,7 +1494,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 			goto err_clk;
 		}
 		if (pcm512x->pll_in && pcm512x->pll_in == pcm512x->pll_out) {
-			dev_err(dev, "Error: pll-in == pll-out\n");
+			printk(KERN_ERR "Error: pll-in == pll-out\n");
 			ret = -EINVAL;
 			goto err_clk;
 		}
@@ -1504,7 +1504,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	ret = snd_soc_register_codec(dev, &pcm512x_codec_driver,
 				    &pcm512x_dai, 1);
 	if (ret != 0) {
-		dev_err(dev, "Failed to register CODEC: %d\n", ret);
+		printk(KERN_ERR "Failed to register CODEC: %d\n", ret);
 		goto err_pm;
 	}
 
@@ -1544,14 +1544,14 @@ static int pcm512x_suspend(struct device *dev)
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_POWER,
 				 PCM512x_RQPD, PCM512x_RQPD);
 	if (ret != 0) {
-		dev_err(dev, "Failed to request power down: %d\n", ret);
+		printk(KERN_ERR "Failed to request power down: %d\n", ret);
 		return ret;
 	}
 
 	ret = regulator_bulk_disable(ARRAY_SIZE(pcm512x->supplies),
 				     pcm512x->supplies);
 	if (ret != 0) {
-		dev_err(dev, "Failed to disable supplies: %d\n", ret);
+		printk(KERN_ERR "Failed to disable supplies: %d\n", ret);
 		return ret;
 	}
 
@@ -1569,7 +1569,7 @@ static int pcm512x_resume(struct device *dev)
 	if (!IS_ERR(pcm512x->sclk)) {
 		ret = clk_prepare_enable(pcm512x->sclk);
 		if (ret != 0) {
-			dev_err(dev, "Failed to enable SCLK: %d\n", ret);
+			printk(KERN_ERR "Failed to enable SCLK: %d\n", ret);
 			return ret;
 		}
 	}
@@ -1577,21 +1577,21 @@ static int pcm512x_resume(struct device *dev)
 	ret = regulator_bulk_enable(ARRAY_SIZE(pcm512x->supplies),
 				    pcm512x->supplies);
 	if (ret != 0) {
-		dev_err(dev, "Failed to enable supplies: %d\n", ret);
+		printk(KERN_ERR "Failed to enable supplies: %d\n", ret);
 		return ret;
 	}
 
 	regcache_cache_only(pcm512x->regmap, false);
 	ret = regcache_sync(pcm512x->regmap);
 	if (ret != 0) {
-		dev_err(dev, "Failed to sync cache: %d\n", ret);
+		printk(KERN_ERR "Failed to sync cache: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_POWER,
 				 PCM512x_RQPD, 0);
 	if (ret != 0) {
-		dev_err(dev, "Failed to remove power down: %d\n", ret);
+		printk(KERN_ERR "Failed to remove power down: %d\n", ret);
 		return ret;
 	}
 
