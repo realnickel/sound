@@ -63,7 +63,7 @@ static int codec_fixup(struct snd_soc_pcm_runtime *rtd,
 	 * dai_set_tdm_slot() since there is no other API exposed
 	 */
 	ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
-				  SND_SOC_DAIFMT_I2S     |
+				  SND_SOC_DAIFMT_DSP_B     |
 				  SND_SOC_DAIFMT_NB_NF   |
 				  SND_SOC_DAIFMT_CBS_CFS
 				  );
@@ -100,6 +100,21 @@ static void aif1_shutdown(struct snd_pcm_substream *substream)
 	snd_soc_update_bits(codec, PCM512x_GPIO_CONTROL_1, 0x08, 0x00);
 
 }
+
+static int aif1_hw_params(struct snd_pcm_substream *substream,
+			  struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+
+	printk(KERN_ERR "configuring blck_ratio\n");
+	snd_soc_dai_set_bclk_ratio(codec_dai, 50);
+	return 0;
+}
+
+static const struct snd_soc_ops ssp2_ops = {
+	.hw_params = aif1_hw_params,
+};
 
 static int init(struct snd_soc_pcm_runtime *rtd)
 {
@@ -160,12 +175,13 @@ static struct snd_soc_dai_link dailink[] = {
 		.no_pcm = 1,
 		.codec_dai_name = "pcm512x-hifi",
 		.codec_name = "i2c-10EC512x:00",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
+		.dai_fmt = SND_SOC_DAIFMT_DSP_B | SND_SOC_DAIFMT_NB_NF
 						| SND_SOC_DAIFMT_CBS_CFS,
 		.init = init,
 		.be_hw_params_fixup = codec_fixup,
 		.nonatomic = true,
 		.dpcm_playback = 1,
+		.ops = &ssp2_ops,
 	},
 };
 
