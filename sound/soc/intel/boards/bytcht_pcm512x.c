@@ -50,16 +50,16 @@ static int codec_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *channels = hw_param_interval(params,
 						SNDRV_PCM_HW_PARAM_CHANNELS);
 
-	/* The DSP will covert the FE rate to 48k, stereo, 24bits */
+	/* The DSP will covert the FE rate to 48k, stereo, 16bits */
 	rate->min = rate->max = 48000;
 	channels->min = channels->max = 2;
 
-	/* set SSP2 to 24-bit */
-	params_set_format(params, SNDRV_PCM_FORMAT_S24_LE);
+	/* set SSP2 to 16-bit */
+	params_set_format(params, SNDRV_PCM_FORMAT_S16_LE);
 
 	/*
 	 * Default mode for SSP configuration is TDM 4 slot, override config
-	 * with explicit setting to I2S 2ch 24-bit. The word length is set with
+	 * with explicit setting to I2S 2ch 16-bit. The word length is set with
 	 * dai_set_tdm_slot() since there is no other API exposed
 	 */
 	ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
@@ -72,7 +72,7 @@ static int codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		return ret;
 	}
 
-	ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0x3, 0x3, 2, 24);
+	ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0x3, 0x3, 2, 16);
 	if (ret < 0) {
 		dev_err(rtd->dev, "can't set I2S config, err %d\n", ret);
 		return ret;
