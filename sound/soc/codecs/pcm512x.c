@@ -56,6 +56,8 @@ struct pcm512x_priv {
 	unsigned long overclock_pll;
 	unsigned long overclock_dac;
 	unsigned long overclock_dsp;
+
+	unsigned int bclk_ratio;
 };
 
 /*
@@ -494,6 +496,8 @@ static int pcm512x_hw_rule_rate(struct snd_pcm_hw_params *params,
 	struct pcm512x_priv *pcm512x = rule->private;
 	struct snd_interval ranges[2];
 	int frame_size;
+	
+	printk(KERN_ERR "pcm512x_hw_rule_rate\n");
 
 	frame_size = snd_soc_params_to_frame_size(params);
 	if (frame_size < 0)
@@ -504,6 +508,7 @@ static int pcm512x_hw_rule_rate(struct snd_pcm_hw_params *params,
 		/* No hole when the frame size is 32. */
 		return 0;
 	case 48:
+	  printk(KERN_ERR "hw_rule_rate: frame 48\n");
 	case 64:
 		/* There is only one hole in the range of supported
 		 * rates, but it moves with the frame size.
@@ -515,6 +520,7 @@ static int pcm512x_hw_rule_rate(struct snd_pcm_hw_params *params,
 		ranges[1].max = 384000;
 		break;
 	default:
+	  printk(KERN_ERR "hw_rule_rate: invalid size\n");
 		return -EINVAL;
 	}
 
@@ -573,7 +579,7 @@ static int pcm512x_dai_startup_slave(struct snd_pcm_substream *substream,
 	struct regmap *regmap = pcm512x->regmap;
 
 	if (IS_ERR(pcm512x->sclk)) {
-		dev_info(dev, "No SCLK, using BCLK: %ld\n",
+		printk(KERN_ERR "No SCLK, using BCLK: %ld\n",
 			 PTR_ERR(pcm512x->sclk));
 
 		/* Disable reporting of missing SCLK as an error */
@@ -614,27 +620,33 @@ static int pcm512x_set_bias_level(struct snd_soc_codec *codec,
 {
 	struct pcm512x_priv *pcm512x = dev_get_drvdata(codec->dev);
 	int ret;
-
+	
+	printk(KERN_ERR "pcm512x_set_bias_level \n");
 	switch (level) {
 	case SND_SOC_BIAS_ON:
+		printk(KERN_ERR "pcm512x_set_bias_level  ON\n");
+		break;
 	case SND_SOC_BIAS_PREPARE:
+		printk(KERN_ERR "pcm512x_set_bias_level  PREPARE\n");
 		break;
 
 	case SND_SOC_BIAS_STANDBY:
+		printk(KERN_ERR "pcm512x_set_bias_level  STANDBY\n");
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_POWER,
 					 PCM512x_RQST, 0);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to remove standby: %d\n",
+			printk(KERN_ERR  "Failed to remove standby: %d\n",
 				ret);
 			return ret;
 		}
 		break;
 
 	case SND_SOC_BIAS_OFF:
+		printk(KERN_ERR "pcm512x_set_bias_level  OFF\n");
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_POWER,
 					 PCM512x_RQST, PCM512x_RQST);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to request standby: %d\n",
+			printk(KERN_ERR  "Failed to request standby: %d\n",
 				ret);
 			return ret;
 		}
@@ -652,7 +664,8 @@ static unsigned long pcm512x_find_sck(struct snd_soc_dai *dai,
 	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
 	unsigned long sck_rate;
 	int pow2;
-
+	
+	printk(KERN_ERR "pcm512x_find_sck \n");
 	/* 64 MHz <= pll_rate <= 100 MHz, VREF mode */
 	/* 16 MHz <= sck_rate <=  25 MHz, VREF mode */
 
@@ -702,6 +715,8 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 	unsigned long num;
 	unsigned long den;
 
+	printk(KERN_ERR "pcm512x_find_pll_coeff \n");
+	
 	common = gcd(pll_rate, pllin_rate);
 	printk(KERN_ERR "pll %lu pllin %lu common %lu\n",
 		pll_rate, pllin_rate, common);
@@ -794,6 +809,8 @@ done:
 	pcm512x->pll_j = J;
 	pcm512x->pll_d = D;
 	pcm512x->pll_p = P;
+
+	printk(KERN_ERR "\t pcm512x_find_pll_coeffs done \n");
 	return 0;
 }
 
@@ -805,6 +822,8 @@ static unsigned long pcm512x_pllin_dac_rate(struct snd_soc_dai *dai,
 	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
 	unsigned long dac_rate;
 
+	printk(KERN_ERR "pcm512x_pllin_dac_rate \n");
+		
 	if (!pcm512x->pll_out)
 		return 0; /* no PLL to bypass, force SCK as DAC input */
 
@@ -854,31 +873,44 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 	int fssp;
 	int gpio;
 
-	lrclk_div = snd_soc_params_to_frame_size(params);
-	if (lrclk_div == 0) {
-		printk(KERN_ERR "No LRCLK?\n");
-		return -EINVAL;
-	}
+	printk(KERN_ERR "set_dividers \n");
+	
+	if (pcm512x->bclk_ratio%32 == 0) {
+		lrclk_div = snd_soc_params_to_frame_size(params);
+		if (lrclk_div == 0) {
+			printk(KERN_ERR "No LRCLK?\n");
+			return -EINVAL;
+		}
+	} else
+		lrclk_div = pcm512x->bclk_ratio;
 
-	if (!pcm512x->pll_out) {
+	if (!pcm512x->pll_out && (pcm512x->bclk_ratio%32 == 0)) {
+	  	printk(KERN_ERR "set_dividers: no pll out \n");
 		sck_rate = clk_get_rate(pcm512x->sclk);
 		bclk_div = params->rate_den * 64 / lrclk_div;
 		bclk_rate = DIV_ROUND_CLOSEST(sck_rate, bclk_div);
 
 		mck_rate = sck_rate;
 	} else {
-		ret = snd_soc_params_to_bclk(params);
-		if (ret < 0) {
-			printk(KERN_ERR "Failed to find suitable BCLK: %d\n", ret);
-			return ret;
-		}
-		if (ret == 0) {
-			printk(KERN_ERR "No BCLK?\n");
-			return -EINVAL;
-		}
-		bclk_rate = ret;
+		printk(KERN_ERR "set_dividers: pll out \n");
 
-		pllin_rate = clk_get_rate(pcm512x->sclk);
+		if(pcm512x->bclk_ratio%32 == 0) {
+			ret = snd_soc_params_to_bclk(params);
+			if (ret < 0) {
+				printk(KERN_ERR "Failed to find suitable BCLK: %d\n", ret);
+				return ret;
+			}
+			if (ret == 0) {
+				printk(KERN_ERR "No BCLK?\n");
+				return -EINVAL;
+			}
+			bclk_rate = ret;
+
+			pllin_rate = clk_get_rate(pcm512x->sclk);
+		} else {
+			bclk_rate = 48000 * pcm512x->bclk_ratio;
+			pllin_rate = 48000 * pcm512x->bclk_ratio;
+		}
 
 		sck_rate = pcm512x_find_sck(dai, bclk_rate);
 		if (!sck_rate)
@@ -934,6 +966,8 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
+	printk(KERN_ERR "sck_rate %d bclk_div %d lrclk_div %d \n", sck_rate, bclk_div, lrclk_div);
+
 	/* the actual rate */
 	sample_rate = sck_rate / bclk_div / lrclk_div;
 	osr_rate = 16 * sample_rate;
@@ -942,6 +976,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 	dsp_div = mck_rate > pcm512x_dsp_max(pcm512x) ? 2 : 1;
 
 	dac_rate = pcm512x_pllin_dac_rate(dai, osr_rate, pllin_rate);
+	printk(KERN_ERR "dac_rate %d \n",dac_rate);
 	if (dac_rate) {
 		/* the desired clock rate is "compatible" with the pll input
 		 * clock, so use that clock as dac input instead of the pll
@@ -952,7 +987,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_DAC_REF,
 					 PCM512x_SDAC, PCM512x_SDAC_GPIO);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to set gpio as dacref: %d\n", ret);
 			return ret;
 		}
@@ -961,7 +996,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_DACIN,
 					 PCM512x_GREF, gpio);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to set gpio %d as dacin: %d\n",
 				pcm512x->pll_in, ret);
 			return ret;
@@ -974,6 +1009,9 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 			/ osr_rate;
 		unsigned long sck_mul = sck_rate / osr_rate;
 
+		printk(KERN_ERR "dac_mul %lu sck_mul %lu\n",
+		       dac_mul, sck_mul);
+		
 		for (; dac_mul; dac_mul--) {
 			if (!(sck_mul % dac_mul))
 				break;
@@ -983,14 +1021,24 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 			return -EINVAL;
 		}
 
+		printk(KERN_ERR "dac_mul %lu sck_mul %lu osr_rate %d\n",
+		       dac_mul, sck_mul, osr_rate);
+
+				
 		dac_rate = dac_mul * osr_rate;
 		printk(KERN_ERR "dac_rate %lu sample_rate %lu\n",
 			dac_rate, sample_rate);
 
-		ret = regmap_update_bits(pcm512x->regmap, PCM512x_DAC_REF,
-					 PCM512x_SDAC, PCM512x_SDAC_SCK);
+		if (pcm512x->bclk_ratio%32 == 0) {
+			ret = regmap_update_bits(pcm512x->regmap, PCM512x_DAC_REF,
+						 PCM512x_SDAC, PCM512x_SDAC_SCK);
+		} else {
+			ret = regmap_update_bits(pcm512x->regmap, PCM512x_DAC_REF,
+						 PCM512x_SDAC, PCM512x_SDAC_PLL);
+
+		}
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to set sck as dacref: %d\n", ret);
 			return ret;
 		}
@@ -1048,20 +1096,22 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		return ret;
 	}
 
-	ret = regmap_write(pcm512x->regmap,
-			   PCM512x_MASTER_CLKDIV_1, bclk_div - 1);
-	if (ret != 0) {
-		printk(KERN_ERR "Failed to write BCLK divider: %d\n", ret);
-		return ret;
+	if (pcm512x->bclk_ratio%32 == 0) { /* FIXME: should be for master mode only */
+		ret = regmap_write(pcm512x->regmap,
+				   PCM512x_MASTER_CLKDIV_1, bclk_div - 1);
+		if (ret != 0) {
+			printk(KERN_ERR "Failed to write BCLK divider: %d\n", ret);
+			return ret;
+		}
+		
+		ret = regmap_write(pcm512x->regmap,
+				   PCM512x_MASTER_CLKDIV_2, lrclk_div - 1);
+		if (ret != 0) {
+			printk(KERN_ERR "Failed to write LRCLK divider: %d\n", ret);
+			return ret;
+		}
 	}
-
-	ret = regmap_write(pcm512x->regmap,
-			   PCM512x_MASTER_CLKDIV_2, lrclk_div - 1);
-	if (ret != 0) {
-		printk(KERN_ERR "Failed to write LRCLK divider: %d\n", ret);
-		return ret;
-	}
-
+	
 	ret = regmap_write(pcm512x->regmap, PCM512x_IDAC_1, idac >> 8);
 	if (ret != 0) {
 		printk(KERN_ERR "Failed to write IDAC msb divider: %d\n", ret);
@@ -1085,18 +1135,18 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_FS_SPEED_MODE,
 				 PCM512x_FSSP, fssp);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set fs speed: %d\n", ret);
+		printk(KERN_ERR  "Failed to set fs speed: %d\n", ret);
 		return ret;
 	}
 
-	dev_dbg(codec->dev, "DSP divider %d\n", dsp_div);
-	dev_dbg(codec->dev, "DAC divider %d\n", dac_div);
-	dev_dbg(codec->dev, "NCP divider %d\n", ncp_div);
-	dev_dbg(codec->dev, "OSR divider %d\n", osr_div);
-	dev_dbg(codec->dev, "BCK divider %d\n", bclk_div);
-	dev_dbg(codec->dev, "LRCK divider %d\n", lrclk_div);
-	dev_dbg(codec->dev, "IDAC %d\n", idac);
-	dev_dbg(codec->dev, "1<<FSSP %d\n", 1 << fssp);
+	printk(KERN_ERR  "DSP divider %d\n", dsp_div);
+	printk(KERN_ERR  "DAC divider %d\n", dac_div);
+	printk(KERN_ERR  "NCP divider %d\n", ncp_div);
+	printk(KERN_ERR  "OSR divider %d\n", osr_div);
+	printk(KERN_ERR  "BCK divider %d\n", bclk_div);
+	printk(KERN_ERR  "LRCK divider %d\n", lrclk_div);
+	printk(KERN_ERR  "IDAC %d\n", idac);
+	printk(KERN_ERR  "1<<FSSP %d\n", 1 << fssp);
 
 	return 0;
 }
@@ -1109,11 +1159,12 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
 	int alen;
 	int gpio;
-	int clock_output;
-	int master_mode;
+	int clock_divider_autoset;
+	int clock_output =0;
+	int master_mode = 0;
 	int ret;
 
-	dev_dbg(codec->dev, "hw_params %u Hz, %u channels\n",
+	printk(KERN_ERR  "hw_params %u Hz, %u channels\n",
 		params_rate(params),
 		params_channels(params));
 
@@ -1131,7 +1182,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		alen = PCM512x_ALEN_32;
 		break;
 	default:
-		dev_err(codec->dev, "Bad frame size: %d\n",
+		printk(KERN_ERR  "Bad frame size: %d\n",
 			params_width(params));
 		return -EINVAL;
 	}
@@ -1144,20 +1195,30 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 					 | PCM512x_BCKO | PCM512x_LRKO,
 					 0);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to enable slave mode: %d\n", ret);
 			return ret;
 		}
 
+		clock_divider_autoset = (pcm512x->bclk_ratio%32==0) ? 0 : 1;
+			
+
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_ERROR_DETECT,
-					 PCM512x_DCAS, 0);
+					 PCM512x_DCAS, clock_divider_autoset);
 		if (ret != 0) {
-			dev_err(codec->dev,
-				"Failed to enable clock divider autoset: %d\n",
-				ret);
+			printk(KERN_ERR 
+			       "Failed to update clock divider autoset: %d\n",
+			       ret);
 			return ret;
 		}
-		return 0;
+		printk(KERN_ERR "\t hw_params done for CBS_CFS case \n");
+
+		if (pcm512x->bclk_ratio%32==0)
+			return 0;
+		 
+		printk(KERN_ERR "\t block ratio, PLL needs to be configured\n");
+		break;
+
 	case SND_SOC_DAIFMT_CBM_CFM:
 		clock_output = PCM512x_BCKO | PCM512x_LRKO;
 		master_mode = PCM512x_RLRK | PCM512x_RBCK;
@@ -1173,20 +1234,20 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_I2S_1,
 				 PCM512x_ALEN, alen);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set frame size: %d\n", ret);
+		printk(KERN_ERR  "Failed to set frame size: %d\n", ret);
 		return ret;
 	}
 
 	if (pcm512x->pll_out) {
 		ret = regmap_write(pcm512x->regmap, PCM512x_FLEX_A, 0x11);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to set FLEX_A: %d\n", ret);
+			printk(KERN_ERR  "Failed to set FLEX_A: %d\n", ret);
 			return ret;
 		}
 
 		ret = regmap_write(pcm512x->regmap, PCM512x_FLEX_B, 0xff);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to set FLEX_B: %d\n", ret);
+			printk(KERN_ERR  "Failed to set FLEX_B: %d\n", ret);
 			return ret;
 		}
 
@@ -1199,7 +1260,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 					 | PCM512x_IDSK | PCM512x_IDCH
 					 | PCM512x_DCAS);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to ignore auto-clock failures: %d\n",
 				ret);
 			return ret;
@@ -1214,7 +1275,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 					 | PCM512x_IDSK | PCM512x_IDCH
 					 | PCM512x_DCAS | PCM512x_IPLK);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to ignore auto-clock failures: %d\n",
 				ret);
 			return ret;
@@ -1223,7 +1284,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_PLL_EN,
 					 PCM512x_PLLE, 0);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to disable pll: %d\n", ret);
+			printk(KERN_ERR  "Failed to disable pll: %d\n", ret);
 			return ret;
 		}
 	}
@@ -1236,7 +1297,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_PLL_REF,
 					 PCM512x_SREF, PCM512x_SREF_GPIO);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to set gpio as pllref: %d\n", ret);
 			return ret;
 		}
@@ -1245,7 +1306,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_PLLIN,
 					 PCM512x_GREF, gpio);
 		if (ret != 0) {
-			dev_err(codec->dev,
+			printk(KERN_ERR 
 				"Failed to set gpio %d as pllin: %d\n",
 				pcm512x->pll_in, ret);
 			return ret;
@@ -1254,7 +1315,16 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_PLL_EN,
 					 PCM512x_PLLE, PCM512x_PLLE);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to enable pll: %d\n", ret);
+			printk(KERN_ERR  "Failed to enable pll: %d\n", ret);
+			return ret;
+		}
+	} else if (pcm512x->bclk_ratio%32 != 0) {
+
+		/* FIXME, the PLL needs to be restarted, no? */
+		ret = regmap_update_bits(pcm512x->regmap, PCM512x_PLL_EN,
+					 PCM512x_PLLE, PCM512x_PLLE);
+		if (ret != 0) {
+			printk(KERN_ERR  "Failed to enable pll: %d\n", ret);
 			return ret;
 		}
 	}
@@ -1263,7 +1333,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 				 PCM512x_BCKP | PCM512x_BCKO | PCM512x_LRKO,
 				 clock_output);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to enable clock output: %d\n", ret);
+		printk(KERN_ERR  "Failed to enable clock output: %d\n", ret);
 		return ret;
 	}
 
@@ -1271,7 +1341,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 				 PCM512x_RLRK | PCM512x_RBCK,
 				 master_mode);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to enable master mode: %d\n", ret);
+		printk(KERN_ERR  "Failed to enable master mode: %d\n", ret);
 		return ret;
 	}
 
@@ -1280,7 +1350,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		ret = regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_EN,
 					 gpio, gpio);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to enable gpio %d: %d\n",
+			printk(KERN_ERR  "Failed to enable gpio %d: %d\n",
 				pcm512x->pll_out, ret);
 			return ret;
 		}
@@ -1289,7 +1359,7 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 		ret = regmap_update_bits(pcm512x->regmap, gpio,
 					 PCM512x_GxSL, PCM512x_GxSL_PLLCK);
 		if (ret != 0) {
-			dev_err(codec->dev, "Failed to output pll on %d: %d\n",
+			printk(KERN_ERR  "Failed to output pll on %d: %d\n",
 				ret, pcm512x->pll_out);
 			return ret;
 		}
@@ -1298,17 +1368,17 @@ static int pcm512x_hw_params(struct snd_pcm_substream *substream,
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_SYNCHRONIZE,
 				 PCM512x_RQSY, PCM512x_RQSY_HALT);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to halt clocks: %d\n", ret);
+		printk(KERN_ERR  "Failed to halt clocks: %d\n", ret);
 		return ret;
 	}
 
 	ret = regmap_update_bits(pcm512x->regmap, PCM512x_SYNCHRONIZE,
 				 PCM512x_RQSY, PCM512x_RQSY_RESUME);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to resume clocks: %d\n", ret);
+		printk(KERN_ERR  "Failed to resume clocks: %d\n", ret);
 		return ret;
 	}
-
+	printk(KERN_ERR "\t end hw_params \n");
 	return 0;
 }
 
@@ -1322,10 +1392,27 @@ static int pcm512x_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	return 0;
 }
 
+static int pcm512x_set_bclk_ratio(struct snd_soc_dai *dai, unsigned int ratio)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
+
+	if (ratio%32 == 0) {
+		dev_dbg(codec->dev, "bclk ratio is multiple of 32, ignored\n");
+		printk(KERN_ERR "bclk ratio is multiple of 32, ignored\n");
+	}
+	else {
+		pcm512x->bclk_ratio = ratio;
+		printk(KERN_ERR "bclk ratio %d \n",ratio);
+	}
+	return 0;
+}
+
 static const struct snd_soc_dai_ops pcm512x_dai_ops = {
 	.startup = pcm512x_dai_startup,
 	.hw_params = pcm512x_hw_params,
 	.set_fmt = pcm512x_set_fmt,
+	.set_bclk_ratio = pcm512x_set_bclk_ratio,
 };
 
 static struct snd_soc_dai_driver pcm512x_dai = {
@@ -1413,7 +1500,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 		ret = regulator_register_notifier(pcm512x->supplies[i].consumer,
 						  &pcm512x->supply_nb[i]);
 		if (ret != 0) {
-			dev_err(dev,
+			printk(KERN_ERR 
 				"Failed to register regulator notifier: %d\n",
 				ret);
 		}
@@ -1488,7 +1575,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 		}
 
 		if (!pcm512x->pll_in != !pcm512x->pll_out) {
-			dev_err(dev,
+			printk(KERN_ERR 
 				"Error: both pll-in and pll-out, or none\n");
 			ret = -EINVAL;
 			goto err_clk;
