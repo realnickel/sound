@@ -766,6 +766,7 @@ static int pcm512x_find_pll_coeff(struct snd_soc_dai *dai,
 			continue;
 		if (num * P % den)
 			continue;
+
 		K = num * P / den;
 		/* J == 12 is ok if D == 0 */
 		if (K < 40000 || K > 120000)
@@ -1386,8 +1387,48 @@ static int pcm512x_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
-
+	int format;
+	int offset = 0;
+	int ret;
+	
 	pcm512x->fmt = fmt;
+
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		format = PCM512x_AFMT_I2S;
+		break;
+	case SND_SOC_DAIFMT_LEFT_J:
+		format = PCM512x_AFMT_LTJ;
+		break;
+	case SND_SOC_DAIFMT_RIGHT_J:
+		format = PCM512x_AFMT_RTJ;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		format = PCM512x_AFMT_DSP;
+		offset = 1; /* L data MSB after FRM LRC */
+		break;
+	case SND_SOC_DAIFMT_DSP_B:
+		format = PCM512x_AFMT_DSP;
+		break;
+	default:
+		return -EINVAL;
+	}	
+
+	ret = regmap_update_bits(pcm512x->regmap, PCM512x_I2S_1,
+				 PCM512x_AFMT, format);
+	if (ret != 0) {
+		printk(KERN_ERR  "Failed to set format: %d\n", ret);
+		return ret;
+	}
+
+	if (offset) {
+		ret = regmap_update_bits(pcm512x->regmap, PCM512x_I2S_2,
+					 PCM512x_AOFS, offset);
+		if (ret != 0) {
+			printk(KERN_ERR  "Failed to set BCLK offset: %d\n", ret);
+			return ret;
+		}
+	}
 
 	return 0;
 }

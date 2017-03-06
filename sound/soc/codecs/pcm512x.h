@@ -211,6 +211,10 @@
 #define PCM512x_AFMT_RTJ   (2 << 4)
 #define PCM512x_AFMT_LTJ   (3 << 4)
 
+/* Page 0, Register 41 - I2S Shift */
+#define PCM512x_AOFS       (0xFF << 0)
+#define PCM512x_AOFS_SHIFT 0
+
 /* Page 0, Register 42 - DAC routing */
 #define PCM512x_AUPR_SHIFT 0
 #define PCM512x_AUPL_SHIFT 4
