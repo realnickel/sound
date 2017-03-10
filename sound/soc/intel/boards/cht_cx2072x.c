@@ -200,6 +200,7 @@ static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		return ret;
 	}
 	
+	snd_soc_dai_set_bclk_ratio(rtd->codec_dai, 50);
 
 	return 0;
 }
