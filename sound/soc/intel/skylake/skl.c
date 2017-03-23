@@ -895,6 +895,9 @@ static const struct pci_device_id skl_ids[] = {
 	/* BXT-P */
 	{ PCI_DEVICE(0x8086, 0x5a98),
 		.driver_data = (unsigned long)&sst_bxtp_devdata},
+	/* BXT-T */
+	{ PCI_DEVICE(0x8086, 0x1a98),
+		.driver_data = (unsigned long)&sst_bxtp_devdata},
 	/* KBL */
 	{ PCI_DEVICE(0x8086, 0x9D71),
 		.driver_data = (unsigned long)&sst_kbl_devdata},
