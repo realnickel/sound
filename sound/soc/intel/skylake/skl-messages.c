@@ -200,28 +200,35 @@ static struct skl_dsp_loader_ops bxt_get_loader_ops(void)
 
 static const struct skl_dsp_ops dsp_ops[] = {
 	{
-		.id = 0x9d70,
+		.id = 0x9d70, /* Sunrise Point-LP */
 		.loader_ops = skl_get_loader_ops,
 		.init = skl_sst_dsp_init,
 		.init_fw = skl_sst_init_fw,
 		.cleanup = skl_sst_dsp_cleanup
 	},
 	{
-		.id = 0x9d71,
+		.id = 0x9d71, /* KBL */
 		.loader_ops = skl_get_loader_ops,
 		.init = skl_sst_dsp_init,
 		.init_fw = skl_sst_init_fw,
 		.cleanup = skl_sst_dsp_cleanup
 	},
 	{
-		.id = 0x5a98,
+		.id = 0x5a98, /* BXT-P */
 		.loader_ops = bxt_get_loader_ops,
 		.init = bxt_sst_dsp_init,
 		.init_fw = bxt_sst_init_fw,
 		.cleanup = bxt_sst_dsp_cleanup
 	},
 	{
-		.id = 0x3198,
+		.id = 0x1a98, /* BXT-M */
+		.loader_ops = bxt_get_loader_ops,
+		.init = bxt_sst_dsp_init,
+		.init_fw = bxt_sst_init_fw,
+		.cleanup = bxt_sst_dsp_cleanup
+	},
+	{
+		.id = 0x3198, /* GLK */
 		.loader_ops = bxt_get_loader_ops,
 		.init = bxt_sst_dsp_init,
 		.init_fw = bxt_sst_init_fw,
