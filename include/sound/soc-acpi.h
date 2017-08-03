@@ -60,12 +60,29 @@ struct snd_soc_acpi_mach {
 	const char *drv_name;
 	/* firmware file name */
 	const char *fw_filename;
-
 	/* board name */
 	const char *board;
 	struct snd_soc_acpi_mach * (*machine_quirk)(void *arg);
 	const void *quirk_data;
+
+	/* intended for platform data or machine specific-ops */
 	void *pdata;
+
+	/* SOF firmware file name */
+	const char *sof_fw_filename;
+	/* SOF default topology */
+	const char *sof_tplg_filename;
+
+	/* ASoC platform name - used for binding machine drivers if non NULL */
+	const char *asoc_plat_name;
+
+	/* machine driver private data fixup */
+	struct platform_device * (*new_mach_data)(void *pdata);
+
+	/* FIXME: is this needed, was only used for BYTCR-detection
+	   int (*confirm_mach)(struct device *dev,
+	   const struct sof_dev_desc **desc);
+	*/
 };
 
 #define SND_SOC_ACPI_MAX_CODECS 3
