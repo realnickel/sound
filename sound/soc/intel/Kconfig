@@ -27,8 +27,12 @@ config SND_SST_IPC_ACPI
 	select SND_SOC_INTEL_SST
 	select IOSF_MBI
 
+config SND_SOC_INTEL_COMMON
+	tristate
+
 config SND_SOC_INTEL_SST
 	tristate
+	select SND_SOC_INTEL_COMMON
 	select SND_SOC_INTEL_SST_ACPI if ACPI
 	select SND_SOC_ACPI_INTEL_MATCH if ACPI
 
