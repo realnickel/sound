@@ -20,7 +20,7 @@ config SND_SOC_INTEL_HASWELL_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && I2C && I2C_DESIGNWARE_PLATFORM
 	depends on DMADEVICES
-	depends on SND_SOC_INTEL_HASWELL
+	depends on SND_SOC_INTEL_HASWELL || SND_SOC_SOF_HASWELL
 	select SND_SOC_RT5640
 	help
 	  This adds support for the Lynxpoint Audio DSP on Intel(R) Haswell
@@ -33,7 +33,7 @@ config SND_SOC_INTEL_BDW_RT5677_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && GPIOLIB && I2C
 	depends on DMADEVICES
-	depends on SND_SOC_INTEL_HASWELL
+	depends on SND_SOC_INTEL_HASWELL || SND_SOC_SOF_HASWELL
 	select SND_SOC_RT5677
 	help
 	  This adds support for Intel Broadwell platform based boards with
@@ -44,7 +44,7 @@ config SND_SOC_INTEL_BROADWELL_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && I2C && I2C_DESIGNWARE_PLATFORM
 	depends on DMADEVICES
-	depends on SND_SOC_INTEL_HASWELL
+	depends on SND_SOC_INTEL_HASWELL || SND_SOC_SOF_HASWELL
 	select SND_SOC_RT286
 	help
 	  This adds support for the Wilcatpoint Audio DSP on Intel(R) Broadwell
@@ -82,7 +82,7 @@ config SND_SOC_INTEL_BYTCR_RT5640_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86 && I2C && ACPI
 	select SND_SOC_RT5640
-	depends on SND_SST_ATOM_HIFI2_PLATFORM
+	depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
 	select SND_SST_IPC_ACPI
 	help
           This adds support for ASoC machine driver for Intel(R) Baytrail and Baytrail-CR
@@ -95,7 +95,7 @@ config SND_SOC_INTEL_BYTCR_RT5651_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86 && I2C && ACPI
 	select SND_SOC_RT5651
-	depends on SND_SST_ATOM_HIFI2_PLATFORM
+	depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
 	select SND_SST_IPC_ACPI
 	help
           This adds support for ASoC machine driver for Intel(R) Baytrail and Baytrail-CR
@@ -108,7 +108,7 @@ config SND_SOC_INTEL_CHT_BSW_RT5672_MACH
         depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && I2C && ACPI
         select SND_SOC_RT5670
-        depends on SND_SST_ATOM_HIFI2_PLATFORM
+        depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
         select SND_SST_IPC_ACPI
         help
           This adds support for ASoC machine driver for Intel(R) Cherrytrail & Braswell
@@ -121,7 +121,7 @@ config SND_SOC_INTEL_CHT_BSW_RT5645_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && I2C && ACPI
 	select SND_SOC_RT5645
-	depends on SND_SST_ATOM_HIFI2_PLATFORM
+	depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
 	select SND_SST_IPC_ACPI
 	help
 	  This adds support for ASoC machine driver for Intel(R) Cherrytrail & Braswell
@@ -134,7 +134,7 @@ config SND_SOC_INTEL_CHT_BSW_MAX98090_TI_MACH
 	depends on X86_INTEL_LPSS && I2C && ACPI
 	select SND_SOC_MAX98090
 	select SND_SOC_TS3A227E
-	depends on SND_SST_ATOM_HIFI2_PLATFORM
+	depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
 	select SND_SST_IPC_ACPI
 	help
 	  This adds support for ASoC machine driver for Intel(R) Cherrytrail & Braswell
@@ -146,7 +146,7 @@ config SND_SOC_INTEL_BYT_CHT_DA7213_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && I2C && ACPI
 	select SND_SOC_DA7213
-	depends on SND_SST_ATOM_HIFI2_PLATFORM
+	depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
 	select SND_SST_IPC_ACPI
 	help
 	  This adds support for ASoC machine driver for Intel(R) Baytrail & CherryTrail
@@ -158,7 +158,7 @@ config SND_SOC_INTEL_BYT_CHT_ES8316_MACH
 	depends on SND_SOC_INTEL_MACH
 	depends on X86_INTEL_LPSS && I2C && ACPI
 	select SND_SOC_ES8316
-	depends on SND_SST_ATOM_HIFI2_PLATFORM
+	depends on SND_SST_ATOM_HIFI2_PLATFORM || SND_SOC_SOF_BAYTRAIL
 	select SND_SST_IPC_ACPI
 	help
 	  This adds support for ASoC machine driver for Intel(R) Baytrail &
