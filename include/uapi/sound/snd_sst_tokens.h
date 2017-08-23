@@ -159,6 +159,11 @@
  *
  * module_id and loadable flags dont have tokens as these values will be
  * read from the DSP FW manifest
+ *
+ * Tokens defined can be used either in the manifest or widget private data.
+ *
+ * SKL_TKN_MM is used as a suffix for all tokens that represent
+ * module data in the manifest.
  */
 enum SKL_TKNS {
 	SKL_TKN_UUID = 1,
