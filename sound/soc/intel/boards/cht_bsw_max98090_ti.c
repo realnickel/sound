@@ -212,11 +212,16 @@ static int cht_codec_init(struct snd_soc_pcm_runtime *runtime)
 	jack_type = SND_JACK_HEADPHONE | SND_JACK_MICROPHONE;
 
 	ret = snd_soc_card_jack_new(runtime->card, "Headset Jack",
-					jack_type, jack, NULL, 0);
+				    jack_type, jack,
+				    hs_jack_pins, ARRAY_SIZE(hs_jack_pins));
 	if (ret) {
 		dev_err(runtime->dev, "Headset Jack creation failed %d\n", ret);
 		return ret;
 	}
+
+
+	if (ctx->ts3a227e_present)
+		snd_soc_jack_notifier_register(jack, &cht_jack_nb);
 
 	ret = snd_soc_jack_add_gpiods(runtime->card->dev->parent, jack,
 				      ARRAY_SIZE(hs_jack_gpios),
@@ -229,25 +234,6 @@ static int cht_codec_init(struct snd_soc_pcm_runtime *runtime)
 		dev_err(runtime->dev,
 			"jack detection gpios not added, error %d\n", ret);
 	}
-
-	/*
-	 * The firmware might enable the clock at
-	 * boot (this information may or may not
-	 * be reflected in the enable clock register).
-	 * To change the rate we must disable the clock
-	 * first to cover these cases. Due to common
-	 * clock framework restrictions that do not allow
-	 * to disable a clock that has not been enabled,
-	 * we need to enable the clock first.
-	 */
-	ret = clk_prepare_enable(ctx->mclk);
-	if (!ret)
-		clk_disable_unprepare(ctx->mclk);
-
-	ret = clk_set_rate(ctx->mclk, CHT_PLAT_CLK_3_HZ);
-
-	if (ret)
-		dev_err(runtime->dev, "unable to set MCLK rate\n");
 
 	/*
 	 * The firmware might enable the clock at
