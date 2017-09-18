@@ -443,6 +443,21 @@ enum sdw_reg_bank {
 };
 
 /**
+ * enum sdw_clk_stop_type: clock stop operations
+ *
+ * @SDW_CLK_PRE_PREPARE: pre clock stop prepare
+ * @SDW_CLK_POST_PREPARE: post clock stop prepare
+ * @SDW_CLK_PRE_DEPREPARE: pre clock stop de-prepare
+ * @SDW_CLK_POST_DEPREPARE: post clock stop de-prepare
+ */
+enum sdw_clk_stop_type {
+	SDW_CLK_PRE_PREPARE = 0,
+	SDW_CLK_POST_PREPARE,
+	SDW_CLK_PRE_DEPREPARE,
+	SDW_CLK_POST_DEPREPARE,
+};
+
+/**
  * struct sdw_bus_conf: Bus configuration
  *
  * @clk_freq: Clock frequency, in Hz
@@ -517,6 +532,8 @@ struct sdw_bus_params {
  * @interrupt_callback: Device interrupt notification (invoked in thread
  * context)
  * @update_status: Update Slave status
+ * @get_clk_stop_mode: Query the clock mode to be entered
+ * @clk_stop: Clock stop callback
  * @bus_config: Update the bus config for Slave
  * @port_prep: Prepare the port with parameters
  */
@@ -526,6 +543,10 @@ struct sdw_slave_ops {
 				  struct sdw_slave_intr_status *status);
 	int (*update_status)(struct sdw_slave *slave,
 			     enum sdw_slave_status status);
+	int (*get_clk_stop_mode)(struct sdw_slave *slave);
+	int (*clk_stop)(struct sdw_slave *slave,
+			enum sdw_clk_stop_mode mode,
+			enum sdw_clk_stop_type type);
 	int (*bus_config)(struct sdw_slave *slave,
 			  struct sdw_bus_params *params);
 	int (*port_prep)(struct sdw_slave *slave,
@@ -544,6 +565,7 @@ struct sdw_slave_ops {
  * @debugfs: Slave debugfs
  * @node: node for bus list
  * @port_ready: Port ready completion flag for each Slave port
+ * @curr_clk_stop_mode: Current clock stop mode
  * @dev_num: Current Device Number, values can be 0 or dev_num_sticky
  * @dev_num_sticky: one-time static Device Number assigned by Bus
  * @probed: boolean tracking driver state
@@ -563,6 +585,7 @@ struct sdw_slave {
 #endif
 	struct list_head node;
 	struct completion *port_ready;
+	enum sdw_clk_stop_mode curr_clk_stop_mode;
 	u16 dev_num;
 	u16 dev_num_sticky;
 	bool probed;
@@ -918,6 +941,10 @@ int sdw_prepare_stream(struct sdw_stream_runtime *stream);
 int sdw_enable_stream(struct sdw_stream_runtime *stream);
 int sdw_disable_stream(struct sdw_stream_runtime *stream);
 int sdw_deprepare_stream(struct sdw_stream_runtime *stream);
+
+int sdw_bus_prep_clk_stop(struct sdw_bus *bus);
+int sdw_bus_clk_stop(struct sdw_bus *bus);
+int sdw_bus_exit_clk_stop(struct sdw_bus *bus);
 
 /* messaging and data APIs */
 
