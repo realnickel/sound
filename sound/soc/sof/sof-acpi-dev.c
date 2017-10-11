@@ -152,7 +152,7 @@ static int is_byt_cr(struct device *dev)
 }
 
 static struct sof_dev_desc sof_acpi_cherrytrail_desc = {
-	.machines = snd_soc_acpi_intel_baytrail_machines,
+	.machines = snd_soc_acpi_intel_cherrytrail_machines,
 	.resindex_lpe_base = 0,
 	.resindex_pcicfg_base = 1,
 	.resindex_imr_base = 2,
@@ -263,7 +263,7 @@ static int sof_acpi_probe(struct platform_device *pdev)
 		new_mach_data = mfld_new_mach_data;
 	}
 	else if (desc == &sof_acpi_cherrytrail_desc) {
-		ops = &snd_sof_byt_ops;
+		ops = &snd_sof_cht_ops;
 		new_mach_data = mfld_new_mach_data;
 	}
 #endif
