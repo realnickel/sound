@@ -33,11 +33,11 @@
 #include <sound/soc-acpi.h>
 #include "../../codecs/rt5651.h"
 #include "../atom/sst-atom-controls.h"
+#include "../common/sst-acpi.h"
 
 enum {
 	BYT_RT5651_DMIC_MAP,
 	BYT_RT5651_IN1_MAP,
-	BYT_RT5651_IN2_MAP,
 };
 
 #define BYT_RT5651_MAP(quirk)	((quirk) & GENMASK(7, 0))
@@ -47,7 +47,6 @@ enum {
 
 struct byt_rt5651_private {
 	struct clk *mclk;
-	struct snd_soc_jack jack;
 };
 
 static unsigned long byt_rt5651_quirk = BYT_RT5651_DMIC_MAP |
@@ -60,8 +59,6 @@ static void log_quirks(struct device *dev)
 		dev_info(dev, "quirk DMIC_MAP enabled");
 	if (BYT_RT5651_MAP(byt_rt5651_quirk) == BYT_RT5651_IN1_MAP)
 		dev_info(dev, "quirk IN1_MAP enabled");
-	if (BYT_RT5651_MAP(byt_rt5651_quirk) == BYT_RT5651_IN2_MAP)
-		dev_info(dev, "quirk IN2_MAP enabled");
 	if (byt_rt5651_quirk & BYT_RT5651_DMIC_EN)
 		dev_info(dev, "quirk DMIC enabled");
 	if (byt_rt5651_quirk & BYT_RT5651_MCLK_EN)
@@ -72,6 +69,18 @@ static void log_quirks(struct device *dev)
 
 #define BYT_CODEC_DAI1	"rt5651-aif1"
 
+static inline struct snd_soc_dai *byt_get_codec_dai(struct snd_soc_card *card)
+{
+	struct snd_soc_pcm_runtime *rtd;
+
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+		if (!strncmp(rtd->codec_dai->name, BYT_CODEC_DAI1,
+			     strlen(BYT_CODEC_DAI1)))
+			return rtd->codec_dai;
+	}
+	return NULL;
+}
+
 static int platform_clock_control(struct snd_soc_dapm_widget *w,
 				  struct snd_kcontrol *k, int  event)
 {
@@ -81,7 +90,7 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 	struct byt_rt5651_private *priv = snd_soc_card_get_drvdata(card);
 	int ret;
 
-	codec_dai = snd_soc_card_get_codec_dai(card, BYT_CODEC_DAI1);
+	codec_dai = byt_get_codec_dai(card);
 	if (!codec_dai) {
 		dev_err(card->dev,
 			"Codec dai not found; Unable to set platform clock\n");
@@ -164,12 +173,6 @@ static const struct snd_soc_dapm_route byt_rt5651_intmic_in1_map[] = {
 	{"IN1P", NULL, "Internal Mic"},
 };
 
-static const struct snd_soc_dapm_route byt_rt5651_intmic_in2_map[] = {
-	{"Internal Mic", NULL, "micbias1"},
-	{"IN1P", NULL, "Headset Mic"},
-	{"IN2P", NULL, "Internal Mic"},
-};
-
 static const struct snd_kcontrol_new byt_rt5651_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Headphone"),
 	SOC_DAPM_PIN_SWITCH("Headset Mic"),
@@ -249,21 +252,12 @@ static const struct dmi_system_id byt_rt5651_quirk_table[] = {
 		.driver_data = (void *)(BYT_RT5651_DMIC_MAP |
 					BYT_RT5651_DMIC_EN),
 	},
-	{
-		.callback = byt_rt5651_quirk_cb,
-		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "KIANO"),
-			DMI_MATCH(DMI_PRODUCT_NAME, "KIANO SlimNote 14.2"),
-		},
-		.driver_data = (void *)(BYT_RT5651_IN2_MAP),
-	},
 	{}
 };
 
 static int byt_rt5651_init(struct snd_soc_pcm_runtime *runtime)
 {
 	struct snd_soc_card *card = runtime->card;
-	struct snd_soc_codec *codec = runtime->codec;
 	struct byt_rt5651_private *priv = snd_soc_card_get_drvdata(card);
 	const struct snd_soc_dapm_route *custom_map;
 	int num_routes;
@@ -316,16 +310,6 @@ static int byt_rt5651_init(struct snd_soc_pcm_runtime *runtime)
 		if (ret)
 			dev_err(card->dev, "unable to set MCLK rate\n");
 	}
-
-	ret = snd_soc_card_jack_new(runtime->card, "Headset",
-				    SND_JACK_HEADSET, &priv->jack,
-				    bytcr_jack_pins, ARRAY_SIZE(bytcr_jack_pins));
-	if (ret) {
-		dev_err(runtime->dev, "Headset jack creation failed %d\n", ret);
-		return ret;
-	}
-
-	rt5651_set_jack_detect(codec, &priv->jack);
 
 	return ret;
 }
@@ -469,10 +453,10 @@ static char byt_rt5651_codec_name[16]; /* i2c-<HID>:00 with HID being 8 chars */
 static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 {
 	struct byt_rt5651_private *priv;
-	struct snd_soc_acpi_mach *mach;
+	struct sst_acpi_mach *mach;
 	const char *i2c_name = NULL;
 	int ret_val = 0;
-	int dai_index = 0;
+	int dai_index;
 	int i;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_ATOMIC);
@@ -486,6 +470,7 @@ static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 	snd_soc_card_set_drvdata(&byt_rt5651_card, priv);
 
 	/* fix index of codec dai */
+	dai_index = MERR_DPCM_COMPR + 1;
 	for (i = 0; i < ARRAY_SIZE(byt_rt5651_dais); i++) {
 		if (!strcmp(byt_rt5651_dais[i].codec_name, "i2c-10EC5651:00")) {
 			dai_index = i;
@@ -494,7 +479,7 @@ static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 	}
 
 	/* fixup codec name based on HID */
-	i2c_name = snd_soc_acpi_find_name_from_hid(mach->id);
+	i2c_name = sst_acpi_find_name_from_hid(mach->id);
 	if (i2c_name) {
 		snprintf(byt_rt5651_codec_name, sizeof(byt_rt5651_codec_name),
 			"%s%s", "i2c-", i2c_name);
