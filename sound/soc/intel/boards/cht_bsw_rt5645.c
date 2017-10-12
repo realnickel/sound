@@ -523,7 +523,7 @@ struct acpi_chan_package {   /* ACPICA seems to require 64 bit integers */
 static int snd_cht_mc_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = snd_soc_cards[0].soc_card;
-	struct sst_acpi_mach *mach;
+	struct snd_soc_acpi_mach *mach;
 	struct cht_mc_private *drv;
 	const char *i2c_name = NULL;
 	bool found = false;
@@ -566,7 +566,7 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 		}
 
 	/* fixup codec name based on HID */
-	i2c_name = sst_acpi_find_name_from_hid(mach->id);
+	i2c_name = snd_soc_acpi_find_name_from_hid(mach->id);
 	if (i2c_name) {
 		snprintf(cht_rt5645_codec_name, sizeof(cht_rt5645_codec_name),
 			"%s%s", "i2c-", i2c_name);

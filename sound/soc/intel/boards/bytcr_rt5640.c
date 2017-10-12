@@ -737,7 +737,7 @@ struct acpi_chan_package {   /* ACPICA seems to require 64 bit integers */
 static int snd_byt_rt5640_mc_probe(struct platform_device *pdev)
 {
 	struct byt_rt5640_private *priv;
-	struct sst_acpi_mach *mach;
+	struct snd_soc_acpi_mach *mach;
 	const char *i2c_name = NULL;
 	int ret_val = 0;
 	int dai_index = 0;
@@ -762,7 +762,7 @@ static int snd_byt_rt5640_mc_probe(struct platform_device *pdev)
 	}
 
 	/* fixup codec name based on HID */
-	i2c_name = sst_acpi_find_name_from_hid(mach->id);
+	i2c_name = snd_soc_acpi_find_name_from_hid(mach->id);
 	if (i2c_name) {
 		snprintf(byt_rt5640_codec_name, sizeof(byt_rt5640_codec_name),
 			"%s%s", "i2c-", i2c_name);
