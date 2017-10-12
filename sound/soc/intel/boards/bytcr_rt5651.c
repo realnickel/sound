@@ -444,7 +444,7 @@ static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 	struct sst_acpi_mach *mach;
 	const char *i2c_name = NULL;
 	int ret_val = 0;
-	int dai_index;
+	int dai_index = 0;
 	int i;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_ATOMIC);
@@ -458,7 +458,6 @@ static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 	snd_soc_card_set_drvdata(&byt_rt5651_card, priv);
 
 	/* fix index of codec dai */
-	dai_index = MERR_DPCM_COMPR + 1;
 	for (i = 0; i < ARRAY_SIZE(byt_rt5651_dais); i++) {
 		if (!strcmp(byt_rt5651_dais[i].codec_name, "i2c-10EC5651:00")) {
 			dai_index = i;

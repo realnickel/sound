@@ -740,7 +740,7 @@ static int snd_byt_rt5640_mc_probe(struct platform_device *pdev)
 	struct sst_acpi_mach *mach;
 	const char *i2c_name = NULL;
 	int ret_val = 0;
-	int dai_index;
+	int dai_index = 0;
 	int i;
 
 	is_bytcr = false;
