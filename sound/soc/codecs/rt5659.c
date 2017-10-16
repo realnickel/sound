@@ -3746,6 +3746,7 @@ static const struct snd_soc_codec_driver soc_codec_dev_rt5659 = {
 		.num_dapm_routes	= ARRAY_SIZE(rt5659_dapm_routes),
 	},
 	.set_sysclk = rt5659_set_codec_sysclk,
+	.set_pll = rt5659_set_codec_pll,
 };
 
 
