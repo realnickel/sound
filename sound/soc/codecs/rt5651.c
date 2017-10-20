@@ -1871,6 +1871,93 @@ int rt5651_set_jack_detect(struct snd_soc_codec *codec,
 }
 EXPORT_SYMBOL_GPL(rt5651_set_jack_detect);
 
+static irqreturn_t rt5651_irq(int irq, void *data)
+{
+	struct rt5651_priv *rt5651 = data;
+
+	queue_delayed_work(system_power_efficient_wq,
+			   &rt5651->jack_detect_work, msecs_to_jiffies(250));
+
+	return IRQ_HANDLED;
+}
+
+static int rt5651_jack_detect(struct snd_soc_codec *codec, int jack_insert)
+{
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
+	int jack_type;
+
+	if (jack_insert) {
+		snd_soc_dapm_force_enable_pin(dapm, "LDO");
+		snd_soc_dapm_sync(dapm);
+
+		snd_soc_update_bits(codec, RT5651_MICBIAS,
+				    RT5651_MIC1_OVCD_MASK |
+				    RT5651_MIC1_OVTH_MASK |
+				    RT5651_PWR_CLK12M_MASK |
+				    RT5651_PWR_MB_MASK,
+				    RT5651_MIC1_OVCD_EN |
+				    RT5651_MIC1_OVTH_600UA |
+				    RT5651_PWR_MB_PU |
+				    RT5651_PWR_CLK12M_PU);
+		msleep(100);
+		if (snd_soc_read(codec, RT5651_IRQ_CTRL2) & RT5651_MB1_OC_CLR)
+			jack_type = SND_JACK_HEADPHONE;
+		else
+			jack_type = SND_JACK_HEADSET;
+		snd_soc_update_bits(codec, RT5651_IRQ_CTRL2,
+				    RT5651_MB1_OC_CLR, 0);
+	} else { /* jack out */
+		jack_type = 0;
+
+		snd_soc_update_bits(codec, RT5651_MICBIAS,
+				    RT5651_MIC1_OVCD_MASK,
+				    RT5651_MIC1_OVCD_DIS);
+	}
+
+	return jack_type;
+}
+
+static void rt5651_jack_detect_work(struct work_struct *work)
+{
+	struct rt5651_priv *rt5651 =
+		container_of(work, struct rt5651_priv, jack_detect_work.work);
+
+	int report, val = 0;
+
+	if (!rt5651->codec)
+		return;
+
+	switch (rt5651->pdata.jd_src) {
+	case RT5651_JD1_1:
+		val = snd_soc_read(rt5651->codec, RT5651_INT_IRQ_ST) & 0x1000;
+		break;
+	case RT5651_JD1_2:
+		val = snd_soc_read(rt5651->codec, RT5651_INT_IRQ_ST) & 0x2000;
+		break;
+	case RT5651_JD2:
+		val = snd_soc_read(rt5651->codec, RT5651_INT_IRQ_ST) & 0x4000;
+		break;
+	default:
+		break;
+	}
+
+	report = rt5651_jack_detect(rt5651->codec, !val);
+
+	snd_soc_jack_report(rt5651->hp_jack, report, SND_JACK_HEADSET);
+}
+
+int rt5651_set_jack_detect(struct snd_soc_codec *codec,
+			   struct snd_soc_jack *hp_jack)
+{
+	struct rt5651_priv *rt5651 = snd_soc_codec_get_drvdata(codec);
+
+	rt5651->hp_jack = hp_jack;
+	rt5651_irq(0, rt5651);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(rt5651_set_jack_detect);
+
 static int rt5651_i2c_probe(struct i2c_client *i2c,
 		    const struct i2c_device_id *id)
 {
