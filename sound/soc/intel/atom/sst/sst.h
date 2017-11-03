@@ -365,6 +365,7 @@ struct intel_sst_drv {
 	unsigned int		dev_id;
 	void __iomem		*ddr;
 	void __iomem		*shim;
+	void __iomem		*ssp2;
 	void __iomem		*mailbox;
 	void __iomem		*iram;
 	void __iomem		*dram;

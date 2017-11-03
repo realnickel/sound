@@ -193,7 +193,7 @@ static int sst_platform_get_resources(struct intel_sst_drv *ctx)
 	}
 
 	ctx->shim_phy_add = rsrc->start + ctx->pdata->res_info->shim_offset;
-	dev_info(ctx->dev, "SHIM base: %#x", ctx->shim_phy_add);
+	dev_info(ctx->dev, "SHIM base: %#x, size %#x ", ctx->shim_phy_add,ctx->pdata->res_info->shim_size);
 	ctx->shim = devm_ioremap_nocache(ctx->dev, ctx->shim_phy_add,
 					ctx->pdata->res_info->shim_size);
 	if (!ctx->shim) {
@@ -203,6 +203,14 @@ static int sst_platform_get_resources(struct intel_sst_drv *ctx)
 
 	/* reassign physical address to LPE viewpoint address */
 	ctx->shim_phy_add = ctx->pdata->res_info->shim_phy_addr;
+
+	/* Get SSP2 addr */
+	dev_info(ctx->dev, "SSP2 base: %#x\n", (unsigned int)(rsrc->start + 0xA2000));
+	ctx->ssp2 = devm_ioremap_nocache(ctx->dev, rsrc->start + 0xA2000, 0x100);
+	if (!ctx->ssp2) {
+		dev_err(ctx->dev, "unable to map SSP2\n");
+		return -EIO;
+	}
 
 	/* Get mailbox addr */
 	ctx->mailbox_add = rsrc->start + ctx->pdata->res_info->mbox_offset;
@@ -285,6 +293,8 @@ static int is_byt_cr(struct device *dev, bool *bytcr)
 	return status;
 }
 
+extern struct intel_sst_drv *sst_ctx;
+
 
 static int sst_acpi_probe(struct platform_device *pdev)
 {
@@ -328,6 +338,8 @@ static int sst_acpi_probe(struct platform_device *pdev)
 	ret = sst_alloc_drv_context(&ctx, dev, dev_id);
 	if (ret < 0)
 		return ret;
+
+	sst_ctx = ctx;
 
 	ret = is_byt_cr(dev, &bytcr);
 	if (!((ret < 0) || (bytcr == false))) {

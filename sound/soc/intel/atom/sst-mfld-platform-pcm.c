@@ -30,9 +30,70 @@
 #include <asm/platform_sst_audio.h>
 #include "sst-mfld-platform.h"
 #include "sst-atom-controls.h"
+#include "sst/sst.h"
 
 struct sst_device *sst;
 static DEFINE_MUTEX(sst_lock);
+
+struct intel_sst_drv *sst_ctx;
+EXPORT_SYMBOL_GPL(sst_ctx);
+
+static void dump_ssp_registers(void)
+{
+#if 1
+	  uint8_t  __iomem		*ssp2;
+	  uint32_t val;
+
+	  ssp2 = sst_ctx->ssp2;
+
+#define SSCR0		0x00
+#define SSCR1		0x04
+#define SSSR		0x08
+#define SSITR		0x0C
+#define SSDR		0x10
+#define SSTO		0x28
+#define SSPSP		0x2C
+#define SSTSA		0x30
+#define SSRSA		0x34
+#define SSTSS		0x38
+#define SSCR2		0x40
+#define SFIFOTT		0x6C
+#define SSCR3		0x70
+#define SSCR4		0x74
+#define SSCR5		0x78
+
+	  val = readl(ssp2  + SSCR0);
+	  printk(KERN_ERR "sscr0 \t %08X\n", val);
+	  val = readl(ssp2  + SSCR1);
+	  printk(KERN_ERR "sscr1 \t %08X\n", val);
+	  val = readl(ssp2  + SSSR);
+	  printk(KERN_ERR "sssr \t %08X\n", val);
+	  val = readl(ssp2  + SSITR);
+	  printk(KERN_ERR "ssitr \t %08X\n", val);
+	  val = readl(ssp2  + SSDR);
+	  printk(KERN_ERR "ssdr \t %08X\n", val);
+	  val = readl(ssp2  + SSTO);
+	  printk(KERN_ERR "ssto \t %08X\n", val);
+	  val = readl(ssp2  + SSPSP);
+	  printk(KERN_ERR "sspsp \t %08X\n", val);
+	  val = readl(ssp2  + SSTSA);
+	  printk(KERN_ERR "sstsa \t %08X\n", val);
+	  val = readl(ssp2  + SSRSA);
+	  printk(KERN_ERR "ssrsa \t %08X\n", val);
+	  val = readl(ssp2  + SSTSS);
+	  printk(KERN_ERR "sstss \t %08X\n", val);
+	  val = readl(ssp2  + SSCR2);
+	  printk(KERN_ERR "sscr2 \t %08X\n", val);
+	  val = readl(ssp2  + SFIFOTT);
+	  printk(KERN_ERR "sfifott \t %08X\n", val);
+	  val = readl(ssp2  + SSCR3);
+	  printk(KERN_ERR "sscr3 \t %08X\n", val);
+	  val = readl(ssp2  + SSCR4);
+	  printk(KERN_ERR "sscr4 \t %08X\n", val);
+	  val = readl(ssp2  + SSCR5);
+	  printk(KERN_ERR "sscr5 \t %08X\n", val);
+#endif
+}
 
 int sst_register_dsp(struct sst_device *dev)
 {
@@ -616,23 +677,27 @@ static int sst_platform_pcm_trigger(struct snd_pcm_substream *substream,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		dev_dbg(rtd->dev, "sst: Trigger Start\n");
+		printk(KERN_ERR "sst: Trigger Start\n");
 		status = SST_PLATFORM_RUNNING;
 		stream->stream_info.arg = substream;
 		ret_val = stream->ops->stream_start(sst->dev, str_id);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		dev_dbg(rtd->dev, "sst: in stop\n");
+		printk(KERN_ERR "sst: Trigger Stop\n");
 		status = SST_PLATFORM_DROPPED;
 		ret_val = stream->ops->stream_drop(sst->dev, str_id);
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
+		printk(KERN_ERR "sst: Trigger Pause\n");
 		dev_dbg(rtd->dev, "sst: in pause\n");
 		status = SST_PLATFORM_PAUSED;
 		ret_val = stream->ops->stream_pause(sst->dev, str_id);
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 	case SNDRV_PCM_TRIGGER_RESUME:
+		printk(KERN_ERR "sst: Trigger Release\n");
 		dev_dbg(rtd->dev, "sst: in pause release\n");
 		status = SST_PLATFORM_RUNNING;
 		ret_val = stream->ops->stream_pause_release(sst->dev, str_id);
@@ -643,6 +708,8 @@ static int sst_platform_pcm_trigger(struct snd_pcm_substream *substream,
 
 	if (!ret_val)
 		sst_set_stream_status(stream, status);
+
+	dump_ssp_registers();
 
 	return ret_val;
 }
