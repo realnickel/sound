@@ -2054,6 +2054,8 @@ static int skl_tplg_fill_pin(struct device *dev,
 			struct skl_module_pin *m_pin,
 			int pin_index)
 {
+	int ret;
+
 	switch (tkn_elem->token) {
 	case SKL_TKN_U32_PIN_MOD_ID:
 		m_pin[pin_index].id.module_id = tkn_elem->value;
@@ -2061,6 +2063,14 @@ static int skl_tplg_fill_pin(struct device *dev,
 
 	case SKL_TKN_U32_PIN_INST_ID:
 		m_pin[pin_index].id.instance_id = tkn_elem->value;
+		break;
+
+	case SKL_TKN_UUID:
+		ret = skl_tplg_get_uuid(dev, m_pin[pin_index].id.mod_uuid.b,
+			(struct snd_soc_tplg_vendor_uuid_elem *)tkn_elem);
+		if (ret < 0)
+			return ret;
+
 		break;
 
 	default:
@@ -2566,8 +2576,15 @@ static int skl_tplg_get_tokens(struct device *dev,
 			continue;
 
 		case SND_SOC_TPLG_TUPLE_TYPE_UUID:
-			ret = skl_tplg_get_uuid(dev, mconfig->guid,
-					array->uuid);
+			if (is_module_guid) {
+				ret = skl_tplg_get_uuid(dev, mconfig->guid,
+							array->uuid);
+				is_module_guid = false;
+			} else {
+				ret = skl_tplg_get_token(dev, array->value, skl,
+							 mconfig);
+			}
+
 			if (ret < 0)
 				return ret;
 
