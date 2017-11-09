@@ -408,6 +408,10 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
 	if (ret)
 		goto exit_probe;
 
+	dev_info(&pdev->dev,
+		 "I2C_DESIGNWARE %d Controller at 0x%08lx (irq %d) (baudrate %d)",
+		 pdev->id_auto, (unsigned long) mem->start, irq, dev->clk_freq);
+
 	return ret;
 
 exit_probe:
