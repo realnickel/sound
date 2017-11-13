@@ -119,6 +119,8 @@ static const struct snd_soc_dapm_widget cht_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	SND_SOC_DAPM_LINE("Line Out", NULL),
+	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_SUPPLY("Platform Clock", SND_SOC_NOPM, 0, 0,
 			platform_clock_control, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 };
@@ -128,14 +130,20 @@ static const struct snd_soc_dapm_route cht_rt5645_audio_map[] = {
 	{"IN1N", NULL, "Headset Mic"},
 	{"DMIC L1", NULL, "Int Mic"},
 	{"DMIC R1", NULL, "Int Mic"},
+	{"IN2P", NULL, "Line In"},
+	{"IN2N", NULL, "Line In"},
 	{"Headphone", NULL, "HPOL"},
 	{"Headphone", NULL, "HPOR"},
 	{"Ext Spk", NULL, "SPOL"},
 	{"Ext Spk", NULL, "SPOR"},
+	{"Line Out", NULL, "LOUTL"},
+	{"Line Out", NULL, "LOUTR"},
 	{"Headphone", NULL, "Platform Clock"},
 	{"Headset Mic", NULL, "Platform Clock"},
 	{"Int Mic", NULL, "Platform Clock"},
+	{"Line In", NULL, "Platform Clock"},
 	{"Ext Spk", NULL, "Platform Clock"},
+	{"Line Out", NULL, "Platform Clock"},
 };
 
 static const struct snd_soc_dapm_route cht_rt5650_audio_map[] = {
@@ -143,14 +151,20 @@ static const struct snd_soc_dapm_route cht_rt5650_audio_map[] = {
 	{"IN1N", NULL, "Headset Mic"},
 	{"DMIC L2", NULL, "Int Mic"},
 	{"DMIC R2", NULL, "Int Mic"},
+	{"IN2P", NULL, "Line In"},
+	{"IN2N", NULL, "Line In"},
 	{"Headphone", NULL, "HPOL"},
 	{"Headphone", NULL, "HPOR"},
 	{"Ext Spk", NULL, "SPOL"},
 	{"Ext Spk", NULL, "SPOR"},
+	{"Line Out", NULL, "LOUTL"},
+	{"Line Out", NULL, "LOUTR"},
 	{"Headphone", NULL, "Platform Clock"},
 	{"Headset Mic", NULL, "Platform Clock"},
 	{"Int Mic", NULL, "Platform Clock"},
+	{"Line In", NULL, "Platform Clock"},
 	{"Ext Spk", NULL, "Platform Clock"},
+	{"Line Out", NULL, "Platform Clock"},
 };
 
 static const struct snd_soc_dapm_route cht_rt5645_ssp2_aif1_map[] = {
@@ -189,7 +203,9 @@ static const struct snd_kcontrol_new cht_mc_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Headphone"),
 	SOC_DAPM_PIN_SWITCH("Headset Mic"),
 	SOC_DAPM_PIN_SWITCH("Int Mic"),
+	SOC_DAPM_PIN_SWITCH("Line In"),
 	SOC_DAPM_PIN_SWITCH("Ext Spk"),
+	SOC_DAPM_PIN_SWITCH("Line Out"),
 };
 
 static struct snd_soc_jack_pin cht_bsw_jack_pins[] = {
