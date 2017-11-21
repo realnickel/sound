@@ -37,6 +37,7 @@
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <linux/input.h>
+#include <linux/soundwire/sdw.h>
 
 struct cnl_rt700_mc_private {
 	u8		pmic_id;
@@ -44,12 +45,26 @@ struct cnl_rt700_mc_private {
 	int bt_mode;
 };
 
+struct rt700_sdw_cdns_dma_data {
+	int stream_tag;
+	int nr_ports;
+	struct sdw_bus *bus;
+	enum sdw_stream_type stream_type;
+	int link_id;
+	unsigned int num_slots;
+	unsigned int slot;
+	struct sdw_cdns_port **port;
+};
+
 #ifndef CONFIG_SND_SOC_SDW_AGGM1M2
 static const struct snd_soc_dapm_widget cnl_rt700_widgets[] = {
-	SND_SOC_DAPM_HP("Headphones", NULL),
-	SND_SOC_DAPM_MIC("AMIC", NULL),
+	SND_SOC_DAPM_HP("Left Headphones", NULL),
+	SND_SOC_DAPM_HP("Right Headphones", NULL),
+	SND_SOC_DAPM_MIC("Left AMIC", NULL),
+	SND_SOC_DAPM_MIC("Right AMIC", NULL),
 	SND_SOC_DAPM_MIC("SoC DMIC", NULL),
-	SND_SOC_DAPM_SPK("Speaker", NULL),
+	SND_SOC_DAPM_SPK("Left Speaker", NULL),
+	SND_SOC_DAPM_SPK("Right Speaker", NULL),
 };
 #else
 static const struct snd_soc_dapm_widget cnl_rt700_widgets[] = {
@@ -64,16 +79,23 @@ static const struct snd_soc_dapm_widget cnl_rt700_widgets[] = {
 #ifndef CONFIG_SND_SOC_SDW_AGGM1M2
 static const struct snd_soc_dapm_route cnl_rt700_map[] = {
 	/*Headphones*/
-	{ "Headphones", NULL, "HP" },
-	{ "Speaker", NULL, "SPK" },
+	{ "Left Headphones", NULL, "Left HP" },
+	{ "Right Headphones", NULL, "Right HP" },
+	{ "Left Speaker", NULL, "Left SPK" },
+	{ "Right Speaker", NULL, "Right SPK" },
 	{ "I2NP", NULL, "AMIC" },
 
 	/* SWM map link the SWM outs to codec AIF */
-	{ "DP1 Playback", NULL, "SDW1 Tx0"},
+	{ "Left DP1 Playback", NULL, "SDW1 Tx0"},
 	{ "SDW1 Tx0", NULL, "codec0_out"},
 
+	{ "Right DP1 Playback", NULL, "SDW2 Tx0"},
+	{ "SDW2 Tx0", NULL, "codec0_out"},
+
 	{ "codec0_in", NULL, "SDW1 Rx0" },
-	{ "SDW1 Rx0", NULL, "DP2 Capture" },
+	{ "SDW1 Rx0", NULL, "DP1 Capture" },
+	{ "codec0_in", NULL, "SDW2 Rx0" },
+	{ "SDW2 Rx0", NULL, "DP2 Capture" },
 
 };
 #else
@@ -85,15 +107,15 @@ static const struct snd_soc_dapm_route cnl_rt700_map[] = {
 	{ "MIC2_2", NULL, "AMIC_2" },
 
 	/* SWM map link the SWM outs to codec AIF */
-	{ "DP1 Playback", NULL, "SDW Tx10"},
+	{ "Left DP1 Playback", NULL, "SDW Tx10"},
 	{ "SDW Tx10", NULL, "sdw_codec0_out"},
-	{ "DP1 Playback2", NULL, "SDW2 Tx"},
+	{ "Right DP1 Playback2", NULL, "SDW2 Tx"},
 	{ "SDW2 Tx", NULL, "sdw_codec0_out"},
 
 	{ "sdw_codec0_in", NULL, "SDW Rx10" },
-	{ "SDW Rx10", NULL, "DP2 Capture" },
+	{ "SDW Rx10", NULL, "Left DP2 Capture" },
 	{"sdw_codec0_in", NULL, "SDW2 Rx"},
-	{"SDW2 Rx", NULL, "DP2 Capture2"},
+	{"SDW2 Rx", NULL, "Right DP2 Capture2"},
 
 	{"DMic", NULL, "SoC DMIC"},
 	{"DMIC01 Rx", NULL, "Capture"},
@@ -192,6 +214,131 @@ static const char cname[] = "sdw-slave0-10:02:5d:07:01:00";
 static const char pname[] = "0000:00:1f.3";
 static const char cname[] = "sdw:25d:700:0:0:1";
 #endif
+
+static struct snd_soc_dai_link_component sdw_multi_cpu_comp[] = {
+	{ /* Left */
+		.name = "int-sdw.1",
+		.dai_name = "SDW1 Pin0",
+	},
+	{ /* Right */
+		.name = "int-sdw.2",
+		.dai_name = "SDW2 Pin0",
+	},
+};
+
+static struct snd_soc_codec_conf rt700_codec_conf[] = {
+	{
+		.dev_name = "sdw:1:25d:700:0:0",
+		.name_prefix = "Left",
+	},
+	{
+		.dev_name = "sdw:2:25d:701:0:0",
+		.name_prefix = "Right",
+	},
+};
+
+static struct snd_soc_dai_link_component sdw_multi_codec_comp[] = {
+	{ /* Left */
+		.name = "sdw:1:25d:700:0:0",
+		.dai_name = "rt700-aif1",
+	},
+	{
+		.name =  "sdw:2:25d:701:0:0",
+		.dai_name = "rt700-aif1",
+	},
+};
+
+static int cnl_rt700_startup(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *dai;
+	struct rt700_sdw_cdns_dma_data *dma;
+	int ret, i, stream_tag;
+
+	stream_tag = sdw_alloc_stream_tag();
+	if (stream_tag < 0) {
+		dev_err(rtd->dev, "can't set channel params\n");
+		return ret;
+	}
+
+	for(i=0; i < rtd->num_codecs;i++) {
+		dai = rtd->codec_dais[i];
+
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			ret = snd_soc_dai_set_tdm_slot(dai,
+					stream_tag, 0, 0, 0);
+		else
+			ret = snd_soc_dai_set_tdm_slot(dai,
+					0, stream_tag, 0, 0);
+
+		if (ret < 0) {
+			dev_err(rtd->dev, "can't set channel params\n");
+			return ret;
+		}
+	}
+
+	for (i = 0; i < rtd->num_cpu_dai; i++) {
+		dai = rtd->cpu_dais[i];
+
+		dma = snd_soc_dai_get_dma_data(dai, substream);
+
+		dma->stream_tag = stream_tag;
+
+	}
+
+	return ret;
+}
+static int cnl_rt700_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *dai;
+	int ret, i;
+	int channel_map[][1] = {{1}, {2}};
+
+	pr_err("Shreyas %s %d",__func__, rtd->num_cpu_dai);
+	for(i=0; i < rtd->num_codecs;i++) {
+		dai = rtd->codec_dais[i];
+		ret = 0;
+
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			ret = snd_soc_dai_set_channel_map(dai,
+				1, &channel_map[0][i], 0, NULL);
+		else
+			ret = snd_soc_dai_set_channel_map(dai,
+				0, NULL, 1, &channel_map[0][i]);
+
+		if (ret < 0) {
+			dev_err(rtd->dev, "can't set channel params\n");
+			return ret;
+		}
+	}
+
+	for (i = 0; i < rtd->num_cpu_dai; i++) {
+		dai = rtd->cpu_dais[i];
+		ret = 0;
+
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			ret = snd_soc_dai_set_channel_map(dai,
+				1, &channel_map[0][i], 0, NULL);
+		else
+			ret = snd_soc_dai_set_channel_map(dai,
+				0, NULL, 1, &channel_map[0][i]);
+
+		if (ret < 0) {
+			dev_err(rtd->dev, "can't set channel params\n");
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
+static const struct snd_soc_ops cnl_rt700_ops = {
+	.startup = cnl_rt700_startup,
+	.hw_params = cnl_rt700_hw_params,
+};
+
 struct snd_soc_dai_link cnl_rt700_msic_dailink[] = {
 	{
 		.name = "CNL Audio Port",
@@ -207,13 +354,15 @@ struct snd_soc_dai_link cnl_rt700_msic_dailink[] = {
 	},
 	{
 		.name = "SDW0-Codec",
-		.cpu_dai_name = "SDW1 Pin0",
+		.cpu_dai = sdw_multi_cpu_comp,
+		.num_cpu_dai = ARRAY_SIZE(sdw_multi_cpu_comp),
 		.platform_name = "0000:00:1f.3",
-		.codec_name = "sdw:1:25d:700:0:0",
-		.codec_dai_name = "rt700-aif1",
+		.codecs = sdw_multi_codec_comp,
+		.num_codecs = ARRAY_SIZE(sdw_multi_codec_comp),
 		.be_hw_params_fixup = cnl_rt700_codec_fixup,
 		.ignore_suspend = 1,
 		.no_pcm = 1,
+		.ops = &cnl_rt700_ops,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
 	},
@@ -238,6 +387,8 @@ static struct snd_soc_card snd_soc_card_cnl_rt700 = {
 	.dapm_routes = cnl_rt700_map,
 	.num_dapm_routes = ARRAY_SIZE(cnl_rt700_map),
 	.add_dai_link = cnl_add_dai_link,
+	.codec_conf = rt700_codec_conf,
+	.num_configs = ARRAY_SIZE(rt700_codec_conf),
 	.owner = THIS_MODULE,
 };
 
