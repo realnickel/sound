@@ -548,7 +548,11 @@ static u32 skl_get_node_id(struct skl_sst *ctx,
 			(SKL_CONN_SOURCE == mconfig->hw_conn_type) ?
 			SKL_DMA_SDW_LINK_OUTPUT_CLASS :
 			SKL_DMA_SDW_LINK_INPUT_CLASS;
-		node_id.node.vindex = mconfig->sdw_stream_num;
+		if (mconfig->sdw_agg.num_masters > 1)
+			node_id.node.vindex = 0x50;
+		else
+
+			node_id.node.vindex = mconfig->sdw_stream_num;
 		break;
 
 	default:

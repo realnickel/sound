@@ -1188,6 +1188,7 @@ int cdns_set_sdw_stream(struct snd_soc_dai *dai,
 	else
 		dai->capture_dma_data = dma;
 
+	pr_err("Shreyas ste dma data");
 	return 0;
 
 }

@@ -109,6 +109,8 @@ struct sdw_cdns_dma_data {
 	struct sdw_bus *bus;
 	enum sdw_stream_type stream_type;
 	int link_id;
+	unsigned int num_slots;
+	unsigned int slot;
 };
 
 /**

@@ -100,7 +100,8 @@ struct skl_sst {
 	/* callback for tplg params update */
 	int (*update_params)(struct device *dev, struct snd_soc_dai *dai,
 			struct snd_pcm_substream *s,
-			struct snd_pcm_hw_params *params, int pdi);
+			struct snd_pcm_hw_params *params, int pdi,
+					int ch_mask, bool enable);
 
 	/* Populate module information */
 	struct list_head uuid_list;

@@ -565,13 +565,15 @@ intel_pdi_alh_configure(struct sdw_intel *sdw, struct sdw_cdns_pdi *pdi)
 static int intel_config_stream(struct sdw_intel *sdw,
 			struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai,
-			struct snd_pcm_hw_params *hw_params, int link_id)
+			struct snd_pcm_hw_params *hw_params, int link_id,
+			int ch_mask)
 {
+
 	if (sdw->res->ops && sdw->res->ops->config_stream)
 		return sdw->res->ops->config_stream(sdw->res->arg,
-				substream, dai, hw_params, link_id);
-
-	return -EIO;
+				substream, dai, hw_params, link_id, ch_mask);
+	else
+		return -EIO;
 }
 
 /*
@@ -717,7 +719,11 @@ static int intel_hw_params(struct snd_pcm_substream *substream,
 	if (!dma)
 		return -EIO;
 
-	ch = params_channels(params);
+	if (dma->num_slots)
+		ch = dma->num_slots;
+	else
+		ch = params_channels(params);
+
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		dir = SDW_DATA_DIR_RX;
 	else
@@ -751,7 +757,7 @@ static int intel_hw_params(struct snd_pcm_substream *substream,
 	/* Inform DSP about PDI stream number */
 	for (i = 0; i < dma->nr_ports; i++) {
 		ret = intel_config_stream(sdw, substream, dai, params,
-				dma->port[i]->pdi->intel_alh_id);
+				dma->port[i]->pdi->intel_alh_id, dma->slot);
 		if (ret)
 			goto port_error;
 	}
@@ -816,12 +822,51 @@ intel_hw_free(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 
 	intel_port_cleanup(dma);
 	kfree(dma->port);
-	return ret;
+	return 0;
+}
+
+int intel_set_channel_map(struct snd_soc_dai *dai,
+		unsigned int tx_num, unsigned int *tx_slot,
+		unsigned int rx_num, unsigned int *rx_slot)
+{
+	struct sdw_cdns_dma_data *dma = NULL;
+	int i;
+
+	if (tx_num) {
+		dma = dai->playback_dma_data;
+		if (!dma) {
+			pr_err("dma data is not there %s\n", dai->name);
+			return -EIO;
+		}
+
+		dma->num_slots = tx_num;
+		for (i = 0; i < dma->num_slots; i++)
+			dma->slot |= tx_slot[i];
+	} else {
+		dma = dai->capture_dma_data;
+		if (!dma) {
+			pr_err("man, dma data is not there\n");
+			return -EIO;
+		}
+		dma->num_slots = rx_num;
+		for (i = 0; i < dma->num_slots; i++)
+			dma->slot |= rx_slot[i];
+	}
+
+#if 0
+	if (dma->stream_type == SDW_STREAM_PDM)
+		dma->slot = 1;
+	else
+		dma->slot = (1 << dma->num_slots) - 1;
+#endif
+
+	return 0;
 }
 
 static int intel_pcm_set_sdw_stream(struct snd_soc_dai *dai,
 					void *stream, int direction)
 {
+	pr_err("shreyas set stream %s", dai->name);
 	return cdns_set_sdw_stream(dai, stream, true, direction);
 }
 
@@ -883,6 +928,7 @@ static struct snd_soc_dai_ops intel_pcm_dai_ops = {
 	.hw_free = intel_hw_free,
 	.shutdown = sdw_cdns_shutdown,
 	.set_sdw_stream = intel_pcm_set_sdw_stream,
+	.set_channel_map = intel_set_channel_map,
 };
 
 static struct snd_soc_dai_ops intel_pdm_dai_ops = {

@@ -385,6 +385,16 @@ struct skl_module {
 	struct skl_module_iface formats[SKL_MAX_MODULE_FORMATS];
 };
 
+struct skl_sdw_agg_data {
+	u32 alh_stream_num;
+	u32 ch_mask;
+};
+
+struct skl_sdw_aggregation {
+	u32 num_masters;
+	struct skl_sdw_agg_data *agg_data;
+};
+
 struct skl_module_cfg {
 	u8 guid[16];
 	struct skl_module_inst_id id;
@@ -427,6 +437,8 @@ struct skl_module_cfg {
 	struct skl_pipe *pipe;
 	struct skl_specific_cfg formats_config;
 	struct skl_pipe_mcfg mod_cfg[SKL_MAX_MODULES_IN_PIPE];
+	bool sdw_agg_enable;
+	struct skl_sdw_aggregation sdw_agg;
 };
 
 struct skl_algo_data {
@@ -473,8 +485,9 @@ int skl_tplg_be_update_params(struct device *dev, struct snd_soc_dai *dai,
 int skl_dsp_set_dma_control(struct skl_sst *ctx, u32 *caps,
 			u32 caps_size, u32 node_id);
 int skl_tplg_be_sdw_update_params(struct device *dev, struct snd_soc_dai *dai,
-				struct snd_pcm_substream *substream,
-				struct snd_pcm_hw_params *params, int pdi);
+					struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params,
+					int pdi, int ch_mask, bool enable);
 
 void skl_tplg_set_be_dmic_config(struct snd_soc_dai *dai,
 	struct skl_pipe_params *params, int stream);

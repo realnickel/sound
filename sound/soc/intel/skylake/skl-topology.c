@@ -1219,12 +1219,23 @@ static int skl_tplg_mixer_dapm_post_pmd_event(struct snd_soc_dapm_widget *w,
 	skl_tplg_free_pipe_mcps(skl, mconfig);
 	skl_tplg_free_pipe_mem(skl, mconfig);
 
+	if (mconfig->sdw_agg.agg_data) {
+		mconfig->sdw_agg.num_masters = 0;
+		kfree(mconfig->sdw_agg.agg_data);
+		mconfig->sdw_agg.agg_data = NULL;
+	}
+
 	list_for_each_entry(w_module, &s_pipe->w_list, node) {
 		if (list_empty(&skl->bind_list))
 			break;
 
 		src_module = w_module->w->priv;
 
+		if (src_module->sdw_agg.agg_data) {
+			src_module->sdw_agg.num_masters = 0;
+			kfree(src_module->sdw_agg.agg_data);
+			src_module->sdw_agg.agg_data = NULL;
+		}
 		list_for_each_entry_safe(modules, tmp, &skl->bind_list, node) {
 			/*
 			 * When the destination module is deleted, Unbind the
@@ -1260,6 +1271,11 @@ static int skl_tplg_mixer_dapm_post_pmd_event(struct snd_soc_dapm_widget *w,
 
 		skl_unbind_modules(ctx, src_module, dst_module);
 		src_module = dst_module;
+		if (dst_module->sdw_agg.agg_data) {
+			dst_module->sdw_agg.num_masters = 0;
+			kfree(dst_module->sdw_agg.agg_data);
+			dst_module->sdw_agg.agg_data = NULL;
+		}
 	}
 
 	skl_delete_pipe(ctx, mconfig->pipe);
@@ -1297,6 +1313,10 @@ static int skl_tplg_pga_dapm_post_pmd_event(struct snd_soc_dapm_widget *w,
 			sink_mconfig = src_mconfig->m_out_pin[i].tgt_mcfg;
 			if (!sink_mconfig)
 				continue;
+
+			if (sink_mconfig->sdw_agg.agg_data) {
+				kfree(sink_mconfig->sdw_agg.agg_data);
+			}
 			/*
 			 * This is a connecter and if path is found that means
 			 * unbind between source and sink has not happened yet
@@ -1792,6 +1812,7 @@ static int skl_tplg_be_fill_pipe_params(struct device *dev,
 	struct skl *skl = get_skl_ctx(dev);
 	int link_type = skl_tplg_be_link_type(mconfig->dev_type);
 	u8 dev_type = skl_tplg_be_dev_type(mconfig->dev_type);
+	int j, i;
 
 	skl_tplg_fill_dma_id(mconfig, params);
 
@@ -1801,8 +1822,10 @@ static int skl_tplg_be_fill_pipe_params(struct device *dev,
        if (link_type == NHLT_LINK_SDW) {
 		struct skl_sdw_cfg *sdw_cfg;
 		size_t sz;
+		int num;
 
-		sz = sizeof(struct skl_sdw_agg) + 2;
+		num = mconfig->sdw_agg.num_masters;
+		sz = (num * sizeof(struct skl_sdw_agg)) + sizeof(*sdw_cfg);
 
 		/* TODO: who frees this mem */
 		sdw_cfg = kzalloc(sz, GFP_KERNEL);
@@ -1810,13 +1833,24 @@ static int skl_tplg_be_fill_pipe_params(struct device *dev,
 			return -ENOMEM;
 
 		mconfig->formats_config.caps_size = sz;
-		sdw_cfg->count = 1;
+
+		sdw_cfg->count = mconfig->sdw_agg.num_masters;
+
+
+		for (i = 0; i < num; i++) {
+			sdw_cfg->data[i].ch_mask =
+				mconfig->sdw_agg.agg_data[i].ch_mask;
+			sdw_cfg->data[i].alh_stream =
+				mconfig->sdw_agg.agg_data[i].alh_stream_num;
+			pr_err("VK: .alh_stream %x hai num = %d\n", sdw_cfg->data[i].alh_stream, num);
+		}
 
 		/* TODO: dont see how ch_mask is configured so set to 0 for
 		 * now
+		 * Add support for multiple ports
 		 */
-		sdw_cfg->data[0].ch_mask = 0;
-		sdw_cfg->data[0].alh_stream = mconfig->sdw_stream_num;
+		pr_err("VK: mcfg ptr %p\n", mconfig);
+		pr_err("VK: .alh_stream %d hai\n", mconfig->sdw_stream_num);
 
 		mconfig->formats_config.caps = (u32 *)sdw_cfg;
 		return 0;
@@ -1918,10 +1952,14 @@ int skl_tplg_be_update_params(struct device *dev, struct snd_soc_dai *dai,
 
 int skl_tplg_be_sdw_update_params(struct device *dev, struct snd_soc_dai *dai,
 				struct snd_pcm_substream *substream,
-				struct snd_pcm_hw_params *params, int pdi)
+				struct snd_pcm_hw_params *params, int pdi, int ch_mask,
+				bool enable)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct skl_pipe_params p_params = {0};
 	struct skl_module_cfg *m_cfg;
+       struct skl_sdw_agg_data *temp_agg_data;
+	int num;
 
 	p_params.s_fmt = snd_pcm_format_width(params_format(params));
 	p_params.ch = params_channels(params);
@@ -1932,9 +1970,32 @@ int skl_tplg_be_sdw_update_params(struct device *dev, struct snd_soc_dai *dai,
 	if (!m_cfg)
 		return -EIO;
 
+	num = m_cfg->sdw_agg.num_masters;
+	m_cfg->sdw_agg.num_masters++;
+
+	if(!m_cfg->sdw_agg.agg_data) {
+		m_cfg->sdw_agg.agg_data =
+			kzalloc(sizeof(*m_cfg->sdw_agg.agg_data),
+					GFP_KERNEL);
+	}
+	else {
+		temp_agg_data = krealloc(m_cfg->sdw_agg.agg_data,
+				num * sizeof(*temp_agg_data), GFP_KERNEL);
+
+		if (!temp_agg_data)
+			return -ENOMEM;
+
+
+		m_cfg->sdw_agg.agg_data = temp_agg_data;
+	}
+
 	m_cfg->sdw_stream_num = pdi;
+	pr_err("VK: mcfg ptr, %p, pdi %d num = %d\n", m_cfg, pdi, num);
+	m_cfg->sdw_agg.agg_data[num].ch_mask = ch_mask;
+	m_cfg->sdw_agg.agg_data[num].alh_stream_num = pdi;
 
 	skl_tplg_be_update_params(dev, dai, &p_params);
+
 
 	return 0;
 }
@@ -2833,7 +2894,6 @@ static int skl_tplg_widget_load(struct snd_soc_component *cmpnt,
 		goto bind_event;
 
 	mconfig = devm_kzalloc(bus->dev, sizeof(*mconfig), GFP_KERNEL);
-
 	if (!mconfig)
 		return -ENOMEM;
 
@@ -2844,6 +2904,7 @@ static int skl_tplg_widget_load(struct snd_soc_component *cmpnt,
 			return -ENOMEM;
 	}
 
+	mconfig->sdw_agg.agg_data = NULL;
 	w->priv = mconfig;
 
 	/*

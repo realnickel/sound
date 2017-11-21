@@ -1068,6 +1068,10 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 	num_channels = params_channels(params);
 	port_config.ch_mask = (1 << (num_channels)) - 1;
 	port_config.num = port;
+	if (stream->num_channels)
+		num_channels = stream->num_channels;
+	else
+		num_channels = params_channels(params);
 
 	retval = sdw_stream_add_slave(rt700->slave, &stream_config,
 					&port_config, 1, stream->sdw_stream);
@@ -1144,6 +1148,23 @@ int rt700_pcm_hw_free(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+int rt700_channel_map(struct snd_soc_dai *dai,
+		unsigned int tx_num, unsigned int *tx_slot,
+		unsigned int rx_num, unsigned int *rx_slot)
+{
+	struct sdw_stream_data *dma;
+
+	if (tx_num) {
+		dma = dai->playback_dma_data;
+		dma->num_channels = tx_num;
+	} else {
+		dma = dai->capture_dma_data;
+		dma->num_channels = rx_num;
+	}
+
+	return 0;
+}
+
 #define RT700_STEREO_RATES (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000)
 #define RT700_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | \
 			SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S8)
@@ -1153,6 +1174,7 @@ static struct snd_soc_dai_ops rt700_ops = {
 	.hw_free	= rt700_pcm_hw_free,
 	.set_sdw_stream	= rt700_set_sdw_stream,
 	.shutdown	= rt700_shutdown,
+	.set_channel_map = rt700_channel_map,
 };
 
 static struct snd_soc_dai_driver rt700_dai[] = {
@@ -1439,7 +1461,8 @@ int rt700_init(struct device *dev, struct regmap *regmap,
 	 * to handle this, only register codec if it is actually
 	 * present on board, adding check accordingly
 	 */
-	if (slave->bus->link_id == 1) {
+
+	if (slave->bus->link_id == 1 || slave->bus->link_id == 2) {
 		ret =  snd_soc_register_codec(dev,
 				&soc_codec_dev_rt700, rt700_dai,
 						ARRAY_SIZE(rt700_dai));

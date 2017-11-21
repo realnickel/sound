@@ -34,6 +34,9 @@ int sdw_master_read_prop(struct sdw_bus *bus)
 	char name[32];
 	int nval, i;
 
+	if (bus->link_id == 1|| bus->link_id == 2)
+		bus->multi_link = true;
+
 	device_property_read_u32(bus->dev,
 			"mipi-sdw-sw-interface-revision", &prop->revision);
 

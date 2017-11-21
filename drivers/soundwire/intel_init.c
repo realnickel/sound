@@ -91,7 +91,7 @@ static struct sdw_intel_ctx
 
 	// BIOS FIX need count = 1
 	/* STODO: Remove before posting patches */
-	count = 2;
+	count = 3;
 
 	dev_dbg(&adev->dev, "Creating %d SDW Link devices\n", count);
 

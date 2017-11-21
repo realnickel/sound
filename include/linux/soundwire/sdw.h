@@ -804,6 +804,7 @@ struct sdw_bus {
 	const struct sdw_master_ops *ops;
 	const struct sdw_master_port_ops *port_ops;
 	struct sdw_bus_params params;
+	bool link_sync_mask;
 	struct sdw_master_prop prop;
 	struct list_head m_rt_list;
 	struct sdw_master_sysfs *sysfs;

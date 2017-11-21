@@ -41,6 +41,7 @@ int sdw_add_bus_master(struct sdw_bus *bus)
 	 * TODO: populate this flag by reading property from FW node
 	 */
 	bus->multi_link = false;
+	bus->bank_switch_timeout = 3000;
 	if (bus->ops->read_prop) {
 		ret = bus->ops->read_prop(bus);
 		if (ret < 0) {
@@ -199,6 +200,7 @@ static inline int do_transfer_defer(struct sdw_bus *bus,
 	init_completion(&defer->complete);
 
 	for (i = 0; i <= retry; i++) {
+
 		resp = bus->ops->xfer_msg_defer(bus, msg, defer);
 		ret = find_response_code(resp);
 		/* if cmd is ok or ignored return */

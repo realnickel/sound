@@ -1050,7 +1050,8 @@ static int skl_platform_open(struct snd_pcm_substream *substream)
 		}
 
 		/* Set stream pointer on CPU DAI */
-		snd_soc_dai_set_sdw_stream(rtd->cpu_dai,
+		for (i = 0; i < rtd->num_cpu_dai; i++)
+		snd_soc_dai_set_sdw_stream(rtd->cpu_dais[i],
 				sdw_stream, substream->stream);
 
 		/* Set stream pointer on all CODEC DAIs */

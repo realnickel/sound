@@ -482,11 +482,11 @@ static int cnl_ipc_init(struct device *dev, struct skl_sst *cnl)
 }
 
 static int cnl_config_stream(void *arg, void *s, void *dai,
-					void *params, int pdi)
+					void *params, int pdi, int ch_mask)
 {
 	struct skl_sst *cnl = arg;
 
-	return cnl->update_params(cnl->dev, dai, s, params, pdi);
+	return cnl->update_params(cnl->dev, dai, s, params, pdi, ch_mask, true);
 
 }
 

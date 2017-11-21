@@ -37,6 +37,7 @@ struct  rt700_priv {
 
 struct sdw_stream_data {
    struct sdw_stream_runtime *sdw_stream;
+	int num_channels;
 };
 
 /* NID */

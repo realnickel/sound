@@ -37,23 +37,11 @@
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <linux/input.h>
-#include <linux/soundwire/sdw.h>
 
 struct cnl_rt700_mc_private {
 	u8		pmic_id;
 	void __iomem    *osc_clk0_reg;
 	int bt_mode;
-};
-
-struct rt700_sdw_cdns_dma_data {
-	int stream_tag;
-	int nr_ports;
-	struct sdw_bus *bus;
-	enum sdw_stream_type stream_type;
-	int link_id;
-	unsigned int num_slots;
-	unsigned int slot;
-	struct sdw_cdns_port **port;
 };
 
 #ifndef CONFIG_SND_SOC_SDW_AGGM1M2
@@ -93,7 +81,7 @@ static const struct snd_soc_dapm_route cnl_rt700_map[] = {
 	{ "SDW2 Tx0", NULL, "codec0_out"},
 
 	{ "codec0_in", NULL, "SDW1 Rx0" },
-	{ "SDW1 Rx0", NULL, "DP1 Capture" },
+	{ "SDW1 Rx0", NULL, "DP2 Capture" },
 	{ "codec0_in", NULL, "SDW2 Rx0" },
 	{ "SDW2 Rx0", NULL, "DP2 Capture" },
 
@@ -256,7 +244,7 @@ static int cnl_rt700_hw_params(struct snd_pcm_substream *substream,
 	int ret, i;
 	int channel_map[][1] = {{1}, {2}};
 
-	pr_err("Shreyas %s %d",__func__, rtd->num_cpu_dai);
+	pr_err("Shreyas %s %d",__func__, rtd->num_cpu);
 	for(i=0; i < rtd->num_codecs;i++) {
 		dai = rtd->codec_dais[i];
 		ret = 0;
@@ -274,7 +262,7 @@ static int cnl_rt700_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	for (i = 0; i < rtd->num_cpu_dai; i++) {
+	for (i = 0; i < rtd->num_cpu; i++) {
 		dai = rtd->cpu_dais[i];
 		ret = 0;
 
@@ -314,7 +302,7 @@ struct snd_soc_dai_link cnl_rt700_msic_dailink[] = {
 	{
 		.name = "SDW0-Codec",
 		.cpu_dai = sdw_multi_cpu_comp,
-		.num_cpu_dai = ARRAY_SIZE(sdw_multi_cpu_comp),
+		.num_cpu = ARRAY_SIZE(sdw_multi_cpu_comp),
 		.platform_name = "0000:00:1f.3",
 		.codecs = sdw_multi_codec_comp,
 		.num_codecs = ARRAY_SIZE(sdw_multi_codec_comp),
@@ -357,13 +345,12 @@ static int snd_cnl_rt700_mc_probe(struct platform_device *pdev)
 	int ret_val = 0;
 	struct cnl_rt700_mc_private *drv;
 
-	pr_err("Entry %s\n", __func__);
+	pr_debug("Entry %s\n", __func__);
 
 	drv = devm_kzalloc(&pdev->dev, sizeof(*drv), GFP_KERNEL);
 	if (!drv)
 		return -ENOMEM;
 
-	pr_err("1 Entry %s\n", __func__);
 	snd_soc_card_cnl_rt700.dev = &pdev->dev;
 	snd_soc_card_set_drvdata(&snd_soc_card_cnl_rt700, drv);
 	/* Register the card */
@@ -406,11 +393,8 @@ static struct platform_driver snd_cnl_rt700_mc_driver = {
 	.id_table = cnl_board_ids
 };
 
-module_platform_driver(snd_cnl_rt700_mc_driver)
-#if 0
 static int snd_cnl_rt700_driver_init(void)
 {
-	pr_err("Shreyas %s",__func__);
 	return platform_driver_register(&snd_cnl_rt700_mc_driver);
 }
 late_initcall(snd_cnl_rt700_driver_init);
@@ -420,7 +404,7 @@ static void snd_cnl_rt700_driver_exit(void)
 	platform_driver_unregister(&snd_cnl_rt700_mc_driver);
 }
 module_exit(snd_cnl_rt700_driver_exit)
-#endif
+
 MODULE_DESCRIPTION("ASoC CNL Machine driver");
 MODULE_AUTHOR("Hardik Shah <hardik.t.shah>");
 MODULE_LICENSE("GPL v2");
