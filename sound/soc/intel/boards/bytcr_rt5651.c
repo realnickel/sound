@@ -278,22 +278,27 @@ static const struct snd_soc_dapm_route byt_rt5651_intmic_in2_hs_in3_map[] = {
 };
 
 static const struct snd_soc_dapm_route byt_rt5651_ssp0_aif1_map[] = {
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	{"ssp0 Tx", NULL, "modem_out"},
 	{"modem_in", NULL, "ssp0 Rx"},
 
 	{"AIF1 Playback", NULL, "ssp0 Tx"},
 	{"ssp0 Rx", NULL, "AIF1 Capture"},
+#endif
 };
 
 static const struct snd_soc_dapm_route byt_rt5651_ssp0_aif2_map[] = {
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	{"ssp0 Tx", NULL, "modem_out"},
 	{"modem_in", NULL, "ssp0 Rx"},
 
 	{"AIF2 Playback", NULL, "ssp0 Tx"},
 	{"ssp0 Rx", NULL, "AIF2 Capture"},
+#endif
 };
 
 static const struct snd_soc_dapm_route byt_rt5651_ssp2_aif1_map[] = {
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	{"ssp2 Tx", NULL, "codec_out0"},
 	{"ssp2 Tx", NULL, "codec_out1"},
 	{"codec_in0", NULL, "ssp2 Rx"},
@@ -301,9 +306,11 @@ static const struct snd_soc_dapm_route byt_rt5651_ssp2_aif1_map[] = {
 
 	{"AIF1 Playback", NULL, "ssp2 Tx"},
 	{"ssp2 Rx", NULL, "AIF1 Capture"},
+#endif
 };
 
 static const struct snd_soc_dapm_route byt_rt5651_ssp2_aif2_map[] = {
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	{"ssp2 Tx", NULL, "codec_out0"},
 	{"ssp2 Tx", NULL, "codec_out1"},
 	{"codec_in0", NULL, "ssp2 Rx"},
@@ -311,6 +318,7 @@ static const struct snd_soc_dapm_route byt_rt5651_ssp2_aif2_map[] = {
 
 	{"AIF2 Playback", NULL, "ssp2 Tx"},
 	{"ssp2 Rx", NULL, "AIF2 Capture"},
+#endif
 };
 
 static const struct snd_kcontrol_new byt_rt5651_controls[] = {
