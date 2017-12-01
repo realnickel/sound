@@ -493,6 +493,7 @@ void intel_audio_codec_enable(struct intel_encoder *intel_encoder)
 	struct i915_audio_component *acomp = dev_priv->audio_component;
 	enum port port = intel_encoder->port;
 	enum pipe pipe = crtc->pipe;
+	struct intel_crtc_state *crtc_state = crtc->config;
 
 	connector = drm_select_eld(encoder);
 	if (!connector)
