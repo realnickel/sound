@@ -329,6 +329,43 @@ pinctrl_match_gpio_range(struct pinctrl_dev *pctldev, unsigned gpio)
 }
 
 /**
+ * pinctrl_get_device_gpio_range() - find device for GPIO range
+ * @gpio: the pin to locate the pin controller for
+ * @outdev: the pin control device if found
+ * @outrange: the GPIO range if found
+ *
+ * Find the pin controller handling a certain GPIO pin from the pinspace of
+ * the GPIO subsystem, return the device and the matching GPIO range. Returns
+ * -EPROBE_DEFER if the GPIO range could not be found in any device since it
+ * may still have not been registered.
+ */
+static int pinctrl_get_device_gpio_range(unsigned gpio,
+					 struct pinctrl_dev **outdev,
+					 struct pinctrl_gpio_range **outrange)
+{
+	struct pinctrl_dev *pctldev = NULL;
+
+	mutex_lock(&pinctrldev_list_mutex);
+
+	/* Loop over the pin controllers */
+	list_for_each_entry(pctldev, &pinctrldev_list, node) {
+		struct pinctrl_gpio_range *range;
+
+		range = pinctrl_match_gpio_range(pctldev, gpio);
+		if (range) {
+			*outdev = pctldev;
+			*outrange = range;
+			mutex_unlock(&pinctrldev_list_mutex);
+			return 0;
+		}
+	}
+
+	mutex_unlock(&pinctrldev_list_mutex);
+
+	return -EPROBE_DEFER;
+}
+
+/**
  * pinctrl_add_gpio_range() - register a GPIO range for a controller
  * @pctldev: pin controller device to add the range to
  * @range: the GPIO range to add
