@@ -490,6 +490,8 @@ struct sdw_slave_ops {
 			enum sdw_port_prep_ops pre_ops);
 };
 
+struct sdw_slave_debugfs;
+
 /**
  * struct sdw_slave - SoundWire Slave
  * @id: MIPI device ID
@@ -499,6 +501,7 @@ struct sdw_slave_ops {
  * @ops: Slave callback ops
  * @prop: Slave properties
  * @sysfs: Sysfs interface
+ * @debugfs: Slave debugfs
  * @node: node for bus list
  * @port_ready: Port ready completion flag for each Slave port
  * @dev_num: Device Number assigned by Bus
@@ -511,6 +514,7 @@ struct sdw_slave {
 	const struct sdw_slave_ops *ops;
 	struct sdw_slave_prop prop;
 	struct sdw_slave_sysfs *sysfs;
+	struct sdw_slave_debugfs *debugfs;
 	struct list_head node;
 	struct completion *port_ready;
 	u16 dev_num;
@@ -671,6 +675,8 @@ struct sdw_master_ops {
 
 };
 
+struct sdw_bus_debugfs;
+
 /**
  * struct sdw_bus - SoundWire bus
  * @dev: Master linux device
@@ -685,8 +691,10 @@ struct sdw_master_ops {
  * @params: Current bus parameters
  * @prop: Master properties
  * @m_rt_list: List of Master instance of all stream(s) running on Bus. This
+ * @rt_list: List of Master instance of all stream(s) running on Bus. This
  * is used to compute and program bus bandwidth, clock, frame shape,
  * transport and port parameters
+ * @debugfs: Bus debugfs
  * @sysfs: Bus sysfs
  * @defer_msg: Defer message
  * @clk_stop_timeout: Clock stop timeout computed
@@ -708,6 +716,7 @@ struct sdw_bus {
 	struct sdw_master_prop prop;
 	struct list_head m_rt_list;
 	struct sdw_master_sysfs *sysfs;
+	struct sdw_bus_debugfs *debugfs;
 	struct sdw_defer defer_msg;
 	unsigned int clk_stop_timeout;
 	u32 bank_switch_timeout;
