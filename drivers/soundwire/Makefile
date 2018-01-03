@@ -4,7 +4,8 @@
 
 #Bus Objs
 soundwire-bus-objs := bus_type.o bus.o slave.o mipi_disco.o stream.o \
-			sysfs.o sysfs_slave_dp0.o sysfs_slave_dpn.o
+			sysfs.o sysfs_slave_dp0.o sysfs_slave_dpn.o  \
+			debugfs.o
 obj-$(CONFIG_SOUNDWIRE_BUS) += soundwire-bus.o
 
 #Cadence Objs
