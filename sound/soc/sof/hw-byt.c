@@ -750,6 +750,9 @@ struct snd_sof_dsp_ops snd_sof_byt_ops = {
 
 	/*Firmware loading */
  	.load_firmware	= snd_sof_load_firmware_memcpy,
+
+	/*Firmware boot */
+	.fw_boot = snd_sof_fw_boot,
 };
 EXPORT_SYMBOL(snd_sof_byt_ops);
 
@@ -799,6 +802,9 @@ struct snd_sof_dsp_ops snd_sof_cht_ops = {
 
 	/*Firmware loading */
  	.load_firmware	= snd_sof_load_firmware_memcpy,
+
+	/*Firmware boot */
+	.fw_boot = snd_sof_fw_boot,
 };
 EXPORT_SYMBOL(snd_sof_cht_ops);
 

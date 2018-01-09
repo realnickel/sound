@@ -294,7 +294,15 @@ int snd_sof_load_firmware(struct snd_sof_dev *sdev,
 }
 EXPORT_SYMBOL(snd_sof_load_firmware);
 
-int snd_sof_run_firmware(struct snd_sof_dev *sdev)
+int snd_sof_firmware_boot(struct snd_sof_dev *sdev)
+{
+	if (sdev->ops->fw_boot)
+		return sdev->ops->fw_boot(sdev);
+	return 0;
+}
+EXPORT_SYMBOL(snd_sof_firmware_boot);
+
+int snd_sof_fw_boot(struct snd_sof_dev *sdev)
 {
 	int ret;
 
@@ -323,7 +331,7 @@ int snd_sof_run_firmware(struct snd_sof_dev *sdev)
 
 	return 0;
 }
-EXPORT_SYMBOL(snd_sof_run_firmware);
+EXPORT_SYMBOL(snd_sof_fw_boot);
 
 void snd_sof_fw_unload(struct snd_sof_dev *sdev)
 {
