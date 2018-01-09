@@ -2544,6 +2544,9 @@ struct snd_sof_dsp_ops snd_sof_apl_ops = {
 
 	/* firmware run */
 	.run = apl_run_firmware,
+
+	/*Firmware boot */
+	.fw_boot = snd_sof_fw_boot,
 };
 EXPORT_SYMBOL(snd_sof_apl_ops);
 
@@ -2595,7 +2598,10 @@ struct snd_sof_dsp_ops snd_sof_cnl_ops = {
 	.load_firmware = apl_load_firmware,
 
 	/* firmware run */
-	.run = apl_run_firmware
+	.run = apl_run_firmware,
+
+	/*Firmware boot */
+	.fw_boot = snd_sof_fw_boot,
 };
 EXPORT_SYMBOL(snd_sof_cnl_ops);
 

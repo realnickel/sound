@@ -169,6 +169,9 @@ struct snd_sof_dsp_ops {
 		struct snd_sof_mod_hdr *hdr);
 	int (*fw_ready)(struct snd_sof_dev *sdev, u32 msg_id);
 
+	/* wait FW boot */
+	int (*fw_boot)(struct snd_sof_dev *sof_dev);
+
 };
 
 struct snd_sof_chip_info {
@@ -422,7 +425,8 @@ int snd_sof_load_firmware(struct snd_sof_dev *sdev,
 	const struct firmware *fw);
 int snd_sof_load_firmware_memcpy(struct snd_sof_dev *sdev,
 	const struct firmware *fw);
-int snd_sof_run_firmware(struct snd_sof_dev *sdev);
+int snd_sof_firmware_boot(struct snd_sof_dev *sdev);
+int snd_sof_fw_boot(struct snd_sof_dev *sdev);
 int snd_sof_parse_module_memcpy(struct snd_sof_dev *sdev,
 	struct snd_sof_mod_hdr *module);
 void snd_sof_fw_unload(struct snd_sof_dev *sdev);
