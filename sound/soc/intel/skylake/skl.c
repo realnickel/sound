@@ -453,6 +453,13 @@ static struct skl_ssp_clk skl_ssp_clks[] = {
 						{.name = "ssp5_sclkfs"},
 };
 
+static struct snd_soc_acpi_mach skl_hdmi_mach[] = {
+	{
+		.drv_name = "skl_hdmi",
+		.fw_filename = "intel/dsp_fw_release.bin",
+	}
+};
+
 static int skl_find_machine(struct skl *skl, void *driver_data)
 {
 	struct snd_soc_acpi_mach *mach = driver_data;
@@ -461,8 +468,13 @@ static int skl_find_machine(struct skl *skl, void *driver_data)
 
 	mach = snd_soc_acpi_find_machine(mach);
 	if (mach == NULL) {
-		dev_err(bus->dev, "No matching machine driver found\n");
-		return -ENODEV;
+		if (IS_ENABLED(CONFIG_SND_SOC_INTEL_SKL_HDMI_MACH)) {
+			dev_info(bus->dev, "No audio codec found, using HDMI only output\n");
+			mach = skl_hdmi_mach;
+		} else {
+			dev_err(bus->dev, "No matching machine driver found\n");
+			return -ENODEV;
+		}
 	}
 
 	skl->mach = mach;
