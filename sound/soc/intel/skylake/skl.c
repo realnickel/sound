@@ -1047,6 +1047,13 @@ static struct snd_soc_acpi_mach sst_skl_devdata[] = {
 };
 
 static struct snd_soc_acpi_mach sst_bxtp_devdata[] = {
+#if IS_ENABLED(CONFIG_SND_SOC_INTEL_SKL_HDMI_MACH)
+	{
+		.id = "INT33A1", // dummy value to force match on Leaf Hill
+		.drv_name = "skl_hdmi",
+		.fw_filename = "intel/dsp_fw_bxtn.bin",
+	},
+#endif
 	{
 		.id = "INT343A",
 		.drv_name = "bxt_alc298s_i2s",
