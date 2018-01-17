@@ -418,6 +418,11 @@ void skl_get_clks(struct skl *skl, struct skl_ssp_clk *ssp_clks)
 	int i;
 	u8 id;
 
+	if (!nhlt) {
+		ssp_clks = NULL;
+		return;
+	}
+
 	epnt = (struct nhlt_endpoint *)nhlt->desc;
 	for (i = 0; i < nhlt->endpoint_count; i++) {
 		if (epnt->linktype == NHLT_LINK_SSP) {

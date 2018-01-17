@@ -601,16 +601,19 @@ static int skl_clock_device_register(struct skl *skl)
 
 	/* Query NHLT to fill the rates and parent */
 	skl_get_clks(skl, clk_pdata->ssp_clks);
-	clk_pdata->pvt_data = skl;
+	if (clk_pdata->ssp_clks) {
+		clk_pdata->pvt_data = skl;
 
-	/* Register Platform device */
-	pdevinfo.parent = &skl->pci->dev;
-	pdevinfo.id = -1;
-	pdevinfo.name = "skl-ssp-clk";
-	pdevinfo.data = clk_pdata;
-	pdevinfo.size_data = sizeof(*clk_pdata);
-	skl->clk_dev = platform_device_register_full(&pdevinfo);
-	return PTR_ERR_OR_ZERO(skl->clk_dev);
+		/* Register Platform device */
+		pdevinfo.parent = &skl->pci->dev;
+		pdevinfo.id = -1;
+		pdevinfo.name = "skl-ssp-clk";
+		pdevinfo.data = clk_pdata;
+		pdevinfo.size_data = sizeof(*clk_pdata);
+		skl->clk_dev = platform_device_register_full(&pdevinfo);
+		return PTR_ERR_OR_ZERO(skl->clk_dev);
+	} else
+		return 0; /* no NHLT, silent bail */
 }
 
 static void skl_clock_device_unregister(struct skl *skl)
@@ -896,20 +899,17 @@ static int skl_probe(struct pci_dev *pci,
 
 	skl->nhlt = skl_nhlt_init(bus->dev);
 
-	if (skl->nhlt == NULL) {
-		err = -ENODEV;
-		goto out_free;
+	if (skl->nhlt != NULL) {
+		err = skl_nhlt_create_sysfs(skl);
+		if (err < 0)
+			goto out_nhlt_free;
+
+		skl_nhlt_update_topology_bin(skl);
+
+		skl_dmic_data.dmic_num = skl_get_dmic_geo(skl);
 	}
 
-	err = skl_nhlt_create_sysfs(skl);
-	if (err < 0)
-		goto out_nhlt_free;
-
-	skl_nhlt_update_topology_bin(skl);
-
 	pci_set_drvdata(skl->pci, ebus);
-
-	skl_dmic_data.dmic_num = skl_get_dmic_geo(skl);
 
 	/* check if dsp is there */
 	if (bus->ppcap) {
