@@ -456,7 +456,8 @@ static struct skl_ssp_clk skl_ssp_clks[] = {
 static struct snd_soc_acpi_mach skl_hdmi_mach[] = {
 	{
 		.drv_name = "skl_hdmi",
-		.fw_filename = "intel/dsp_fw_release.bin",
+		//		.fw_filename = "intel/dsp_fw_release.bin",
+				.fw_filename = "intel/dsp_fw_bxtn.bin",
 	}
 };
 
