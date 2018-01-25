@@ -5,7 +5,7 @@ ccflags-y += -DDEBUG
 
 #Bus Objs
 soundwire-bus-objs := bus_type.o bus.o slave.o mipi_disco.o stream.o \
-			sysfs.o
+			sysfs.o sysfs_slave_dp0.o sysfs_slave_dpn.o
 obj-$(CONFIG_SOUNDWIRE_BUS) += soundwire-bus.o
 
 #Cadence Objs

@@ -8,6 +8,7 @@
 #include <linux/soundwire/sdw.h>
 #include <linux/soundwire/sdw_type.h>
 #include "bus.h"
+#include "sysfs_local.h"
 
 struct sdw_master_sysfs {
 	struct device dev;
@@ -159,4 +160,216 @@ void sdw_sysfs_bus_exit(struct sdw_bus *bus)
 	master->bus = NULL;
 	put_device(&master->dev);
 	bus->sysfs = NULL;
+}
+
+/*
+ * Slave sysfs
+ */
+
+/*
+ * The sysfs for Slave reflects the MIPI description as given
+ * in the MIPI DisCo spec
+ *
+ * Base file is device
+ *	|---- mipi_revision
+ *	|---- wake_capable
+ *	|---- test_mode_capable
+ *	|---- simple_clk_stop_capable
+ *	|---- clk_stop_timeout
+ *	|---- ch_prep_timeout
+ *	|---- reset_behave
+ *	|---- high_PHY_capable
+ *	|---- paging_support
+ *	|---- bank_delay_support
+ *	|---- p15_behave
+ *	|---- master_count
+ *	|---- source_ports
+ *	|---- sink_ports
+ *	|---- dp0
+ *		|---- max_word
+ *		|---- min_word
+ *		|---- words
+ *		|---- flow_controlled
+ *		|---- simple_ch_prep_sm
+ *		|---- device_interrupts
+ *	|---- dpN
+ *		|---- max_word
+ *		|---- min_word
+ *		|---- words
+ *		|---- type
+ *		|---- max_grouping
+ *		|---- simple_ch_prep_sm
+ *		|---- ch_prep_timeout
+ *		|---- device_interrupts
+ *		|---- max_ch
+ *		|---- min_ch
+ *		|---- ch
+ *		|---- ch_combinations
+ *		|---- modes
+ *		|---- max_async_buffer
+ *		|---- block_pack_mode
+ *		|---- port_encoding
+ *		|---- audio_modeM
+ *				|---- bus_min_freq
+ *				|---- bus_max_freq
+ *				|---- bus_freq
+ *				|---- max_freq
+ *				|---- min_freq
+ *				|---- freq
+ *				|---- prep_ch_behave
+ *				|---- glitchless
+ *
+ */
+
+#define sdw_slave_attr(field, format_string)			\
+static ssize_t field##_show(struct device *dev,			\
+			    struct device_attribute *attr,	\
+			    char *buf)				\
+{								\
+	struct sdw_slave *slave = dev_to_sdw_dev(dev);		\
+	return sprintf(buf, format_string, slave->prop.field);	\
+}								\
+static DEVICE_ATTR_RO(field)
+
+sdw_slave_attr(mipi_revision, "0x%x\n");
+sdw_slave_attr(wake_capable, "%d\n");
+sdw_slave_attr(test_mode_capable, "%d\n");
+sdw_slave_attr(clk_stop_mode1, "%d\n");
+sdw_slave_attr(simple_clk_stop_capable, "%d\n");
+sdw_slave_attr(clk_stop_timeout, "%d\n");
+sdw_slave_attr(ch_prep_timeout, "%d\n");
+sdw_slave_attr(reset_behave, "%d\n");
+sdw_slave_attr(high_PHY_capable, "%d\n");
+sdw_slave_attr(paging_support, "%d\n");
+sdw_slave_attr(bank_delay_support, "%d\n");
+sdw_slave_attr(p15_behave, "%d\n");
+sdw_slave_attr(master_count, "%d\n");
+sdw_slave_attr(source_ports, "%d\n");
+sdw_slave_attr(sink_ports, "%d\n");
+
+static ssize_t modalias_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct sdw_slave *slave = dev_to_sdw_dev(dev);
+
+	return sdw_slave_modalias(slave, buf, 256);
+}
+static DEVICE_ATTR_RO(modalias);
+
+static struct attribute *slave_dev_attrs[] = {
+	&dev_attr_mipi_revision.attr,
+	&dev_attr_wake_capable.attr,
+	&dev_attr_test_mode_capable.attr,
+	&dev_attr_clk_stop_mode1.attr,
+	&dev_attr_simple_clk_stop_capable.attr,
+	&dev_attr_clk_stop_timeout.attr,
+	&dev_attr_ch_prep_timeout.attr,
+	&dev_attr_reset_behave.attr,
+	&dev_attr_high_PHY_capable.attr,
+	&dev_attr_paging_support.attr,
+	&dev_attr_bank_delay_support.attr,
+	&dev_attr_p15_behave.attr,
+	&dev_attr_master_count.attr,
+	&dev_attr_source_ports.attr,
+	&dev_attr_sink_ports.attr,
+	&dev_attr_modalias.attr,
+	NULL,
+};
+
+static struct attribute_group sdw_slave_dev_attr_group = {
+	.attrs	= slave_dev_attrs,
+};
+
+const struct attribute_group *sdw_slave_dev_attr_groups[] = {
+	&sdw_slave_dev_attr_group,
+	NULL
+};
+
+int sdw_sysfs_slave_init(struct sdw_slave *slave)
+{
+	struct sdw_slave_sysfs *sysfs;
+	unsigned int src_dpns, sink_dpns, i, j;
+	int err;
+
+	if (slave->sysfs) {
+		dev_err(&slave->dev, "SDW Slave sysfs is already initialized\n");
+		err = -EIO;
+		goto err_ret;
+	}
+
+	sysfs = kzalloc(sizeof(*sysfs), GFP_KERNEL);
+	if (!sysfs) {
+		err = -ENOMEM;
+		goto err_ret;
+	}
+
+	slave->sysfs = sysfs;
+	sysfs->slave = slave;
+
+	if (slave->prop.dp0_prop) {
+		sysfs->dp0 = sdw_sysfs_slave_dp0_init(slave,
+						      slave->prop.dp0_prop);
+		if (!sysfs->dp0) {
+			err = -ENOMEM;
+			goto err_free_sysfs;
+		}
+	}
+
+	src_dpns = hweight32(slave->prop.source_ports);
+	sink_dpns = hweight32(slave->prop.sink_ports);
+	sysfs->num_dpns = src_dpns + sink_dpns;
+
+	sysfs->dpns = kcalloc(sysfs->num_dpns,
+			      sizeof(**sysfs->dpns), GFP_KERNEL);
+	if (!sysfs->dpns) {
+		err = -ENOMEM;
+		goto err_dp0;
+	}
+
+	for (i = 0; i < src_dpns; i++) {
+		sysfs->dpns[i] =
+			sdw_sysfs_slave_dpn_init(slave,
+						 &slave->prop.src_dpn_prop[i],
+						 true);
+		if (!sysfs->dpns[i]) {
+			err = -ENOMEM;
+			goto err_dpn;
+		}
+	}
+
+	for (j = 0; j < sink_dpns; j++) {
+		sysfs->dpns[i + j] =
+			sdw_sysfs_slave_dpn_init(slave,
+						 &slave->prop.sink_dpn_prop[j],
+						 false);
+		if (!sysfs->dpns[i + j]) {
+			err = -ENOMEM;
+			goto err_dpn;
+		}
+	}
+	return 0;
+
+err_dpn:
+	sdw_sysfs_slave_dpn_exit(sysfs);
+err_dp0:
+	sdw_sysfs_slave_dp0_exit(sysfs);
+err_free_sysfs:
+	kfree(sysfs);
+	sysfs->slave = NULL;
+err_ret:
+	return err;
+}
+
+void sdw_sysfs_slave_exit(struct sdw_slave *slave)
+{
+	struct sdw_slave_sysfs *sysfs = slave->sysfs;
+
+	if (!sysfs)
+		return;
+
+	sdw_sysfs_slave_dpn_exit(sysfs);
+	kfree(sysfs->dpns);
+	sdw_sysfs_slave_dp0_exit(sysfs);
+	kfree(sysfs);
+	slave->sysfs = NULL;
 }
