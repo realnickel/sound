@@ -31,6 +31,7 @@ struct sdw_master_sysfs {
  *      |---- clk_gears
  *      |---- default_row
  *      |---- default_col
+ *      |---- default_frame_shape
  *      |---- dynamic_shape
  *      |---- err_threshold
  */
