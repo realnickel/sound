@@ -173,28 +173,28 @@ static int sof_probe(struct platform_device *pdev)
 	ret = snd_sof_dbg_init(sdev);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to init DSP trace/debug %d\n", ret);
-		return ret;
+		goto dbg_err;
 	}
 
 	/* init the IPC */
 	sdev->ipc = snd_sof_ipc_init(sdev);
 	if (sdev->ipc == NULL) {
 		dev_err(sdev->dev, "error: failed to init DSP IPC %d\n", ret);
-		goto err;
+		goto ipc_err;
 	}
 
 	/* load the firmware */
 	ret = snd_sof_load_firmware(sdev, plat_data->fw);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to load DSP firmware %d\n", ret);
-		goto err;
+		goto fw_load_err;
 	}
 
 	/* boot the firmware */
 	ret = snd_sof_run_firmware(sdev);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to boot DSP firmware %d\n", ret);
-		goto err;
+		goto fw_run_err;
 	}
 
 	/* now register audio DSP platform driver */
@@ -202,7 +202,7 @@ static int sof_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(sdev->dev,
 			"error: failed to register DSP platform driver %d\n", ret);
-		goto err;
+		goto fw_run_err;
 	}
 
 	ret = snd_soc_register_component(&pdev->dev,  sdev->cmpnt_drv,
@@ -210,24 +210,30 @@ static int sof_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(sdev->dev,
 			"error: failed to register DSP DAI driver %d\n", ret);
-		goto err;
+		goto comp_err;
 	}
 
 	ret = snd_sof_init_trace(sdev);
 	if (ret < 0) {
 		dev_warn(sdev->dev,
-			 "error: failed to initialize FW debug tracing %d\n", ret);
-		ret = 0;
+			"warning: failed to initialize trace %d\n", ret);
 	}
 
-	/* we return 0 on error if debug is defined as this allows DSP
-	 * memories to and peripherals to be inspected. */
-err:
-#if defined DEBUG
 	return 0;
-#else
+
+comp_err:
+	snd_soc_unregister_component(&pdev->dev);
+	snd_sof_free_topology(sdev);
+fw_run_err:
+	snd_sof_fw_unload(sdev);
+fw_load_err:
+	snd_sof_ipc_free(sdev);
+ipc_err:
+	snd_sof_free_debug(sdev);
+dbg_err:
+	snd_sof_remove(sdev);
+
 	return ret;
-#endif
 }
 
 static int sof_remove(struct platform_device *pdev)
