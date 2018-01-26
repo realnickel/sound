@@ -2327,14 +2327,14 @@ static int apl_probe(struct snd_sof_dev *sdev)
 	ret = apl_get_caps(sdev);
 	if (ret < 0) {
 		dev_err(&pci->dev, "error: failed to find DSP capability\n");
-		goto irq_err;
+		goto err;
 	}
 
 	/* init streams */
 	ret = apl_stream_init(sdev);
 	if (ret < 0) {
 		dev_err(&pci->dev, "error: failed to init streams\n");
-		goto irq_err;
+		goto err;
 	}
 	
 	/*
@@ -2417,7 +2417,7 @@ static int apl_probe(struct snd_sof_dev *sdev)
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to register PCI IRQ %d\n",
 			sdev->ipc_irq);
-		goto err;
+		goto irq_err;
 	}
 
 	/* re-enable CGCTL.MISCBDCGE after rest */
@@ -2443,7 +2443,7 @@ static int apl_probe(struct snd_sof_dev *sdev)
 	return 0;		
 
 irq_err:
-	free_irq(sdev->ipc_irq, sdev);
+	free_irq(sdev->pci->irq, sdev);
 err:
 	/* disable DSP */
 	snd_sof_dsp_update_bits(sdev, APL_PP_BAR, SOF_HDA_REG_PP_PPCTL,
