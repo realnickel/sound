@@ -2456,18 +2456,23 @@ static int apl_remove(struct snd_sof_dev *sdev)
 	const struct snd_sof_chip_info *chip;
 	chip = sof_get_chip_info(sdev->pci->device);
 
-	/* disable cores */
-	apl_disable_core(sdev, chip->cores_mask);
-
 	/* disable DSP IRQ */
 	snd_sof_dsp_update_bits(sdev, APL_PP_BAR, SOF_HDA_REG_PP_PPCTL,
 		SOF_HDA_PPCTL_PIE, 0);
+
+	/* disable CIE and GIE interrupts */
+	snd_sof_dsp_update_bits(sdev, APL_HDA_BAR, SOF_HDA_INTCTL,
+		SOF_HDA_INT_CTRL_EN | SOF_HDA_INT_GLOBAL_EN, 0);
+
+	/* disable cores */
+	apl_disable_core(sdev, chip->cores_mask);
 
 	/* disable DSP */
 	snd_sof_dsp_update_bits(sdev, APL_PP_BAR, SOF_HDA_REG_PP_PPCTL,
 		SOF_HDA_PPCTL_GPROCEN, 0);
 
 	free_irq(sdev->ipc_irq, sdev);
+	free_irq(sdev->pci->irq, sdev);
 
 	return 0;
 }
