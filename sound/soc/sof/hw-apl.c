@@ -226,16 +226,20 @@ static void apl_dump(struct snd_sof_dev *sdev, u32 flags)
 	u32 reg;
 	int i;
 
+	/* dump status "register" */
+	dev_err(sdev->dev, "status: 0x%8.8x\n", snd_sof_dsp_read(sdev,
+		APL_DSP_BAR, APL_MBOX_OFFSET));
+
 	if (flags & SOF_DBG_REGS && sdev->bar[APL_HDA_BAR]) {
 		for (i = 0; i < 0x120; i += 4 ) {
-			dev_dbg(sdev->dev, "hda 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "hda 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, APL_HDA_BAR, i));
 		}
 
 		if (sdev->bar[APL_SPIB_BAR] == NULL)
 			goto dsp_bar;
 		for (i = 0; i < 0xc; i += 4 ) {
-			dev_dbg(sdev->dev, "spib 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "spib 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, APL_SPIB_BAR, i));
 		}
 
@@ -243,7 +247,7 @@ dsp_bar:
 		if (sdev->bar[APL_DSP_BAR] == NULL)
 			goto pp_bar;
 		for (i = 0; i < 0x40; i += 4 ) {
-			dev_dbg(sdev->dev, "dsp 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "dsp 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, APL_DSP_BAR, i));
 		}
 
@@ -251,7 +255,7 @@ pp_bar:
 		if (sdev->bar[APL_PP_BAR] == NULL)
 			goto mbox;
 		for (i = 0; i < 0x40; i += 4 ) {
-			dev_dbg(sdev->dev, "pp 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "pp 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, APL_PP_BAR, i));
 		}
 	}
@@ -259,17 +263,17 @@ pp_bar:
 mbox:
 	if (flags & SOF_DBG_MBOX) {
 		for (i = 0; i < APL_MBOX_DUMP_SIZE; i += 4) {
-			dev_dbg(sdev->dev, "regs: 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "regs: 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, 
 					APL_DSP_BAR, i + APL_MBOX_OFFSET));
 		}
 		for (i = 0; i < APL_MBOX_DUMP_SIZE; i += 4) {
-			dev_dbg(sdev->dev, "inbox: 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "inbox: 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, 
 					APL_DSP_BAR, i + APL_MBOX_OFFSET + 1000));
 		}
 		for (i = 0; i < APL_MBOX_DUMP_SIZE; i += 4) {
-			dev_dbg(sdev->dev, "outbox: 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "outbox: 0x%2.2x value 0x%8.8x\n",
 				i, snd_sof_dsp_read(sdev, 
 					APL_DSP_BAR, i + SRAM_WINDOW_OFFSET(1)));
 		}
@@ -278,7 +282,7 @@ mbox:
 	if (flags & SOF_DBG_PCI) {
 		for (i = 0; i < 0x150; i += 4) {
 			pci_read_config_dword(sdev->pci, i, &reg);
-			dev_dbg(sdev->dev, "pci: 0x%2.2x value 0x%8.8x\n",
+			dev_vdbg(sdev->dev, "pci: 0x%2.2x value 0x%8.8x\n",
 				i, reg);
 		}
 	}
@@ -1100,7 +1104,7 @@ static int apl_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
 
 	/* copy data from the DSP FW ready offset */
 	apl_block_read(sdev, offset, fw_ready,	sizeof(*fw_ready));
-	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n", 
+	dev_info(sdev->dev, " Firmware info: version %d.%d-%s build %d on %s:%s\n",
 		v->major, v->minor, v->tag, v->build, v->date, v->time);
 
 	/* now check for extended data */
@@ -1165,7 +1169,7 @@ static irqreturn_t apl_irq_thread(int irq, void *context)
 		msg = hipci & APL_DSP_REG_HIPCI_MSG_MASK;
 		msg_ext = hipcie & APL_DSP_REG_HIPCIE_MSG_MASK;
 
-		dev_dbg(sdev->dev, "ipc: firmware response, msg:0x%x, msg_ext:0x%x\n",
+		dev_vdbg(sdev->dev, "ipc: firmware response, msg:0x%x, msg_ext:0x%x\n",
 			msg, msg_ext);
 
 		/* mask Done interrupt */
@@ -1197,7 +1201,7 @@ static irqreturn_t apl_irq_thread(int irq, void *context)
 		msg = hipct & APL_DSP_REG_HIPCT_MSG_MASK;
 		msg_ext = hipcte & APL_DSP_REG_HIPCTE_MSG_MASK;
 
-		dev_dbg(sdev->dev, "ipc: firmware initiated, msg:0x%x, msg_ext:0x%x\n",
+		dev_vdbg(sdev->dev, "ipc: firmware initiated, msg:0x%x, msg_ext:0x%x\n",
 			msg, msg_ext);
 
 		/* handle messages from DSP */
@@ -1249,7 +1253,7 @@ static irqreturn_t cnl_irq_thread(int irq, void *context)
 		msg_ext = hipci & CNL_DSP_REG_HIPCIDR_MSG_MASK;
 		msg = hipcida & CNL_DSP_REG_HIPCIDA_MSG_MASK;
 
-		dev_dbg(sdev->dev, "ipc: firmware response, msg:0x%x, msg_ext:0x%x\n",
+		dev_vdbg(sdev->dev, "ipc: firmware response, msg:0x%x, msg_ext:0x%x\n",
 			msg, msg_ext);
 
 		/* mask Done interrupt */
@@ -1282,7 +1286,7 @@ static irqreturn_t cnl_irq_thread(int irq, void *context)
 		msg = hipctdr & CNL_DSP_REG_HIPCTDR_MSG_MASK;
 		msg_ext = hipctdd & CNL_DSP_REG_HIPCTDD_MSG_MASK;
 
-		dev_dbg(sdev->dev, "ipc: firmware initiated, msg:0x%x, msg_ext:0x%x\n",
+		dev_vdbg(sdev->dev, "ipc: firmware initiated, msg:0x%x, msg_ext:0x%x\n",
 			msg, msg_ext);
 
 		/* handle messages from DSP */
