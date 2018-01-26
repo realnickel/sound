@@ -209,7 +209,7 @@ int snd_sof_init_trace(struct snd_sof_dev *sdev)
 				 &ipc_reply, sizeof(ipc_reply));
 	if (ret < 0) {
 		dev_err(sdev->dev,
-			"error: cant set params for DMA for Trace%d\n", ret);
+			"error: can't set params for DMA for trace %d\n", ret);
 		goto table_err;
 	}
 
@@ -252,6 +252,9 @@ void snd_sof_trace_notify_for_error(struct snd_sof_dev *sdev)
 
 void snd_sof_release_trace(struct snd_sof_dev *sdev)
 {
+	if (!sdev->dtrace_is_enabled)
+		return;
+
 	snd_dma_free_pages(&sdev->dmatb);
 	snd_dma_free_pages(&sdev->dmatp);
 }
