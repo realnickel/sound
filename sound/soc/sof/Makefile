@@ -24,5 +24,5 @@ obj-$(CONFIG_SND_SOC_SOF_BAYTRAIL) += snd-sof-intel-byt.o
 obj-$(CONFIG_SND_SOC_SOF_HASWELL) += snd-sof-intel-hsw.o
 obj-$(CONFIG_SND_SOC_SOF_BROADWELL) += snd-sof-intel-bdw.o
 obj-$(CONFIG_SND_SOC_SOF_APOLLOLAKE) += snd-sof-intel-apl.o
-obj-$(CONFIG_SND_SOC_SOF_CANNONLAKE) += snd-sof-intel-apl.o
+obj-$(CONFIG_SND_SOC_SOF_CANNONLAKE) += snd-sof-intel-cnl.o
 obj-$(CONFIG_SND_SOC_SOF_SPIDSP) += snd-sof-spi.o
