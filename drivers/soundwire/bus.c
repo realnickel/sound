@@ -408,6 +408,41 @@ int sdw_write(struct sdw_slave *slave, u32 addr, u8 value)
 EXPORT_SYMBOL(sdw_write);
 
 /*
+ * no PM versions, use with care.
+ * dev_num as SDW_BROADCAST_DEV_NUM would give ORed values
+ */
+static int sdw_read_nopm(struct sdw_bus *bus, u16 dev_num, u32 addr)
+{
+	struct sdw_msg msg;
+	u8 buf;
+	int ret;
+
+	ret = sdw_fill_msg(&msg, NULL, addr, 1, dev_num,
+			SDW_MSG_FLAG_READ, &buf);
+	if (ret)
+		return ret;
+
+	ret = sdw_transfer(bus, &msg);
+	if (ret < 0)
+		return ret;
+	else
+		return buf;
+}
+
+static int sdw_write_nopm(struct sdw_bus *bus, u16 dev_num, u32 addr, u8 value)
+{
+	struct sdw_msg msg;
+	int ret;
+
+	ret = sdw_fill_msg(&msg, NULL, addr, 1, dev_num,
+			SDW_MSG_FLAG_WRITE, &value);
+	if (ret)
+		return ret;
+
+	return sdw_transfer(bus, &msg);
+}
+
+/*
  * SDW alert handling
  */
 
