@@ -477,6 +477,7 @@ static void sof_pcm_free(struct snd_pcm *pcm)
 	if (spcm->pcm.capture)
 		snd_dma_free_pages(&spcm->stream[SNDRV_PCM_STREAM_CAPTURE].page_table);
 
+	snd_sof_free_topology(sdev);
 }
 
 static int sof_pcm_dai_link_fixup(struct snd_soc_pcm_runtime *rtd,

@@ -236,7 +236,6 @@ static int sof_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_platform(&pdev->dev);
 	snd_soc_unregister_component(&pdev->dev);
-	snd_sof_free_topology(sdev);
 	snd_sof_fw_unload(sdev);
 	snd_sof_ipc_free(sdev);
 	snd_sof_free_debug(sdev);
