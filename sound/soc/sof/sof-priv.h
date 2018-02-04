@@ -196,6 +196,8 @@ struct snd_sof_widget {
 	struct snd_soc_dapm_widget *widget;
 	struct mutex mutex;
 	struct list_head list;	/* list in sdev widget list */
+
+	void *private;			/* core does not touch this */
 };
 
 struct snd_sof_dai {
