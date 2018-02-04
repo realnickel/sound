@@ -486,11 +486,47 @@ static int sof_pcm_dai_link_fixup(struct snd_soc_pcm_runtime *rtd,
 			SNDRV_PCM_HW_PARAM_RATE);
 	struct snd_interval *channels = hw_param_interval(params,
 						SNDRV_PCM_HW_PARAM_CHANNELS);
+	struct snd_mask *fmt = hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT);
+	struct snd_sof_dev *sdev =
+		snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_sof_dai *dai =
+		snd_sof_find_dai(sdev, (char *)rtd->dai_link->name);
 
-	/*  tmp hard code to 48k, stereo, 24bits. TODO: read this from topology */
+	/*  set 48k, stereo, 16bits by default */
 	rate->min = rate->max = 48000;
 	channels->min = channels->max = 2;
-	params_set_format(params, SNDRV_PCM_FORMAT_S24_LE);
+	snd_mask_none(fmt);
+	snd_mask_set(fmt, SNDRV_PCM_FORMAT_S16_LE);
+
+	/* read format from topology */
+	if (!dai) {
+		dev_err(sdev->dev, "No DAI is found!\n");
+		return -EINVAL;
+	}
+
+	snd_mask_none(fmt);
+
+	switch (dai->comp_dai.config.frame_fmt) {
+	case SOF_IPC_FRAME_S16_LE:
+		snd_mask_set(fmt, SNDRV_PCM_FORMAT_S16_LE);
+		break;
+	case SOF_IPC_FRAME_S24_4LE:
+		snd_mask_set(fmt, SNDRV_PCM_FORMAT_S24_LE);
+		break;
+	default:
+		dev_err(sdev->dev, "No available DAI format!\n");
+		return -EINVAL;
+	}
+
+	/* read rate and channels from topology */
+	rate->min = rate->max = dai->dai_config.fclk;
+	channels->min = channels->max = dai->dai_config.num_slots;
+
+	dev_dbg(sdev->dev,
+		"rate_min: %d rate_max: %d\n", rate->min, rate->max);
+	dev_dbg(sdev->dev,
+		"channels_min: %d channels_max: %d\n",
+		channels->min, channels->max);
 
 	return 0;
 }
