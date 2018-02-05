@@ -103,6 +103,19 @@ struct snd_sof_widget *snd_sof_find_swidget(struct snd_sof_dev *sdev,
 	return NULL;
 }
 
+struct snd_sof_dai *snd_sof_find_dai(struct snd_sof_dev *sdev,
+				     char *name)
+{
+	struct snd_sof_dai *dai = NULL;
+
+	list_for_each_entry(dai, &sdev->dai_list, list) {
+		if (strcmp(name, dai->name) == 0)
+			return dai;
+	}
+
+	return NULL;
+}
+
 static int sof_probe(struct platform_device *pdev)
 {
 	struct snd_sof_pdata *plat_data = dev_get_platdata(&pdev->dev);
