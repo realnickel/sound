@@ -198,6 +198,15 @@ struct snd_sof_widget {
 	struct list_head list;	/* list in sdev widget list */
 };
 
+struct snd_sof_dai {
+	struct snd_sof_dev *sdev;
+	const char *name;
+
+	struct sof_ipc_comp_dai comp_dai;
+	struct sof_ipc_dai_config dai_config;
+	struct list_head list;	/* list in sdev dai list */
+};
+
 struct snd_sof_ipc_msg {
 	struct list_head list;
 
@@ -329,6 +338,7 @@ struct snd_sof_dev {
 	struct list_head pcm_list;
 	struct list_head kcontrol_list;
 	struct list_head widget_list;
+	struct list_head dai_list;
 	struct snd_soc_component *component;
 
 	/* FW configuration */
