@@ -467,7 +467,8 @@ static int sof_control_unload(struct snd_soc_component *scomp,
 
 static int sof_connect_dai_widget(struct snd_soc_component *scomp,
 	struct snd_soc_dapm_widget *w,
-	struct snd_soc_tplg_dapm_widget *tw)
+	struct snd_soc_tplg_dapm_widget *tw,
+	struct snd_sof_dai *dai)
 {
 	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(scomp);
 	struct snd_soc_card *card = scomp->card;
@@ -485,11 +486,15 @@ static int sof_connect_dai_widget(struct snd_soc_component *scomp,
 		switch (w->id) {
 		case snd_soc_dapm_dai_out:
 			rtd->cpu_dai->capture_widget = w;
+			if (dai)
+				dai->name = rtd->dai_link->name;
 			dev_dbg(sdev->dev, "tplg: connected widget %s -> DAI link %s\n",
 				w->name, rtd->dai_link->name);
 			break;
 		case snd_soc_dapm_dai_in:
 			rtd->cpu_dai->playback_widget = w;
+			if (dai)
+				dai->name = rtd->dai_link->name;
 			dev_dbg(sdev->dev, "tplg: connected widget %s -> DAI link %s\n",
 					w->name, rtd->dai_link->name);
 			break;
@@ -503,32 +508,43 @@ static int sof_connect_dai_widget(struct snd_soc_component *scomp,
 
 static int sof_widget_load_dai(struct snd_soc_component *scomp, int index,
 	struct snd_sof_widget *swidget,
-	struct snd_soc_tplg_dapm_widget *tw, struct sof_ipc_comp_reply *r)
+	struct snd_soc_tplg_dapm_widget *tw, struct sof_ipc_comp_reply *r,
+	struct snd_sof_dai *dai)
 {
 	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(scomp);
 	struct snd_soc_tplg_private *private = &tw->priv;
-	struct sof_ipc_comp_dai dai;
+	struct sof_ipc_comp_dai comp_dai;
+	int ret;
 
 	/* configure dai IPC message */
-	memset(&dai, 0, sizeof(dai));
-	dai.comp.hdr.size = sizeof(dai);
-	dai.comp.hdr.cmd = SOF_IPC_GLB_TPLG_MSG | SOF_IPC_TPLG_COMP_NEW;
-	dai.comp.id = swidget->comp_id;
-	dai.comp.type = SOF_COMP_DAI;
-	dai.comp.pipeline_id = index;
+	memset(&comp_dai, 0, sizeof(comp_dai));
+	comp_dai.comp.hdr.size = sizeof(comp_dai);
+	comp_dai.comp.hdr.cmd = SOF_IPC_GLB_TPLG_MSG | SOF_IPC_TPLG_COMP_NEW;
+	comp_dai.comp.id = swidget->comp_id;
+	comp_dai.comp.type = SOF_COMP_DAI;
+	comp_dai.comp.pipeline_id = index;
 
-	sof_parse_tokens(scomp, &dai, dai_tokens,
-		ARRAY_SIZE(dai_tokens), private->array, private->size);
-	sof_parse_tokens(scomp, &dai.config, comp_tokens,
-		ARRAY_SIZE(comp_tokens), private->array, private->size);
+	sof_parse_tokens(scomp, &comp_dai, dai_tokens,
+			 ARRAY_SIZE(dai_tokens), private->array,
+			 private->size);
+	sof_parse_tokens(scomp, &comp_dai.config, comp_tokens,
+			 ARRAY_SIZE(comp_tokens), private->array,
+			 private->size);
 
 	dev_dbg(sdev->dev, "dai %s: dmac %d chan %d type %d index %d\n",
-		swidget->widget->name, dai.dmac_id, dai.dmac_chan,
-		dai.type, dai.index);
-	sof_dbg_comp_config(scomp, &dai.config);
+		swidget->widget->name, comp_dai.dmac_id, comp_dai.dmac_chan,
+		comp_dai.type, comp_dai.index);
+	sof_dbg_comp_config(scomp, &comp_dai.config);
 
-	return sof_ipc_tx_message(sdev->ipc,
-		dai.comp.hdr.cmd, &dai, sizeof(dai), r, sizeof(*r));
+	ret = sof_ipc_tx_message(sdev->ipc, comp_dai.comp.hdr.cmd,
+				 &comp_dai, sizeof(comp_dai), r, sizeof(*r));
+
+	if (ret == 0 && dai) {
+		dai->sdev = sdev;
+		memcpy(&dai->comp_dai, &comp_dai, sizeof(comp_dai));
+	}
+
+	return ret;
 }
 
 /*
@@ -790,6 +806,7 @@ static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 {
 	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(scomp);
 	struct snd_sof_widget *swidget;
+	struct snd_sof_dai *dai;
 	struct sof_ipc_comp_reply reply;
 	struct snd_sof_control *scontrol = NULL;
 	int ret = 0;
@@ -804,6 +821,7 @@ static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 	swidget->complete = 0;
 	swidget->id = w->id;
 	swidget->pipeline_id = index;
+	swidget->private = NULL;
 	memset(&reply, 0, sizeof(reply));
 
 	dev_dbg(sdev->dev, "tplg: ready widget id %d pipe %d type %d name : %s stream %s\n",
@@ -814,9 +832,19 @@ static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 	switch (w->id) {
 	case snd_soc_dapm_dai_in:
 	case snd_soc_dapm_dai_out:
-		ret = sof_widget_load_dai(scomp, index, swidget, tw, &reply);
-		if (ret == 0)
-			sof_connect_dai_widget(scomp, w, tw);
+		dai = kzalloc(sizeof(*dai), GFP_KERNEL);
+		if (!dai)
+			return -ENOMEM;
+
+		ret = sof_widget_load_dai(scomp, index, swidget, tw, &reply,
+					  dai);
+		if (ret == 0) {
+			sof_connect_dai_widget(scomp, w, tw, dai);
+			list_add(&dai->list, &sdev->dai_list);
+			swidget->private = dai;
+		} else {
+			kfree(dai);
+		}
 		break;
 	case snd_soc_dapm_mixer:
 		ret = sof_widget_load_mixer(scomp, index, swidget, tw, &reply);
@@ -883,6 +911,19 @@ static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 static int sof_widget_unload(struct snd_soc_component *scomp,
 	struct snd_soc_dobj *dobj)
 {
+	struct snd_sof_widget *swidget = dobj->private;
+	struct snd_sof_dai *dai = swidget->private;
+
+	/* remove and free dai object */
+	if (dai) {
+		list_del(&dai->list);
+		kfree(dai);
+	}
+
+	/* remove and free swidget object */
+	list_del(&swidget->list);
+	kfree(swidget);
+
 	return 0;
 }
 
@@ -1064,6 +1105,7 @@ static int sof_link_load(struct snd_soc_component *scomp, int index,
 	struct snd_soc_tplg_private *private = &cfg->priv;
 	struct sof_ipc_dai_config config;
 	struct snd_soc_tplg_hw_config *hw_config;
+	struct snd_sof_dai *dai;
 	int ret = 0;
 
 	link->platform_name = "sof-audio";
@@ -1154,6 +1196,11 @@ static int sof_link_load(struct snd_soc_component *scomp, int index,
 		ret = -EINVAL;
 		break;
 	}
+
+	dai = snd_sof_find_dai(sdev, (char *)link->name);
+	if (dai)
+		memcpy(&dai->dai_config, &config,
+		       sizeof(struct sof_ipc_dai_config));
 
 	return 0;
 }
