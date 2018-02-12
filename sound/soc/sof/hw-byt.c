@@ -12,7 +12,6 @@
  * Hardware interface for audio DSP on Baytrail, Braswell and Cherrytrail.
  */
 
-
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
@@ -99,15 +98,16 @@ static void byt_dump(struct snd_sof_dev *sdev, u32 flags)
 	int i;
 
 	if (flags & SOF_DBG_REGS) {
-		for (i = SHIM_OFFSET; i < SHIM_OFFSET  + SHIM_SIZE; i += 8 ) {
+		for (i = SHIM_OFFSET; i < SHIM_OFFSET  + SHIM_SIZE; i += 8) {
 			dev_dbg(sdev->dev, "shim 0x%2.2x value 0x%16.16llx\n",
-				i - SHIM_OFFSET, 
+				i - SHIM_OFFSET,
 				snd_sof_dsp_read64(sdev, BYT_DSP_BAR, i));
 		}
 	}
 
 	if (flags & SOF_DBG_MBOX) {
-		for (i = MBOX_OFFSET; i < MBOX_OFFSET + MBOX_DUMP_SIZE; i += 4) {
+		for (i = MBOX_OFFSET; i < MBOX_OFFSET + MBOX_DUMP_SIZE;
+			i += 4) {
 			dev_dbg(sdev->dev, "mbox: 0x%2.2x value 0x%8.8x\n",
 				i - MBOX_OFFSET,
 				readl(sdev->bar[BYT_DSP_BAR] + i));
@@ -115,20 +115,14 @@ static void byt_dump(struct snd_sof_dev *sdev, u32 flags)
 	}
 
 	if (flags & SOF_DBG_TEXT) {
-		for (i = IRAM_OFFSET; i < IRAM_OFFSET + MBOX_DUMP_SIZE; i += 4) {
+		for (i = IRAM_OFFSET; i < IRAM_OFFSET + MBOX_DUMP_SIZE;
+			i += 4) {
 			dev_dbg(sdev->dev, "iram: 0x%2.2x value 0x%8.8x\n",
 				i - IRAM_OFFSET,
 				readl(sdev->bar[BYT_DSP_BAR] + i));
 		}
 	}
-#if 0
-	if (flags & SOF_DBG_PCI && sdev->pci == NULL) {
-		for (i = 0; i < 0xff; i += 4) {
-			dev_dbg(sdev->dev, "pci: 0x%2.2x value 0x%8.8x\n",
-				i, readl(sdev->bar[BYT_PCI_BAR] + i));
-		}
-	}
-#endif
+
 	if (flags & SOF_DBG_PCI && sdev->pci) {
 		for (i = 0; i < 0xff; i += 4) {
 			pci_read_config_dword(sdev->pci, i, &val);
@@ -143,7 +137,7 @@ static void byt_dump(struct snd_sof_dev *sdev, u32 flags)
  */
 
 static void byt_write(struct snd_sof_dev *sdev, void __iomem *addr,
-	u32 value)
+		      u32 value)
 {
 	writel(value, addr);
 }
@@ -154,7 +148,7 @@ static u32 byt_read(struct snd_sof_dev *sdev, void __iomem *addr)
 }
 
 static void byt_write64(struct snd_sof_dev *sdev, void __iomem *addr,
-	u64 value)
+			u64 value)
 {
 	memcpy_toio(addr, &value, sizeof(value));
 }
@@ -172,9 +166,9 @@ static u64 byt_read64(struct snd_sof_dev *sdev, void __iomem *addr)
  */
 
 static void byt_block_write(struct snd_sof_dev *sdev, u32 offset, void *src,
-	size_t size)
+			    size_t size)
 {
-	volatile void __iomem *dest = sdev->bar[sdev->mmio_bar] + offset;
+	void __iomem *dest = sdev->bar[sdev->mmio_bar] + offset;
 	u32 tmp = 0;
 	int i, m, n;
 	const u8 *src_byte = src;
@@ -193,9 +187,10 @@ static void byt_block_write(struct snd_sof_dev *sdev, u32 offset, void *src,
 }
 
 static void byt_block_read(struct snd_sof_dev *sdev, u32 offset, void *dest,
-	size_t size)
+			   size_t size)
 {
-	volatile void __iomem *src = sdev->bar[sdev->mmio_bar] + offset;
+	void __iomem *src = sdev->bar[sdev->mmio_bar] + offset;
+
 	memcpy_fromio(dest, src, size);
 }
 
@@ -218,16 +213,17 @@ static int byt_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
 	byt_block_read(sdev, offset, fw_ready, sizeof(*fw_ready));
 
 	snd_sof_dsp_mailbox_init(sdev, fw_ready->dspbox_offset,
-		fw_ready->dspbox_size, fw_ready->hostbox_offset,
-		fw_ready->hostbox_size);
+				 fw_ready->dspbox_size,
+				 fw_ready->hostbox_offset,
+				 fw_ready->hostbox_size);
 
 	dev_dbg(sdev->dev, " mailbox DSP initiated 0x%x - size 0x%x\n",
 		fw_ready->dspbox_offset, fw_ready->dspbox_size);
 	dev_dbg(sdev->dev, " mailbox Host initiated 0x%x - size 0x%x\n",
 		fw_ready->hostbox_offset, fw_ready->hostbox_size);
-	
-	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n", 
-		v->major, v->minor, v->tag, v->build, v->date, v->time);
+
+	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n",
+		 v->major, v->minor, v->tag, v->build, v->date, v->time);
 
 	return 0;
 }
@@ -237,7 +233,7 @@ static int byt_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
  */
 
 static void byt_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+			      void *message, size_t bytes)
 {
 	void __iomem *dest = sdev->bar[sdev->mailbox_bar] + offset;
 
@@ -245,7 +241,7 @@ static void byt_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
 }
 
 static void byt_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+			     void *message, size_t bytes)
 {
 	void __iomem *src = sdev->bar[sdev->mailbox_bar] + offset;
 
@@ -258,25 +254,25 @@ static void byt_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
 
 static irqreturn_t byt_irq_handler(int irq, void *context)
 {
-	struct snd_sof_dev *sdev = (struct snd_sof_dev *) context;
+	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
 	u64 isr;
 	int ret = IRQ_NONE;
 
 	/* Interrupt arrived, check src */
 	isr = snd_sof_dsp_read64(sdev, BYT_DSP_BAR, SHIM_ISRX);
 	if (isr & SHIM_ISRX_DONE) {
-
 		/* Mask Done interrupt before return */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BYT_DSP_BAR, SHIM_IMRX,
-			SHIM_IMRX_DONE, SHIM_IMRX_DONE);
+						   SHIM_IMRX_DONE,
+						   SHIM_IMRX_DONE);
 		ret = IRQ_WAKE_THREAD;
 	}
 
 	if (isr & SHIM_ISRX_BUSY) {
-
 		/* Mask Busy interrupt before return */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BYT_DSP_BAR, SHIM_IMRX,
-			SHIM_IMRX_BUSY, SHIM_IMRX_BUSY);
+						   SHIM_IMRX_BUSY,
+						   SHIM_IMRX_BUSY);
 		ret = IRQ_WAKE_THREAD;
 	}
 
@@ -285,30 +281,28 @@ static irqreturn_t byt_irq_handler(int irq, void *context)
 
 static irqreturn_t byt_irq_thread(int irq, void *context)
 {
-	struct snd_sof_dev *sdev = (struct snd_sof_dev *) context;
+	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
 	u64 ipcx, ipcd;
 
 	ipcx = snd_sof_dsp_read64(sdev, BYT_DSP_BAR, SHIM_IPCX);
 
 	/* reply message from DSP */
 	if (ipcx & SHIM_BYT_IPCX_DONE) {
-
 		/* Handle Immediate reply from DSP Core */
 		snd_sof_ipc_reply(sdev, ipcx);
 
 		/* clear DONE bit - tell DSP we have completed */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BYT_DSP_BAR, SHIM_IPCX,
-			SHIM_BYT_IPCX_DONE, 0);
+						   SHIM_BYT_IPCX_DONE, 0);
 
 		/* unmask Done interrupt */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BYT_DSP_BAR, SHIM_IMRX,
-			SHIM_IMRX_DONE, 0);
+						   SHIM_IMRX_DONE, 0);
 	}
 
 	/* new message from DSP */
 	ipcd = snd_sof_dsp_read64(sdev, BYT_DSP_BAR, SHIM_IPCD);
 	if (ipcd & SHIM_BYT_IPCD_BUSY) {
-
 		/* Handle messages from DSP Core */
 		snd_sof_ipc_msgs_rx(sdev);
 	}
@@ -321,7 +315,7 @@ static irqreturn_t byt_irq_thread(int irq, void *context)
 
 static int byt_is_ready(struct snd_sof_dev *sdev)
 {
-	uint64_t imrx;
+	u64 imrx;
 
 	imrx = snd_sof_dsp_read64(sdev, BYT_DSP_BAR, SHIM_IMRX);
 	if (imrx & SHIM_IMRX_DONE)
@@ -335,9 +329,10 @@ static int byt_send_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 	u64 cmd = msg->header;
 
 	/* send the message */
-	byt_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data, msg->msg_size);
+	byt_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data,
+			  msg->msg_size);
 	snd_sof_dsp_write64(sdev, BYT_DSP_BAR, SHIM_IPCX,
-		cmd | SHIM_BYT_IPCX_BUSY);
+			    cmd | SHIM_BYT_IPCX_BUSY);
 
 	return 0;
 }
@@ -367,7 +362,8 @@ static int byt_get_reply(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 
 	/* read the message */
 	if (msg->msg_data && size > 0)
-		byt_mailbox_read(sdev, sdev->host_box.offset, msg->reply_data, size);
+		byt_mailbox_read(sdev, sdev->host_box.offset, msg->reply_data,
+				 size);
 
 	return ret;
 }
@@ -376,12 +372,13 @@ static int byt_cmd_done(struct snd_sof_dev *sdev)
 {
 	/* clear BUSY bit and set DONE bit - accept new messages */
 	snd_sof_dsp_update_bits64_unlocked(sdev, BYT_DSP_BAR, SHIM_IPCD,
-		SHIM_BYT_IPCD_BUSY | SHIM_BYT_IPCD_DONE,
-		SHIM_BYT_IPCD_DONE);
+					   SHIM_BYT_IPCD_BUSY |
+					   SHIM_BYT_IPCD_DONE,
+					   SHIM_BYT_IPCD_DONE);
 
 	/* unmask busy interrupt */
 	snd_sof_dsp_update_bits64_unlocked(sdev, BYT_DSP_BAR, SHIM_IMRX,
-		SHIM_IMRX_BUSY, 0);
+					   SHIM_IMRX_BUSY, 0);
 
 	return 0;
 }
@@ -396,7 +393,7 @@ static int byt_run(struct snd_sof_dev *sdev)
 
 	/* release stall and wait to unstall */
 	snd_sof_dsp_update_bits64(sdev, BYT_DSP_BAR, SHIM_CSR,
-		SHIM_BYT_CSR_STALL, 0x0);
+				  SHIM_BYT_CSR_STALL, 0x0);
 	while (tries--) {
 		if (!(snd_sof_dsp_read64(sdev, BYT_DSP_BAR, SHIM_CSR) &
 		      SHIM_BYT_CSR_PWAITMODE))
@@ -416,14 +413,16 @@ static int byt_reset(struct snd_sof_dev *sdev)
 {
 	/* put DSP into reset, set reset vector and stall */
 	snd_sof_dsp_update_bits64(sdev, BYT_DSP_BAR, SHIM_CSR,
-		SHIM_BYT_CSR_RST | SHIM_BYT_CSR_VECTOR_SEL | SHIM_BYT_CSR_STALL,
-		SHIM_BYT_CSR_RST | SHIM_BYT_CSR_VECTOR_SEL | SHIM_BYT_CSR_STALL);
+				  SHIM_BYT_CSR_RST | SHIM_BYT_CSR_VECTOR_SEL |
+				  SHIM_BYT_CSR_STALL,
+				  SHIM_BYT_CSR_RST | SHIM_BYT_CSR_VECTOR_SEL |
+				  SHIM_BYT_CSR_STALL);
 
-	udelay(10);
+	usleep_range(10, 15);
 
 	/* take DSP out of reset and keep stalled for FW loading */
 	snd_sof_dsp_update_bits64(sdev, BYT_DSP_BAR, SHIM_CSR,
-		SHIM_BYT_CSR_RST, 0);
+				  SHIM_BYT_CSR_RST, 0);
 
 	return 0;
 }
@@ -451,7 +450,7 @@ static int byt_acpi_probe(struct snd_sof_dev *sdev)
 
 	/* LPE base */
 	mmio = platform_get_resource(pdev, IORESOURCE_MEM,
-		desc->resindex_lpe_base);
+				     desc->resindex_lpe_base);
 	if (mmio) {
 		base = mmio->start;
 		size = resource_size(mmio);
@@ -463,7 +462,7 @@ static int byt_acpi_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "LPE PHY base at 0x%x size 0x%x", base, size);
 	sdev->bar[BYT_DSP_BAR] = ioremap(base, size);
-	if (sdev->bar[BYT_DSP_BAR] == NULL) {
+	if (!sdev->bar[BYT_DSP_BAR]) {
 		dev_err(sdev->dev, "error: failed to ioremap LPE base 0x%x size 0x%x\n",
 			base, size);
 		return -ENODEV;
@@ -479,7 +478,7 @@ static int byt_acpi_probe(struct snd_sof_dev *sdev)
 		goto irq;
 
 	mmio = platform_get_resource(pdev, IORESOURCE_MEM,
-		desc->resindex_imr_base);
+				     desc->resindex_imr_base);
 	if (mmio) {
 		base = mmio->start;
 		size = resource_size(mmio);
@@ -498,7 +497,7 @@ static int byt_acpi_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "IMR base at 0x%x size 0x%x", base, size);
 	sdev->bar[BYT_IMR_BAR] = ioremap(base, size);
-	if (sdev->bar[BYT_IMR_BAR] == NULL) {
+	if (!sdev->bar[BYT_IMR_BAR]) {
 		dev_err(sdev->dev, "error: failed to ioremap IMR base 0x%x size 0x%x\n",
 			base, size);
 		ret = -ENODEV;
@@ -518,11 +517,12 @@ irq:
 
 	dev_dbg(sdev->dev, "using IRQ %d\n", sdev->ipc_irq);
 	ret = request_threaded_irq(sdev->ipc_irq, byt_irq_handler,
-		byt_irq_thread, IRQF_SHARED, "AudioDSP", sdev);
+				   byt_irq_thread, IRQF_SHARED, "AudioDSP",
+				   sdev);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to register IRQ %d\n",
 			sdev->ipc_irq);
-		goto irq_err;		
+		goto irq_err;
 	}
 
 	/* enable Interrupt from both sides */
@@ -540,7 +540,7 @@ irq:
 irq_err:
 	iounmap(sdev->bar[BYT_IMR_BAR]);
 imr_err:
-	iounmap(sdev->bar[BYT_DSP_BAR]);	
+	iounmap(sdev->bar[BYT_DSP_BAR]);
 	return ret;
 }
 
@@ -565,7 +565,7 @@ static int byt_pci_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "LPE PHY base at 0x%x size 0x%x", base, size);
 	sdev->bar[BYT_DSP_BAR] = ioremap(base, size);
-	if (sdev->bar[BYT_DSP_BAR] == NULL) {
+	if (!sdev->bar[BYT_DSP_BAR]) {
 		dev_err(sdev->dev, "error: failed to ioremap LPE base 0x%x size 0x%x\n",
 			base, size);
 		return -ENODEV;
@@ -587,7 +587,7 @@ static int byt_pci_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "IMR base at 0x%x size 0x%x", base, size);
 	sdev->bar[BYT_IMR_BAR] = ioremap(base, size);
-	if (sdev->bar[BYT_IMR_BAR] == NULL) {
+	if (!sdev->bar[BYT_IMR_BAR]) {
 		dev_err(sdev->dev, "error: failed to ioremap IMR base 0x%x size 0x%x\n",
 			base, size);
 		ret = -ENODEV;
@@ -600,11 +600,11 @@ irq:
 	sdev->ipc_irq = pci->irq;
 	dev_dbg(sdev->dev, "using IRQ %d\n", sdev->ipc_irq);
 	ret = request_threaded_irq(sdev->ipc_irq, byt_irq_handler,
-		byt_irq_thread, 0, "AudioDSP", sdev);
+				   byt_irq_thread, 0, "AudioDSP", sdev);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to register IRQ %d\n",
 			sdev->ipc_irq);
-		goto irq_err;		
+		goto irq_err;
 	}
 
 	/* enable Interrupt from both sides */
@@ -622,7 +622,7 @@ irq:
 irq_err:
 	iounmap(sdev->bar[BYT_IMR_BAR]);
 imr_err:
-	iounmap(sdev->bar[BYT_DSP_BAR]);	
+	iounmap(sdev->bar[BYT_DSP_BAR]);
 	return ret;
 }
 
@@ -659,7 +659,6 @@ static int byt_remove(struct snd_sof_dev *sdev)
 
 /* baytrail ops */
 struct snd_sof_dsp_ops snd_sof_byt_ops = {
-
 	/* device init */
 	.probe		= byt_probe,
 	.remove		= byt_remove,
@@ -702,13 +701,12 @@ struct snd_sof_dsp_ops snd_sof_byt_ops = {
 	.load_module	= snd_sof_parse_module_memcpy,
 
 	/*Firmware loading */
- 	.load_firmware	= snd_sof_load_firmware_memcpy,
+	.load_firmware	= snd_sof_load_firmware_memcpy,
 };
 EXPORT_SYMBOL(snd_sof_byt_ops);
 
 /* cherrytrail and braswell ops */
 struct snd_sof_dsp_ops snd_sof_cht_ops = {
-
 	/* device init */
 	.probe		= byt_probe,
 	.remove		= byt_remove,
@@ -751,7 +749,7 @@ struct snd_sof_dsp_ops snd_sof_cht_ops = {
 	.load_module	= snd_sof_parse_module_memcpy,
 
 	/*Firmware loading */
- 	.load_firmware	= snd_sof_load_firmware_memcpy,
+	.load_firmware	= snd_sof_load_firmware_memcpy,
 };
 EXPORT_SYMBOL(snd_sof_cht_ops);
 
