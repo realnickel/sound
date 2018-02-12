@@ -44,7 +44,7 @@ struct snd_sof_pdata {
 	const struct snd_soc_acpi_mach *machine;
 };
 
-/* 
+/*
  * Descriptor used for setting up SOF platform data. This is used when
  * ACPI/PCI data is missing or mapped differently.
  */
@@ -52,7 +52,7 @@ struct sof_dev_desc {
 	/* list of machines using this configuration */
 	struct snd_soc_acpi_mach *machines;
 
-	/* Platform resource indexes in BAR / ACPI resources. */ 
+	/* Platform resource indexes in BAR / ACPI resources. */
 	/* Must set to -1 if not used - add new items to end */
 	int resindex_lpe_base;
 	int resindex_pcicfg_base;
