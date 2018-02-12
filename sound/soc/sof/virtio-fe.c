@@ -19,7 +19,8 @@
  * The virtIO message Q will use the *exact* same IPC structures as we currently
  * use in the mailbox.
  *
- * Guest OS SOF core -> SOF FE -> virtIO Q -> SOF BE -> System OS SOF core -> DSP
+ * Guest OS SOF core -> SOF FE -> virtIO Q -> SOF BE ->
+ * System OS SOF core -> DSP
  *
  * The mailbox IO and TX/RX msg functions below will do IO on the virt IO Q.
  */
@@ -43,7 +44,6 @@
 #include "ops.h"
 #include "intel.h"
 
-
 /*
  * IPC Firmware ready.
  */
@@ -58,37 +58,36 @@ static int virtio_fe_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
  */
 
 static void virtio_fe_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+				    void *message, size_t bytes)
 {
 	/* write data to message Q buffer before sending message */
 }
 
 static void virtio_fe_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+				   void *message, size_t bytes)
 {
 	/* read data from message Q buffer after receiving message */
 }
-
 
 static int virtio_fe_tx_busy(struct snd_sof_dev *sdev)
 {
 	/* return 1 if tx message Q is busy */
 }
 
-static int virtio_fe_tx_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
+static int virtio_fe_tx_msg(struct snd_sof_dev *sdev,
+			    struct snd_sof_ipc_msg *msg)
 {
 	/* write msg to the virtio queue message for BE */
 
 	return 0;
 }
 
-static int virtio_fe_rx_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
+static int virtio_fe_rx_msg(struct snd_sof_dev *sdev,
+			    struct snd_sof_ipc_msg *msg)
 {
-
 	/* read the virtio queue message from BE and copy to msg */
 	return 0;
 }
-
 
 /*
  * Probe and remove.
@@ -108,7 +107,6 @@ static int virtio_fe_remove(struct snd_sof_dev *sdev)
 
 /* baytrail ops */
 struct snd_sof_dsp_ops snd_sof_virtio_fe_ops = {
-
 	/* device init */
 	.probe		= virtio_fe_probe,
 	.remove		= virtio_fe_remove,
@@ -127,7 +125,7 @@ struct snd_sof_dsp_ops snd_sof_virtio_fe_ops = {
 //	.load_module	= snd_sof_parse_module_memcpy,
 
 	/*Firmware loading */
- 	.load_firmware	= snd_sof_load_firmware_memcpy,
+	.load_firmware	= snd_sof_load_firmware_memcpy,
 };
 EXPORT_SYMBOL(snd_sof_virtio_fe_ops);
 

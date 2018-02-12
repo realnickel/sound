@@ -7,7 +7,7 @@
  *
  * Author: Luo Xionghu <xionghu.luo@intel.com>
  *         Liam Girdwood <liam.r.girdwood@linux.intel.com>
- *         
+ *
  */
 
 #include <linux/delay.h>
@@ -27,7 +27,7 @@
 /* BE driver
  *
  * This driver will create IO Queues for communition from FE drivers.
- * The FE driver will send real IPC structures over the queue and then 
+ * The FE driver will send real IPC structures over the queue and then
  * the BE driver will send the structures directlt to the DSP. The BE will
  * get the IPC reply from the DSP and send it back to the FE over the queue.
  *
@@ -81,7 +81,6 @@ static int sof_virtio_restore(struct virtio_device *dev)
 }
 #endif
 
-
 /* IDs of FEs */
 static const struct virtio_device_id *fe_id_table[] + {
 };
@@ -98,7 +97,7 @@ static struct virtio_driver sof_be_virtio_driver = {
 	//unsigned int feature_table_size;
 	//const unsigned int *feature_table_legacy;
 	//unsigned int feature_table_size_legacy;
-	
+
 	validate = sof_virtio_validate,
 	probe = sof_virtio_probe,
 	remove = sof_virtio_remove,
