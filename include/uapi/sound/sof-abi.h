@@ -27,4 +27,3 @@ struct sof_abi_hdr {
 }  __attribute__((packed));
 
 #endif
-
