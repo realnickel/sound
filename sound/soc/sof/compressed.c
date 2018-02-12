@@ -20,23 +20,6 @@
 #include <uapi/sound/sof-ipc.h>
 #include "sof-priv.h"
 
-#if 0
-/* compress stream operations */
-static void sof_period_elapsed(void *arg)
-{
-	struct snd_compr_stream *cstream = (struct snd_compr_stream *)arg;
-
-	snd_compr_fragment_elapsed(cstream);
-}
-
-static void sof_drain_notify(void *arg)
-{
-	struct snd_compr_stream *cstream = (struct snd_compr_stream *)arg;
-
-	snd_compr_drain_notify(cstream);
-}
-#endif
-
 static int sof_compressed_open(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
@@ -63,39 +46,20 @@ static int sof_compressed_free(struct snd_compr_stream *cstream)
 	return 0;
 }
 
-
 static int sof_vorbis_set_params(struct snd_compr_stream *cstream,
-					struct snd_compr_params *params)
+				 struct snd_compr_params *params)
 {
-#if 0
-//	struct snd_compr_runtime *runtime = cstream->runtime;
-	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_sof_dev *sdev =
-		snd_soc_platform_get_drvdata(rtd->platform);
-	struct snd_sof_pcm *spcm = rtd->sof;
-//	struct snd_soc_tplg_stream_caps *caps = 
-//		&spcm->pcm.caps[cstream->direction];
-#endif
 	return 0;
 }
 
 static int sof_mp3_set_params(struct snd_compr_stream *cstream,
-					struct snd_compr_params *params)
+			      struct snd_compr_params *params)
 {
-#if 0
-//	struct snd_compr_runtime *runtime = cstream->runtime;
-	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_sof_dev *sdev =
-		snd_soc_platform_get_drvdata(rtd->platform);
-	struct snd_sof_pcm *spcm = rtd->sof;
-//	struct snd_soc_tplg_stream_caps *caps = 
-//		&spcm->pcm.caps[cstream->direction];
-#endif
 	return 0;
 }
 
 static int sof_compressed_set_params(struct snd_compr_stream *cstream,
-					struct snd_compr_params *params)
+				     struct snd_compr_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
 	struct snd_sof_dev *sdev =
@@ -135,7 +99,7 @@ static int sof_compressed_trigger(struct snd_compr_stream *cstream, int cmd)
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_STOP;
-		break;		
+		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_PAUSE;
 		break;
@@ -147,11 +111,11 @@ static int sof_compressed_trigger(struct snd_compr_stream *cstream, int cmd)
 
 	/* send IPC to the DSP */
 	return sof_ipc_tx_message(sdev->ipc, stream.hdr.cmd, &stream,
-		sizeof(stream), & reply, sizeof(reply));
+		sizeof(stream), &reply, sizeof(reply));
 }
 
 static int sof_compressed_pointer(struct snd_compr_stream *cstream,
-					struct snd_compr_tstamp *tstamp)
+				  struct snd_compr_tstamp *tstamp)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
 	struct snd_sof_dev *sdev =
@@ -162,37 +126,36 @@ static int sof_compressed_pointer(struct snd_compr_stream *cstream,
 	snd_sof_ipc_stream_posn(sdev, spcm, cstream->direction, &posn);
 
 	dev_vdbg(sdev->dev, "CPCM: DMA position %llu DAI position %llu\n",
-		posn.host_posn, posn.dai_posn);
+		 posn.host_posn, posn.dai_posn);
 
 	return 0;
 }
 
 static int sof_compressed_ack(struct snd_compr_stream *cstream,
-					size_t bytes)
+			      size_t bytes)
 {
 	return 0;
 }
 
 static int sof_compressed_get_caps(struct snd_compr_stream *cstream,
-					struct snd_compr_caps *caps)
+				   struct snd_compr_caps *caps)
 {
 	return 0;
 }
 
 static int sof_compressed_get_codec_caps(struct snd_compr_stream *cstream,
-					struct snd_compr_codec_caps *codec)
+					 struct snd_compr_codec_caps *codec)
 {
 	return 0;
 }
 
 static int sof_compressed_set_metadata(struct snd_compr_stream *cstream,
-					struct snd_compr_metadata *metadata)
+				       struct snd_compr_metadata *metadata)
 {
 	return 0;
 }
 
 struct snd_compr_ops sof_compressed_ops = {
-
 	.open = sof_compressed_open,
 	.free = sof_compressed_free,
 	.set_params = sof_compressed_set_params,
