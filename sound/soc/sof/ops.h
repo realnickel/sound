@@ -94,22 +94,22 @@ static inline void snd_sof_dsp_dbg_dump(struct snd_sof_dev *sdev, u32 flags)
 
 /* register IO */
 static inline void snd_sof_dsp_write(struct snd_sof_dev *sdev, u32 bar,
-	u32 offset, u32 value)
+				     u32 offset, u32 value)
 {
 	if (sdev->ops->write)
 		sdev->ops->write(sdev, sdev->bar[bar] + offset, value);
 }
 
 static inline void snd_sof_dsp_write64(struct snd_sof_dev *sdev, u32 bar,
-	u32 offset, u64 value)
+				       u32 offset, u64 value)
 {
 	if (sdev->ops->write64)
-		sdev->ops->write64(sdev, 
+		sdev->ops->write64(sdev,
 			sdev->bar[bar] + offset, value);
 }
 
 static inline u32 snd_sof_dsp_read(struct snd_sof_dev *sdev, u32 bar,
-	u32 offset)
+				   u32 offset)
 {
 	if (sdev->ops->read)
 		return sdev->ops->read(sdev, sdev->bar[bar] + offset);
@@ -118,7 +118,7 @@ static inline u32 snd_sof_dsp_read(struct snd_sof_dev *sdev, u32 bar,
 }
 
 static inline u64 snd_sof_dsp_read64(struct snd_sof_dev *sdev, u32 bar,
-	u32 offset)
+				     u32 offset)
 {
 	if (sdev->ops->read64)
 		return sdev->ops->read64(sdev, sdev->bar[bar] + offset);
@@ -128,14 +128,14 @@ static inline u64 snd_sof_dsp_read64(struct snd_sof_dev *sdev, u32 bar,
 
 /* block IO */
 static inline void snd_sof_dsp_block_read(struct snd_sof_dev *sdev,
-	u32 offset, void *dest, size_t bytes)
+					  u32 offset, void *dest, size_t bytes)
 {
 	if (sdev->ops->block_read)
 		sdev->ops->block_read(sdev, offset, dest, bytes);
 }
 
 static inline void snd_sof_dsp_block_write(struct snd_sof_dev *sdev,
-	u32 offset, void *src, size_t bytes)
+					   u32 offset, void *src, size_t bytes)
 {
 	if (sdev->ops->block_write)
 		sdev->ops->block_write(sdev, offset, src, bytes);
@@ -143,14 +143,16 @@ static inline void snd_sof_dsp_block_write(struct snd_sof_dev *sdev,
 
 /* mailbox */
 static inline void snd_sof_dsp_mailbox_read(struct snd_sof_dev *sdev,
-	u32 offset, void *message, size_t bytes)
+					    u32 offset, void *message,
+					    size_t bytes)
 {
 	if (sdev->ops->mailbox_read)
 		sdev->ops->mailbox_read(sdev, offset, message, bytes);
 }
 
 static inline void snd_sof_dsp_mailbox_write(struct snd_sof_dev *sdev,
-	u32 offset, void *message, size_t bytes)
+					     u32 offset, void *message,
+					     size_t bytes)
 {
 	if (sdev->ops->mailbox_write)
 		sdev->ops->mailbox_write(sdev, offset, message, bytes);
@@ -158,7 +160,7 @@ static inline void snd_sof_dsp_mailbox_write(struct snd_sof_dev *sdev,
 
 /* ipc */
 static inline int snd_sof_dsp_send_msg(struct snd_sof_dev *sdev,
-	struct snd_sof_ipc_msg *msg)
+				       struct snd_sof_ipc_msg *msg)
 {
 	if (sdev->ops->send_msg)
 		return sdev->ops->send_msg(sdev, msg);
@@ -167,7 +169,7 @@ static inline int snd_sof_dsp_send_msg(struct snd_sof_dev *sdev,
 }
 
 static inline int snd_sof_dsp_get_reply(struct snd_sof_dev *sdev,
-	struct snd_sof_ipc_msg *msg)
+					struct snd_sof_ipc_msg *msg)
 {
 	if (sdev->ops->get_reply)
 		return sdev->ops->get_reply(sdev, msg);
@@ -192,32 +194,32 @@ static inline int snd_sof_dsp_cmd_done(struct snd_sof_dev *sdev)
 }
 
 int snd_sof_dsp_update_bits_unlocked(struct snd_sof_dev *sdev, u32 bar,
-		u32 offset, u32 mask, u32 value);
+				     u32 offset, u32 mask, u32 value);
 
 int snd_sof_dsp_update_bits64_unlocked(struct snd_sof_dev *sdev, u32 bar,
-		u32 offset, u64 mask, u64 value);
+				       u32 offset, u64 mask, u64 value);
 
 /* This is for registers bits with attribute RWC */
 void snd_sof_dsp_update_bits_forced_unlocked(struct snd_sof_dev *sdev, u32 bar,
-		u32 offset, u32 mask, u32 value);
+					     u32 offset, u32 mask, u32 value);
 
 int snd_sof_dsp_update_bits(struct snd_sof_dev *sdev, u32 bar, u32 offset,
-		u32 mask, u32 value);
+			    u32 mask, u32 value);
 
 int snd_sof_dsp_update_bits64(struct snd_sof_dev *sdev, u32 bar,
-		u32 offset, u64 mask, u64 value);
+			      u32 offset, u64 mask, u64 value);
 
 /* This is for registers bits with attribute RWC */
 void snd_sof_dsp_update_bits_forced(struct snd_sof_dev *sdev, u32 bar,
-		u32 offset, u32 mask, u32 value);
+				    u32 offset, u32 mask, u32 value);
 
 int snd_sof_pci_update_bits_unlocked(struct snd_sof_dev *sdev, u32 offset,
-		u32 mask, u32 value);
+				     u32 mask, u32 value);
 
 int snd_sof_pci_update_bits(struct snd_sof_dev *sdev, u32 offset,
-		u32 mask, u32 value);
+			    u32 mask, u32 value);
 
 int snd_sof_dsp_register_poll(struct snd_sof_dev *sdev, u32 bar, u32 offset,
-	u32 mask, u32 target, u32 timeout);
+			      u32 mask, u32 target, u32 timeout);
 
 #endif

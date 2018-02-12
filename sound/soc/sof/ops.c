@@ -19,16 +19,15 @@
 #include "sof-priv.h"
 
 int snd_sof_pci_update_bits_unlocked(struct snd_sof_dev *sdev, u32 offset,
-				u32 mask, u32 value)
+				     u32 mask, u32 value)
 {
 	bool change;
 	unsigned int old, new;
 	u32 ret;
 
 	pci_read_config_dword(sdev->pci, offset, &ret);
-	dev_dbg(sdev->dev, "Debug PCIR: %8.8x at  %8.8x\n",\
+	dev_dbg(sdev->dev, "Debug PCIR: %8.8x at  %8.8x\n",
 		pci_read_config_dword(sdev->pci, offset, &ret), offset);
-
 
 	old = ret;
 	new = (old & (~mask)) | (value & mask);
@@ -36,8 +35,8 @@ int snd_sof_pci_update_bits_unlocked(struct snd_sof_dev *sdev, u32 offset,
 	change = (old != new);
 	if (change) {
 		pci_write_config_dword(sdev->pci, offset, new);
-		dev_dbg(sdev->dev, "Debug PCIW: %8.8x at  %8.8x\n",value,
-offset);
+		dev_dbg(sdev->dev, "Debug PCIW: %8.8x at  %8.8x\n", value,
+			offset);
 	}
 
 	return change;
@@ -45,7 +44,7 @@ offset);
 EXPORT_SYMBOL(snd_sof_pci_update_bits_unlocked);
 
 int snd_sof_pci_update_bits(struct snd_sof_dev *sdev, u32 offset,
-				u32 mask, u32 value)
+			    u32 mask, u32 value)
 {
 	unsigned long flags;
 	bool change;
@@ -58,7 +57,7 @@ int snd_sof_pci_update_bits(struct snd_sof_dev *sdev, u32 offset,
 EXPORT_SYMBOL(snd_sof_pci_update_bits);
 
 int snd_sof_dsp_update_bits_unlocked(struct snd_sof_dev *sdev, u32 bar,
-		u32 offset, u32 mask, u32 value)
+				     u32 offset, u32 mask, u32 value)
 {
 	bool change;
 	unsigned int old, new;
@@ -78,7 +77,7 @@ int snd_sof_dsp_update_bits_unlocked(struct snd_sof_dev *sdev, u32 bar,
 EXPORT_SYMBOL(snd_sof_dsp_update_bits_unlocked);
 
 int snd_sof_dsp_update_bits64_unlocked(struct snd_sof_dev *sdev, u32 bar,
-	u32 offset, u64 mask, u64 value)
+				       u32 offset, u64 mask, u64 value)
 {
 	bool change;
 	u64 old, new;
@@ -97,7 +96,7 @@ EXPORT_SYMBOL(snd_sof_dsp_update_bits64_unlocked);
 
 /* This is for registers bits with attribute RWC */
 void snd_sof_dsp_update_bits_forced_unlocked(struct snd_sof_dev *sdev, u32 bar,
-	u32 offset, u32 mask, u32 value)
+					     u32 offset, u32 mask, u32 value)
 {
 	unsigned int old, new;
 	u32 ret;
@@ -112,34 +111,36 @@ void snd_sof_dsp_update_bits_forced_unlocked(struct snd_sof_dev *sdev, u32 bar,
 EXPORT_SYMBOL(snd_sof_dsp_update_bits_forced_unlocked);
 
 int snd_sof_dsp_update_bits(struct snd_sof_dev *sdev, u32 bar, u32 offset,
-				u32 mask, u32 value)
+			    u32 mask, u32 value)
 {
 	unsigned long flags;
 	bool change;
 
 	spin_lock_irqsave(&sdev->hw_lock, flags);
-	change = snd_sof_dsp_update_bits_unlocked(sdev, bar, offset, mask, value);
+	change = snd_sof_dsp_update_bits_unlocked(sdev, bar, offset, mask,
+						  value);
 	spin_unlock_irqrestore(&sdev->hw_lock, flags);
 	return change;
 }
 EXPORT_SYMBOL(snd_sof_dsp_update_bits);
 
 int snd_sof_dsp_update_bits64(struct snd_sof_dev *sdev, u32 bar, u32 offset,
-				u64 mask, u64 value)
+			      u64 mask, u64 value)
 {
 	unsigned long flags;
 	bool change;
 
 	spin_lock_irqsave(&sdev->hw_lock, flags);
-	change = snd_sof_dsp_update_bits64_unlocked(sdev, bar, offset, mask, value);
+	change = snd_sof_dsp_update_bits64_unlocked(sdev, bar, offset, mask,
+						    value);
 	spin_unlock_irqrestore(&sdev->hw_lock, flags);
 	return change;
 }
 EXPORT_SYMBOL(snd_sof_dsp_update_bits64);
 
 /* This is for registers bits with attribute RWC */
-void snd_sof_dsp_update_bits_forced(struct snd_sof_dev *sdev, u32 bar, 
-	u32 offset, u32 mask, u32 value)
+void snd_sof_dsp_update_bits_forced(struct snd_sof_dev *sdev, u32 bar,
+				    u32 offset, u32 mask, u32 value)
 {
 	unsigned long flags;
 
@@ -150,7 +151,7 @@ void snd_sof_dsp_update_bits_forced(struct snd_sof_dev *sdev, u32 bar,
 EXPORT_SYMBOL(snd_sof_dsp_update_bits_forced);
 
 int snd_sof_dsp_register_poll(struct snd_sof_dev *sdev, u32 bar, u32 offset,
-	u32 mask, u32 target, u32 timeout)
+			      u32 mask, u32 target, u32 timeout)
 {
 	int time, ret;
 	bool done = false;
@@ -166,15 +167,16 @@ int snd_sof_dsp_register_poll(struct snd_sof_dev *sdev, u32 bar, u32 offset,
 			done = true;
 			break;
 		}
-		msleep(1);
+		msleep(20);
 	}
 
-	if (done ==  false) {
+	if (!done) {
 		/* sleeping in 10ms steps so adjust timeout value */
 		timeout /= 10;
 
 		for (time = 0; time < timeout; time++) {
-			if ((snd_sof_dsp_read(sdev, bar, offset) & mask) == target)
+			if ((snd_sof_dsp_read(sdev, bar, offset) & mask) ==
+				target)
 				break;
 
 			usleep_range(5000, 10000);
@@ -187,4 +189,3 @@ int snd_sof_dsp_register_poll(struct snd_sof_dev *sdev, u32 bar, u32 offset,
 	return ret;
 }
 EXPORT_SYMBOL(snd_sof_dsp_register_poll);
-
