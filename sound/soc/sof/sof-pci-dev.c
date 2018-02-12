@@ -124,37 +124,36 @@ static void sof_pci_fw_cb(const struct firmware *fw, void *context)
 		dev_err(dev, "Cannot register device sof-audio. Error %d\n",
 			(int)PTR_ERR(priv->pdev_pcm));
 	}
-
-	return;
 }
 
 static const struct dev_pm_ops sof_pci_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(snd_sof_suspend, snd_sof_resume)
-	SET_RUNTIME_PM_OPS(snd_sof_runtime_suspend, snd_sof_runtime_resume, NULL)
+	SET_RUNTIME_PM_OPS(snd_sof_runtime_suspend, snd_sof_runtime_resume,
+			   NULL)
 	.suspend_late = snd_sof_suspend_late,
 };
 
 static int sof_pci_probe(struct pci_dev *pci,
-		     const struct pci_device_id *pci_id)
+			 const struct pci_device_id *pci_id)
 {
 	struct device *dev = &pci->dev;
 	const struct sof_dev_desc *desc =
-		(const struct sof_dev_desc*)pci_id->driver_data;
+		(const struct sof_dev_desc *)pci_id->driver_data;
 	struct snd_soc_acpi_mach *mach;
 	struct snd_sof_pdata *sof_pdata;
 	struct sof_pci_priv *priv;
-        struct snd_sof_dsp_ops *ops;
+	struct snd_sof_dsp_ops *ops;
 	int ret = 0;
 
 	dev_dbg(&pci->dev, "PCI DSP detected");
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-	if (priv == NULL)
+	if (!priv)
 		return -ENOMEM;
 	pci_set_drvdata(pci, priv);
 
 	sof_pdata = devm_kzalloc(dev, sizeof(*sof_pdata), GFP_KERNEL);
-	if (sof_pdata == NULL)
+	if (!sof_pdata)
 		return -ENOMEM;
 
 	ret = pci_enable_device(pci);
@@ -165,35 +164,34 @@ static int sof_pci_probe(struct pci_dev *pci,
 	if (ret < 0)
 		return ret;
 
-	if (0) ;
+	if (0)
+		;
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_APOLLOLAKE)
-	else if (desc == &bxt_desc) {
+	else if (desc == &bxt_desc)
 		ops = &snd_sof_apl_ops;
-	}
 #endif
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_BAYTRAIL)
-	else if (desc == &byt_desc) {
+	else if (desc == &byt_desc)
 		ops = &snd_sof_byt_ops;
-	}
 #endif
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_CANNONLAKE)
-	else if (desc == &cnl_desc) {
-	  ops = &snd_sof_cnl_ops;
-	}
+	else if (desc == &cnl_desc)
+		ops = &snd_sof_cnl_ops;
 #endif
-	else return -ENODEV;
+	else
+		return -ENODEV;
 
 	/* TODO: read NHLT */
 
 	/* find machine */
 	mach = snd_soc_acpi_find_machine(desc->machines);
-	if (mach == NULL) {
+	if (!mach) {
 		struct snd_soc_acpi_mach *m;
 
 		dev_err(dev, "No matching ASoC machine driver found - using nocodec\n");
 		sof_pdata->drv_name = "sof-nocodec";
 		m = devm_kzalloc(dev, sizeof(*mach), GFP_KERNEL);
-		if (m == NULL)
+		if (!m)
 			return -ENOMEM;
 
 		m->drv_name = "sof-nocodec";
@@ -208,7 +206,7 @@ static int sof_pci_probe(struct pci_dev *pci,
 	sof_pdata->id = pci_id->device;
 	sof_pdata->name = pci_name(pci);
 	sof_pdata->machine = mach;
-	sof_pdata->desc = (struct sof_dev_desc*) pci_id->driver_data;
+	sof_pdata->desc = (struct sof_dev_desc *)pci_id->driver_data;
 	priv->sof_pdata = sof_pdata;
 	sof_pdata->pci = pci;
 	sof_pdata->dev = &pci->dev;
