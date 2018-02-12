@@ -61,7 +61,7 @@ static struct snd_sof_ipc_msg *msg_get_empty(struct snd_sof_ipc *ipc)
 
 	if (!list_empty(&ipc->empty_list)) {
 		msg = list_first_entry(&ipc->empty_list, struct snd_sof_ipc_msg,
-			list);
+				       list);
 		list_del(&msg->list);
 	}
 
@@ -69,7 +69,7 @@ static struct snd_sof_ipc_msg *msg_get_empty(struct snd_sof_ipc *ipc)
 }
 
 static int tx_wait_done(struct snd_sof_ipc *ipc, struct snd_sof_ipc_msg *msg,
-	void *reply_data)
+			void *reply_data)
 {
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct sof_ipc_hdr *hdr = (struct sof_ipc_hdr *)msg->msg_data;
@@ -78,7 +78,7 @@ static int tx_wait_done(struct snd_sof_ipc *ipc, struct snd_sof_ipc_msg *msg,
 
 	/* wait for DSP IPC completion */
 	ret = wait_event_timeout(msg->waitq, msg->complete,
-		msecs_to_jiffies(IPC_TIMEOUT_MSECS));
+				 msecs_to_jiffies(IPC_TIMEOUT_MSECS));
 
 	spin_lock_irqsave(&sdev->ipc_lock, flags);
 
@@ -108,8 +108,8 @@ static int tx_wait_done(struct snd_sof_ipc *ipc, struct snd_sof_ipc_msg *msg,
 }
 
 int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
-	void *msg_data, size_t msg_bytes, void *reply_data, 
-	size_t reply_bytes)
+		       void *msg_data, size_t msg_bytes, void *reply_data,
+		       size_t reply_bytes)
 {
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct snd_sof_ipc_msg *msg;
@@ -118,7 +118,7 @@ int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
 	spin_lock_irqsave(&sdev->ipc_lock, flags);
 
 	msg = msg_get_empty(ipc);
-	if (msg == NULL) {
+	if (!msg) {
 		spin_unlock_irqrestore(&sdev->ipc_lock, flags);
 		return -EBUSY;
 	}
@@ -133,7 +133,7 @@ int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
 
 	list_add_tail(&msg->list, &ipc->tx_list);
 
-	/* schedule the messgae if not busy */	
+	/* schedule the messgae if not busy */
 	if (snd_sof_dsp_is_ready(sdev))
 		schedule_work(&ipc->tx_kwork);
 
@@ -165,7 +165,8 @@ out:
 	spin_unlock_irq(&sdev->ipc_lock);
 }
 
-struct snd_sof_ipc_msg *sof_ipc_reply_find_msg(struct snd_sof_ipc *ipc, u32 header)
+struct snd_sof_ipc_msg *sof_ipc_reply_find_msg(struct snd_sof_ipc *ipc,
+					       u32 header)
 {
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct snd_sof_ipc_msg *msg;
@@ -182,14 +183,14 @@ struct snd_sof_ipc_msg *sof_ipc_reply_find_msg(struct snd_sof_ipc *ipc, u32 head
 
 err:
 	dev_err(sdev->dev, "error: rx list empty but received 0x%x\n",
-			header);
+		header);
 	return NULL;
 }
 EXPORT_SYMBOL(sof_ipc_reply_find_msg);
 
 /* locks held by caller */
 void sof_ipc_tx_msg_reply_complete(struct snd_sof_ipc *ipc,
-	struct snd_sof_ipc_msg *msg)
+				   struct snd_sof_ipc_msg *msg)
 {
 	msg->complete = true;
 	wake_up(&msg->waitq);
@@ -223,7 +224,7 @@ void snd_sof_ipc_reply(struct snd_sof_dev *sdev, u32 msg_id)
 	struct snd_sof_ipc_msg *msg;
 
 	msg = sof_ipc_reply_find_msg(sdev->ipc, msg_id);
-	if (msg == NULL) {
+	if (!msg) {
 		dev_err(sdev->dev, "error: can't find message header 0x%x",
 			msg_id);
 		return;
@@ -235,7 +236,8 @@ void snd_sof_ipc_reply(struct snd_sof_dev *sdev, u32 msg_id)
 EXPORT_SYMBOL(snd_sof_ipc_reply);
 
 int snd_sof_dsp_mailbox_init(struct snd_sof_dev *sdev, u32 dspbox,
-		size_t dspbox_size, u32 hostbox, size_t hostbox_size)
+			     size_t dspbox_size, u32 hostbox,
+			     size_t hostbox_size)
 {
 	sdev->dsp_box.offset = dspbox;
 	sdev->dsp_box.size = dspbox_size;
@@ -245,7 +247,6 @@ int snd_sof_dsp_mailbox_init(struct snd_sof_dev *sdev, u32 dspbox,
 }
 EXPORT_SYMBOL(snd_sof_dsp_mailbox_init);
 
-
 static void ipc_period_elapsed(struct snd_sof_dev *sdev, u32 msg_id)
 {
 	struct snd_sof_pcm *spcm;
@@ -253,12 +254,13 @@ static void ipc_period_elapsed(struct snd_sof_dev *sdev, u32 msg_id)
 	int direction;
 
 	/* read back full message */
-	snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn, sizeof(posn));
+	snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
+				 sizeof(posn));
 	dev_dbg(sdev->dev,  "posn: host 0x%llx dai 0x%llx wall 0x%llx\n",
 		posn.host_posn, posn.dai_posn, posn.wallclock);
 
 	spcm = snd_sof_find_spcm_comp(sdev, posn.comp_id, &direction);
-	if (spcm == NULL) {
+	if (!spcm) {
 		dev_err(sdev->dev, "error: period elapsed for unknown component %d\n",
 			posn.comp_id);
 		return;
@@ -275,10 +277,11 @@ static void ipc_xrun(struct snd_sof_dev *sdev, u32 msg_id)
 	int direction;
 
 	/* read back full message */
-	snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn, sizeof(posn));
+	snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
+				 sizeof(posn));
 
 	spcm = snd_sof_find_spcm_comp(sdev, posn.comp_id, &direction);
-	if (spcm == NULL) {
+	if (!spcm) {
 		dev_err(sdev->dev, "error: XRUN for unknown component %d\n",
 			posn.comp_id);
 		return;
@@ -317,7 +320,7 @@ static void ipc_trace_message(struct snd_sof_dev *sdev, u32 msg_id)
 	case SOF_IPC_TRACE_DMA_POSITION:
 		/* read back full message */
 		snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
-			sizeof(posn));
+					 sizeof(posn));
 		snd_sof_trace_update_pos(sdev, &posn);
 		break;
 	default:
@@ -334,7 +337,7 @@ static void ipc_msgs_rx(struct work_struct *work)
 		container_of(work, struct snd_sof_ipc, rx_kwork);
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct sof_ipc_hdr hdr;
-	uint32_t cmd, type;
+	u32 cmd, type;
 	int err = -EINVAL;
 
 	/* read back header */
@@ -356,7 +359,7 @@ static void ipc_msgs_rx(struct work_struct *work)
 				dev_err(sdev->dev, "DSP firmware boot timeout %d\n",
 					err);
 			} else {
-				/* firware boot completed OK */
+				/* firmware boot completed OK */
 				sdev->boot_complete = true;
 				dev_dbg(sdev->dev, "booting DSP firmware completed\n");
 				wake_up(&sdev->boot_wait);
@@ -403,8 +406,8 @@ struct snd_sof_ipc *snd_sof_ipc_init(struct snd_sof_dev *sdev)
 	int i;
 
 	ipc = devm_kzalloc(sdev->dev, sizeof(*ipc), GFP_KERNEL);
-	if (ipc == NULL)
-		return NULL; 
+	if (!ipc)
+		return NULL;
 
 	INIT_LIST_HEAD(&ipc->tx_list);
 	INIT_LIST_HEAD(&ipc->reply_list);
@@ -418,19 +421,19 @@ struct snd_sof_ipc *snd_sof_ipc_init(struct snd_sof_dev *sdev)
 	dev_dbg(sdev->dev, "pre-allocate %d IPC messages\n",
 		IPC_EMPTY_LIST_SIZE);
 	msg = devm_kzalloc(sdev->dev, sizeof(struct snd_sof_ipc_msg) *
-		IPC_EMPTY_LIST_SIZE, GFP_KERNEL);
-	if (msg == NULL)
+			   IPC_EMPTY_LIST_SIZE, GFP_KERNEL);
+	if (!msg)
 		return NULL;
-	
-	/* pre-allocate message data */	
-	for (i = 0; i < IPC_EMPTY_LIST_SIZE; i++) {
 
+	/* pre-allocate message data */
+	for (i = 0; i < IPC_EMPTY_LIST_SIZE; i++) {
 		msg->msg_data = devm_kzalloc(sdev->dev, PAGE_SIZE, GFP_KERNEL);
-		if (msg->msg_data == NULL)
+		if (!msg->msg_data)
 			return NULL;
 
-		msg->reply_data = devm_kzalloc(sdev->dev, PAGE_SIZE, GFP_KERNEL);
-		if (msg->reply_data == NULL)
+		msg->reply_data = devm_kzalloc(sdev->dev, PAGE_SIZE,
+					       GFP_KERNEL);
+		if (!msg->reply_data)
 			return NULL;
 
 		init_waitqueue_head(&msg->waitq);
@@ -451,8 +454,8 @@ void snd_sof_ipc_free(struct snd_sof_dev *sdev)
 EXPORT_SYMBOL(snd_sof_ipc_free);
 
 int snd_sof_ipc_stream_posn(struct snd_sof_dev *sdev,
-	struct snd_sof_pcm *spcm, int direction,
-	struct sof_ipc_stream_posn *posn)
+			    struct snd_sof_pcm *spcm, int direction,
+			    struct sof_ipc_stream_posn *posn)
 {
 	struct sof_ipc_stream stream;
 	int err;
@@ -464,7 +467,8 @@ int snd_sof_ipc_stream_posn(struct snd_sof_dev *sdev,
 
 	/* send IPC to the DSP */
 	err = sof_ipc_tx_message(sdev->ipc,
-		stream.hdr.cmd, &stream, sizeof(stream), &posn, sizeof(*posn));
+				 stream.hdr.cmd, &stream, sizeof(stream), &posn,
+				 sizeof(*posn));
 	if (err < 0) {
 		dev_err(sdev->dev, "error: failed to get stream %d position\n",
 			stream.comp_id);
@@ -476,9 +480,9 @@ int snd_sof_ipc_stream_posn(struct snd_sof_dev *sdev,
 EXPORT_SYMBOL(snd_sof_ipc_stream_posn);
 
 int snd_sof_ipc_set_comp_data(struct snd_sof_ipc *ipc,
-	struct snd_sof_control *scontrol, u32 ipc_cmd,
-	enum sof_ipc_ctrl_type ctrl_type,
-	enum sof_ipc_ctrl_cmd ctrl_cmd)
+			      struct snd_sof_control *scontrol, u32 ipc_cmd,
+			      enum sof_ipc_ctrl_type ctrl_type,
+			      enum sof_ipc_ctrl_cmd ctrl_cmd)
 {
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
@@ -486,11 +490,11 @@ int snd_sof_ipc_set_comp_data(struct snd_sof_ipc *ipc,
 
 	/* read firmware volume */
 	if (scontrol->readback_offset != 0) {
-
 		/* we can read value header via mmaped region */
 		snd_sof_dsp_block_write(sdev, scontrol->readback_offset,
-			cdata->chanv,
-			sizeof(struct sof_ipc_ctrl_value_chan) * cdata->num_elems);
+					cdata->chanv,
+					sizeof(struct sof_ipc_ctrl_value_chan) *
+					cdata->num_elems);
 
 	} else {
 		/* write value via slower IPC */
@@ -503,14 +507,14 @@ int snd_sof_ipc_set_comp_data(struct snd_sof_ipc *ipc,
 
 		/* send IPC to the DSP */
 		err = sof_ipc_tx_message(sdev->ipc,
-			cdata->rhdr.hdr.cmd, cdata, cdata->rhdr.hdr.size,
-			cdata, cdata->rhdr.hdr.size);
+					 cdata->rhdr.hdr.cmd, cdata,
+					 cdata->rhdr.hdr.size,
+					 cdata, cdata->rhdr.hdr.size);
 		if (err < 0) {
 			dev_err(sdev->dev, "error: failed to set control %d values\n",
 				cdata->comp_id);
 			return err;
 		}
-
 	}
 
 	return 0;
@@ -518,9 +522,9 @@ int snd_sof_ipc_set_comp_data(struct snd_sof_ipc *ipc,
 EXPORT_SYMBOL(snd_sof_ipc_set_comp_data);
 
 int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
-	struct snd_sof_control *scontrol, u32 ipc_cmd,
-	enum sof_ipc_ctrl_type ctrl_type,
-	enum sof_ipc_ctrl_cmd ctrl_cmd)
+			      struct snd_sof_control *scontrol, u32 ipc_cmd,
+			      enum sof_ipc_ctrl_type ctrl_type,
+			      enum sof_ipc_ctrl_cmd ctrl_cmd)
 {
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
@@ -528,11 +532,11 @@ int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
 
 	/* read firmware byte counters */
 	if (scontrol->readback_offset != 0) {
-
 		/* we can read values via mmaped region */
 		snd_sof_dsp_block_read(sdev, scontrol->readback_offset,
-			cdata->chanv,
-			sizeof(struct sof_ipc_ctrl_value_chan) * cdata->num_elems);
+				       cdata->chanv,
+				       sizeof(struct sof_ipc_ctrl_value_chan) *
+				       cdata->num_elems);
 
 	} else {
 		/* read position via slower IPC */
@@ -545,8 +549,9 @@ int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
 
 		/* send IPC to the DSP */
 		err = sof_ipc_tx_message(sdev->ipc,
-			cdata->rhdr.hdr.cmd, cdata, cdata->rhdr.hdr.size,
-			cdata, cdata->rhdr.hdr.size);
+					 cdata->rhdr.hdr.cmd, cdata,
+					 cdata->rhdr.hdr.size,
+					 cdata, cdata->rhdr.hdr.size);
 		if (err < 0) {
 			dev_err(sdev->dev, "error: failed to get control %d values\n",
 				cdata->comp_id);
@@ -557,4 +562,3 @@ int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
 	return 0;
 }
 EXPORT_SYMBOL(snd_sof_ipc_get_comp_data);
-

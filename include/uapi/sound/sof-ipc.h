@@ -12,12 +12,12 @@
 #ifndef __INCLUDE_UAPI_SOF_IPC_H__
 #define __INCLUDE_UAPI_SOF_IPC_H__
 
-#include <uapi/sound/sof-abi.h>
+#include <sound/sof-abi.h>
 
 /*
  * IPC messages have a prefixed 32 bit identifier made up as follows :-
  *
- * 	0xGCCCNNNN where
+ * 0xGCCCNNNN where
  * G is global cmd type (4 bits)
  * C is command type (12 bits)
  * I is the ID number (16 bits) - monotonic and overflows
@@ -51,7 +51,6 @@
  * DSP Command Message Types
  */
 
-
 /* topology */
 #define SOF_IPC_TPLG_COMP_NEW			SOF_CMD_TYPE(0x001)
 #define SOF_IPC_TPLG_COMP_FREE			SOF_CMD_TYPE(0x002)
@@ -76,7 +75,6 @@
 #define SOF_IPC_COMP_GET_VALUE			SOF_CMD_TYPE(0x002)
 #define SOF_IPC_COMP_SET_DATA			SOF_CMD_TYPE(0x003)
 #define SOF_IPC_COMP_GET_DATA			SOF_CMD_TYPE(0x004)
-
 
 /* DAI messages */
 #define SOF_IPC_DAI_CONFIG			SOF_CMD_TYPE(0x001)
@@ -127,7 +125,6 @@ struct sof_ipc_reply {
 	int32_t error;			/* negative error numbers */
 }  __attribute__((packed));
 
-
 /*
  * Compound commands - SOF_IPC_GLB_COMPOUND.
  *
@@ -139,9 +136,8 @@ struct sof_ipc_reply {
 
 struct sof_ipc_compound_hdr {
 	struct sof_ipc_hdr hdr;
-	uint32_t count;			/* count of 0 means end of compound sequence */
+	uint32_t count;		/* count of 0 means end of compound sequence */
 }  __attribute__((packed));
-
 
 /*
  * DAI Configuration.
@@ -149,25 +145,25 @@ struct sof_ipc_compound_hdr {
  * Each different DAI type will have it's own structure and IPC cmd.
  */
 
-#define SOF_DAI_FMT_I2S			1 /* I2S mode */
-#define SOF_DAI_FMT_RIGHT_J		2 /* Right Justified mode */
-#define SOF_DAI_FMT_LEFT_J		3 /* Left Justified mode */
-#define SOF_DAI_FMT_DSP_A		4 /* L data MSB after FRM LRC */
-#define SOF_DAI_FMT_DSP_B		5 /* L data MSB during FRM LRC */
-#define SOF_DAI_FMT_PDM			6 /* Pulse density modulation */
+#define SOF_DAI_FMT_I2S		1 /* I2S mode */
+#define SOF_DAI_FMT_RIGHT_J	2 /* Right Justified mode */
+#define SOF_DAI_FMT_LEFT_J	3 /* Left Justified mode */
+#define SOF_DAI_FMT_DSP_A	4 /* L data MSB after FRM LRC */
+#define SOF_DAI_FMT_DSP_B	5 /* L data MSB during FRM LRC */
+#define SOF_DAI_FMT_PDM		6 /* Pulse density modulation */
 
-#define SOF_DAI_FMT_CONT		(1 << 4) /* continuous clock */
-#define SOF_DAI_FMT_GATED		(0 << 4) /* clock is gated */
+#define SOF_DAI_FMT_CONT	(1 << 4) /* continuous clock */
+#define SOF_DAI_FMT_GATED	(0 << 4) /* clock is gated */
 
-#define SOF_DAI_FMT_NB_NF		(0 << 8) /* normal bit clock + frame */
-#define SOF_DAI_FMT_NB_IF		(2 << 8) /* normal BCLK + inv FRM */
-#define SOF_DAI_FMT_IB_NF		(3 << 8) /* invert BCLK + nor FRM */
-#define SOF_DAI_FMT_IB_IF		(4 << 8) /* invert BCLK + FRM */
+#define SOF_DAI_FMT_NB_NF	(0 << 8) /* normal bit clock + frame */
+#define SOF_DAI_FMT_NB_IF	(2 << 8) /* normal BCLK + inv FRM */
+#define SOF_DAI_FMT_IB_NF	(3 << 8) /* invert BCLK + nor FRM */
+#define SOF_DAI_FMT_IB_IF	(4 << 8) /* invert BCLK + FRM */
 
-#define SOF_DAI_FMT_CBM_CFM		(0 << 12) /* codec clk & FRM master */
-#define SOF_DAI_FMT_CBS_CFM		(2 << 12) /* codec clk slave & FRM master */
-#define SOF_DAI_FMT_CBM_CFS		(3 << 12) /* codec clk master & frame slave */
-#define SOF_DAI_FMT_CBS_CFS		(4 << 12) /* codec clk & FRM slave */
+#define SOF_DAI_FMT_CBM_CFM	(0 << 12) /* codec clk & FRM master */
+#define SOF_DAI_FMT_CBS_CFM	(2 << 12) /* codec clk slave & FRM master */
+#define SOF_DAI_FMT_CBM_CFS	(3 << 12) /* codec clk master & frame slave */
+#define SOF_DAI_FMT_CBS_CFS	(4 << 12) /* codec clk & FRM slave */
 
 #define SOF_DAI_FMT_FORMAT_MASK		0x000f
 #define SOF_DAI_FMT_CLOCK_MASK		0x00f0
@@ -200,7 +196,6 @@ struct sof_ipc_dai_dmic_params {
 	struct sof_ipc_hdr hdr;
 	/* TODO */
 } __attribute__((packed));
-
 
 /* general purpose DAI configuration */
 struct sof_ipc_dai_config {
@@ -372,13 +367,11 @@ struct sof_ipc_vorbis_params {
 	/* TODO */
 }  __attribute__((packed));
 
-
 /* free stream - SOF_IPC_STREAM_PCM_PARAMS */
 struct sof_ipc_stream {
 	struct sof_ipc_hdr hdr;
 	uint32_t comp_id;
 } __attribute__((packed));
-
 
 /* flags indicating which time stamps are in sync with each other */
 #define	SOF_TIME_HOST_SYNC	(1 << 0)
@@ -446,7 +439,7 @@ struct sof_ipc_ctrl_value_chan {
 
 /* generic component mapped value data */
 struct sof_ipc_ctrl_value_comp {
-	uint32_t index;		/* component source/sink/control index in control */
+	uint32_t index;	/* component source/sink/control index in control */
 	union {
 		uint32_t uvalue;
 		int32_t svalue;
@@ -478,7 +471,6 @@ struct sof_ipc_ctrl_data {
 	};
 } __attribute__((packed));
 
-
 /*
  * Component
  */
@@ -500,12 +492,12 @@ enum sof_comp_type {
 	SOF_COMP_BUFFER,
 	SOF_COMP_EQ_IIR,
 	SOF_COMP_EQ_FIR,
-        SOF_COMP_FILEREAD,	/* host test based file IO */
-        SOF_COMP_FILEWRITE,	/* host test based file IO */
+	SOF_COMP_FILEREAD,	/* host test based file IO */
+	SOF_COMP_FILEWRITE,	/* host test based file IO */
 };
 
 /* XRUN action for component */
-#define SOF_XRUN_STOP		1 	/* stop stream */
+#define SOF_XRUN_STOP		1	/* stop stream */
 #define SOF_XRUN_UNDER_ZERO	2	/* send 0s to sink */
 #define SOF_XRUN_OVER_NULL	4	/* send data to NULL */
 
@@ -526,7 +518,6 @@ struct sof_ipc_buffer {
 	struct sof_ipc_comp comp;
 	uint32_t size;		/* buffer size in bytes */
 } __attribute__((packed));
-
 
 /* generic component config data - must always be after struct sof_ipc_comp */
 struct sof_ipc_comp_config {
@@ -617,16 +608,15 @@ struct sof_ipc_comp_tone {
 
 /* FIR equalizer component */
 struct sof_ipc_comp_eq_fir {
-       struct sof_ipc_comp comp;
-       struct sof_ipc_comp_config config;
+	struct sof_ipc_comp comp;
+	struct sof_ipc_comp_config config;
 } __attribute__((packed));
 
 /* IIR equalizer component */
 struct sof_ipc_comp_eq_iir {
-       struct sof_ipc_comp comp;
-       struct sof_ipc_comp_config config;
+	struct sof_ipc_comp comp;
+	struct sof_ipc_comp_config config;
 } __attribute__((packed));
-
 
 /* frees components, buffers and pipelines
  * SOF_IPC_TPLG_COMP_FREE, SOF_IPC_TPLG_PIPE_FREE, SOF_IPC_TPLG_BUFFER_FREE
@@ -636,13 +626,11 @@ struct sof_ipc_free {
 	uint32_t id;
 } __attribute__((packed));
 
-
 struct sof_ipc_comp_reply {
 	struct sof_ipc_reply rhdr;
 	uint32_t id;
 	uint32_t offset;
 } __attribute__((packed));
-
 
 /*
  * Pipeline
@@ -658,9 +646,9 @@ struct sof_ipc_pipe_new {
 	uint32_t deadline;	/* execution completion deadline in us*/
 	uint32_t priority;	/* priority level 0 (low) to 10 (max) */
 	uint32_t mips;		/* worst case instruction count per period */
-	uint32_t frames_per_sched; /* output frames of pipeline, 0 is variable */
+	uint32_t frames_per_sched;/* output frames of pipeline, 0 is variable */
 	uint32_t xrun_limit_usecs; /* report xruns greater than limit */
-	uint32_t timer;		/* non zero if timer scheduled otherwise DAI scheduled */
+	uint32_t timer;/* non zero if timer scheduled otherwise DAI scheduled */
 }  __attribute__((packed));
 
 /* pipeline construction complete - SOF_IPC_TPLG_PIPE_COMPLETE */
@@ -668,7 +656,6 @@ struct sof_ipc_pipe_ready {
 	struct sof_ipc_hdr hdr;
 	uint32_t comp_id;
 }  __attribute__((packed));
-
 
 struct sof_ipc_pipe_free {
 	struct sof_ipc_hdr hdr;
@@ -682,7 +669,6 @@ struct sof_ipc_pipe_comp_connect {
 	uint32_t sink_id;
 }  __attribute__((packed));
 
-
 /*
  * PM
  */
@@ -694,8 +680,10 @@ struct sof_ipc_pm_ctx_elem {
 	uint64_t addr;
 }  __attribute__((packed));
 
-/* PM context - SOF_IPC_PM_CTX_SAVE, SOF_IPC_PM_CTX_RESTORE,
- * SOF_IPC_PM_CTX_SIZE */
+/*
+ * PM context - SOF_IPC_PM_CTX_SAVE, SOF_IPC_PM_CTX_RESTORE,
+ * SOF_IPC_PM_CTX_SIZE
+ */
 struct sof_ipc_pm_ctx {
 	struct sof_ipc_hdr hdr;
 	struct sof_ipc_host_buffer buffer;
@@ -764,16 +752,17 @@ struct sof_ipc_dma_buffer_elem {
 struct sof_ipc_dma_buffer_data {
 	struct sof_ipc_ext_data_hdr ext_hdr;
 	uint32_t num_buffers;
-	struct sof_ipc_dma_buffer_elem buffer[];	/* host files in buffer[n].buffer */
+	/* host files in buffer[n].buffer */
+	struct sof_ipc_dma_buffer_elem buffer[];
 }  __attribute__((packed));
-
 
 struct sof_ipc_window_elem {
 	enum sof_ipc_region type;
 	uint32_t id;	/* platform specific - used to map to host memory */
 	uint32_t flags;	/* R, W, RW, etc - to define */
 	uint32_t size;	/* size of region in bytes */
-	uint32_t offset; /* offset in window region as windows can be partitioned */
+	/* offset in window region as windows can be partitioned */
+	uint32_t offset;
 };
 
 /* extended data memory windows for IPC, trace and debug */
