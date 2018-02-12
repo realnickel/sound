@@ -8,7 +8,7 @@
  * Author: Liam Girdwood <liam.r.girdwood@linux.intel.com>
  */
 
-/* 
+/*
  * Hardwre interface for audio DSP on Haswell and Broadwell
  */
 
@@ -38,9 +38,9 @@
 
 /* DSP memories for BDW */
 #define IRAM_OFFSET     0xA0000
-#define BDW_IRAM_SIZE       (10 * 32 * 1024) 
+#define BDW_IRAM_SIZE       (10 * 32 * 1024)
 #define DRAM_OFFSET     0x00000
-#define BDW_DRAM_SIZE       (20 * 32 * 1024) 
+#define BDW_DRAM_SIZE       (20 * 32 * 1024)
 #define SHIM_OFFSET     0xFB000
 #define SHIM_SIZE       0x100
 #define MBOX_OFFSET     0x9E000
@@ -72,9 +72,9 @@ static const struct snd_sof_debugfs_map bdw_debugfs[] = {
 
 /* write has to deal with copying non 32 bit sized data */
 static void bdw_block_write(struct snd_sof_dev *sdev, u32 offset, void *src,
-	size_t size)
+			    size_t size)
 {
-	volatile void __iomem *dest = sdev->bar[sdev->mmio_bar] + offset;
+	void __iomem *dest = sdev->bar[sdev->mmio_bar] + offset;
 	u32 tmp = 0;
 	int i, m, n;
 	const u8 *src_byte = src;
@@ -93,17 +93,19 @@ static void bdw_block_write(struct snd_sof_dev *sdev, u32 offset, void *src,
 }
 
 static void bdw_block_read(struct snd_sof_dev *sdev, u32 offset, void *dest,
-	size_t size)
+			   size_t size)
 {
-	volatile void __iomem *src = sdev->bar[sdev->mmio_bar] + offset;
+	void __iomem *src = sdev->bar[sdev->mmio_bar] + offset;
+
 	memcpy_fromio(dest, src, size);
 }
+
 /*
  * Register IO
  */
 
 static void bdw_write(struct snd_sof_dev *sdev, void __iomem *addr,
-	u32 value)
+		      u32 value)
 {
 	writel(value, addr);
 }
@@ -114,7 +116,7 @@ static u32 bdw_read(struct snd_sof_dev *sdev, void __iomem *addr)
 }
 
 static void bdw_write64(struct snd_sof_dev *sdev, void __iomem *addr,
-	u64 value)
+			u64 value)
 {
 	memcpy_toio(addr, &value, sizeof(value));
 }
@@ -127,7 +129,7 @@ static u64 bdw_read64(struct snd_sof_dev *sdev, void __iomem *addr)
 	return val;
 }
 
-/* 
+/*
  * DSP Control.
  */
 
@@ -135,11 +137,12 @@ static int bdw_run(struct snd_sof_dev *sdev)
 {
 	/* set oportunistic mode on engine 0,1 for all channels */
 	snd_sof_dsp_update_bits(sdev, BDW_DSP_BAR, SHIM_HMDC,
-		SHIM_HMDC_HDDA_E0_ALLCH | SHIM_HMDC_HDDA_E1_ALLCH, 0);
+				SHIM_HMDC_HDDA_E0_ALLCH |
+				SHIM_HMDC_HDDA_E1_ALLCH, 0);
 
 	/* set DSP to RUN */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR, SHIM_CSR,
-		SHIM_CSR_STALL, 0x0);
+					 SHIM_CSR_STALL, 0x0);
 
 	return 0; //TODO: Fix return value
 }
@@ -148,14 +151,16 @@ static int bdw_reset(struct snd_sof_dev *sdev)
 {
 	/* put DSP into reset and stall */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR, SHIM_CSR,
-		SHIM_CSR_RST | SHIM_CSR_STALL, SHIM_CSR_RST | SHIM_CSR_STALL);
+					 SHIM_CSR_RST | SHIM_CSR_STALL,
+					 SHIM_CSR_RST | SHIM_CSR_STALL);
 
 	/* keep in reset for 10ms */
 	mdelay(10);
 
 	/* take DSP out of reset and keep stalled for FW loading */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR, SHIM_CSR,
-		SHIM_CSR_RST | SHIM_CSR_STALL, SHIM_CSR_STALL);
+					 SHIM_CSR_RST | SHIM_CSR_STALL,
+					 SHIM_CSR_STALL);
 
 	return 0; //TODO: Fix return value
 }
@@ -167,16 +172,16 @@ static int bdw_set_dsp_D0(struct snd_sof_dev *sdev)
 
 	/* Disable core clock gating (VDRTCTL2.DCLCGE = 0) */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_PCI_BAR, PCI_VDRTCTL2,
-		PCI_VDRTCL2_DCLCGE | PCI_VDRTCL2_DTCGE, 
-		~(PCI_VDRTCL2_DCLCGE | PCI_VDRTCL2_DTCGE));
+					 PCI_VDRTCL2_DCLCGE |
+					 PCI_VDRTCL2_DTCGE, 0);
 
 	/* Disable D3PG (VDRTCTL0.D3PGD = 1) */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_PCI_BAR, PCI_VDRTCTL0,
-		PCI_VDRTCL0_D3PGD, PCI_VDRTCL0_D3PGD);
+					 PCI_VDRTCL0_D3PGD, PCI_VDRTCL0_D3PGD);
 
 	/* Set D0 state */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_PCI_BAR, PCI_PMCS,
-		PCI_PMCS_PS_MASK, ~PCI_PMCS_PS_MASK);
+					 PCI_PMCS_PS_MASK, 0);
 
 	/* check that ADSP shim is enabled */
 	while (tries--) {
@@ -185,61 +190,78 @@ static int bdw_set_dsp_D0(struct snd_sof_dev *sdev)
 		if (reg == 0)
 			goto finish;
 
-		msleep(1);
+		msleep(20);
 	}
 
 	return -ENODEV;
 
 finish:
-	/* select SSP1 19.2MHz base clock, SSP clock 0, turn off Low Power Clock */
+	/*
+	 * select SSP1 19.2MHz base clock, SSP clock 0,
+	 * turn off Low Power Clock
+	 */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR, SHIM_CSR,
-		SHIM_CSR_S1IOCS | SHIM_CSR_SBCS1 | SHIM_CSR_LPCS, 0x0);
+					 SHIM_CSR_S1IOCS | SHIM_CSR_SBCS1 |
+					 SHIM_CSR_LPCS, 0x0);
 
 	/* stall DSP core, set clk to 192/96Mhz */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR,
-		SHIM_CSR, SHIM_CSR_STALL | SHIM_CSR_DCS_MASK,
-		SHIM_CSR_STALL | SHIM_CSR_DCS(4));
+					 SHIM_CSR, SHIM_CSR_STALL |
+					 SHIM_CSR_DCS_MASK,
+					 SHIM_CSR_STALL |
+					 SHIM_CSR_DCS(4));
 
 	/* Set 24MHz MCLK, prevent local clock gating, enable SSP0 clock */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR, SHIM_CLKCTL,
-		SHIM_CLKCTL_MASK | SHIM_CLKCTL_DCPLCG | SHIM_CLKCTL_SCOE0,
-		SHIM_CLKCTL_MASK | SHIM_CLKCTL_DCPLCG | SHIM_CLKCTL_SCOE0);
+					 SHIM_CLKCTL_MASK |
+					 SHIM_CLKCTL_DCPLCG |
+					 SHIM_CLKCTL_SCOE0,
+					 SHIM_CLKCTL_MASK |
+					 SHIM_CLKCTL_DCPLCG |
+					 SHIM_CLKCTL_SCOE0);
 
 	/* Stall and reset core, set CSR */
 	bdw_reset(sdev);
 
 	/* Enable core clock gating (VDRTCTL2.DCLCGE = 1), delay 50 us */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_PCI_BAR, PCI_VDRTCTL2,
-		PCI_VDRTCL2_DCLCGE | PCI_VDRTCL2_DTCGE,
-		PCI_VDRTCL2_DCLCGE | PCI_VDRTCL2_DTCGE);
+					 PCI_VDRTCL2_DCLCGE |
+					 PCI_VDRTCL2_DTCGE,
+					 PCI_VDRTCL2_DCLCGE |
+					 PCI_VDRTCL2_DTCGE);
 
-	udelay(50);
+	usleep_range(50, 55);
 
 	/* switch on audio PLL */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_PCI_BAR, PCI_VDRTCTL2,
-		PCI_VDRTCL2_APLLSE_MASK, ~PCI_VDRTCL2_APLLSE_MASK);
+					 PCI_VDRTCL2_APLLSE_MASK, 0);
 
-	/* set default power gating control, enable power gating control for 
-        all blocks. that is, can't be accessed, please enable each block
-        before accessing. */
+	/*
+	 * set default power gating control, enable power gating control for
+	 * all blocks. that is, can't be accessed, please enable each block
+	 * before accessing.
+	 */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_PCI_BAR, PCI_VDRTCTL0,
-		0xfffffffC,0x0);
+					 0xfffffffC, 0x0);
 
 	/* disable DMA finish function for SSP0 & SSP1 */
 	snd_sof_dsp_update_bits_unlocked(sdev, BDW_DSP_BAR,  SHIM_CSR2,
-		SHIM_CSR2_SDFD_SSP1, SHIM_CSR2_SDFD_SSP1);
+					 SHIM_CSR2_SDFD_SSP1,
+					 SHIM_CSR2_SDFD_SSP1);
 
 	/* set on-demond mode on engine 0,1 for all channels */
 	snd_sof_dsp_update_bits(sdev, BDW_DSP_BAR, SHIM_HMDC,
-		SHIM_HMDC_HDDA_E0_ALLCH | SHIM_HMDC_HDDA_E1_ALLCH,
-		SHIM_HMDC_HDDA_E0_ALLCH | SHIM_HMDC_HDDA_E1_ALLCH);
+				SHIM_HMDC_HDDA_E0_ALLCH |
+				SHIM_HMDC_HDDA_E1_ALLCH,
+				SHIM_HMDC_HDDA_E0_ALLCH |
+				SHIM_HMDC_HDDA_E1_ALLCH);
 
 	/* Enable Interrupt from both sides */
 	snd_sof_dsp_update_bits(sdev, BDW_DSP_BAR, SHIM_IMRX,
-		(SHIM_IMRX_BUSY | SHIM_IMRX_DONE), 0x0);
+				(SHIM_IMRX_BUSY | SHIM_IMRX_DONE), 0x0);
 	snd_sof_dsp_update_bits(sdev, BDW_DSP_BAR, SHIM_IMRD,
-		(SHIM_IMRD_DONE |SHIM_IMRD_BUSY | SHIM_IMRD_SSP0
-		| SHIM_IMRD_DMAC), 0x0);
+				(SHIM_IMRD_DONE | SHIM_IMRD_BUSY |
+				SHIM_IMRD_SSP0 | SHIM_IMRD_DMAC), 0x0);
 
 	/* clear IPC registers */
 	snd_sof_dsp_write(sdev, BDW_DSP_BAR, SHIM_IPCX, 0x0);
@@ -255,27 +277,27 @@ static void bdw_dump(struct snd_sof_dev *sdev, u32 flags)
 	int i;
 
 	if (flags & SOF_DBG_REGS) {
-		for (i = SHIM_OFFSET; i < SHIM_OFFSET  + SHIM_SIZE; i += 8 ) {
+		for (i = SHIM_OFFSET; i < SHIM_OFFSET  + SHIM_SIZE; i += 8) {
 			dev_dbg(sdev->dev, "shim 0x%2.2x value 0x%16.16llx\n",
-			i - SHIM_OFFSET,
+				i - SHIM_OFFSET,
 			snd_sof_dsp_read64(sdev, BDW_DSP_BAR, i));
 		}
 	}
 
 	if (flags & SOF_DBG_MBOX) {
-		for (i = MBOX_OFFSET; i < MBOX_OFFSET + MBOX_DUMP_SIZE; i += 4)
-		{
+		for (i = MBOX_OFFSET; i < MBOX_OFFSET + MBOX_DUMP_SIZE;
+			i += 4) {
 			dev_dbg(sdev->dev, "mbox: 0x%2.2x value 0x%8.8x\n",
-			i - MBOX_OFFSET,
+				i - MBOX_OFFSET,
 			readl(sdev->bar[BDW_DSP_BAR] + i));
 		}
 	}
 
 	if (flags & SOF_DBG_TEXT) {
-		for (i = IRAM_OFFSET; i < IRAM_OFFSET + MBOX_DUMP_SIZE; i += 4)
-		{
+		for (i = IRAM_OFFSET; i < IRAM_OFFSET + MBOX_DUMP_SIZE;
+			i += 4) {
 			dev_dbg(sdev->dev, "iram: 0x%2.2x value 0x%8.8x\n",
-			i - IRAM_OFFSET,
+				i - IRAM_OFFSET,
 			readl(sdev->bar[BDW_DSP_BAR] + i));
 		}
 	}
@@ -283,7 +305,7 @@ static void bdw_dump(struct snd_sof_dev *sdev, u32 flags)
 	if (flags & SOF_DBG_PCI) {
 		for (i = 0; i < 0xff; i += 4) {
 			dev_dbg(sdev->dev, "pci: 0x%2.2x value 0x%8.8x\n",
-			i, readl(sdev->bar[BDW_PCI_BAR] + i));
+				i, readl(sdev->bar[BDW_PCI_BAR] + i));
 		}
 	}
 }
@@ -294,25 +316,25 @@ static void bdw_dump(struct snd_sof_dev *sdev, u32 flags)
 
 static irqreturn_t bdw_irq_handler(int irq, void *context)
 {
-	struct snd_sof_dev *sdev = (struct snd_sof_dev *) context;
+	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
 	u64 isr;
 	int ret = IRQ_NONE;
 
 	/* Interrupt arrived, check src */
 	isr = snd_sof_dsp_read64(sdev, BDW_DSP_BAR, SHIM_ISRX);
 	if (isr & SHIM_ISRX_DONE) {
-
 		/* Mask Done interrupt before return */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BDW_DSP_BAR,
-			SHIM_IMRX, SHIM_IMRX_DONE, SHIM_IMRX_DONE);
+						   SHIM_IMRX, SHIM_IMRX_DONE,
+						   SHIM_IMRX_DONE);
 		ret = IRQ_WAKE_THREAD;
 	}
 
 	if (isr & SHIM_ISRX_BUSY) {
-
 		/* Mask Busy interrupt before return */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BDW_DSP_BAR,
-			SHIM_IMRX, SHIM_IMRX_BUSY, SHIM_IMRX_BUSY);
+						   SHIM_IMRX, SHIM_IMRX_BUSY,
+						   SHIM_IMRX_BUSY);
 		ret = IRQ_WAKE_THREAD;
 	}
 
@@ -321,31 +343,29 @@ static irqreturn_t bdw_irq_handler(int irq, void *context)
 
 static irqreturn_t bdw_irq_thread(int irq, void *context)
 {
-	struct snd_sof_dev *sdev = (struct snd_sof_dev *) context;
+	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
 	u64 ipcx, ipcd;
 
 	ipcx = snd_sof_dsp_read64(sdev, BDW_DSP_BAR, SHIM_IPCX);
 
 	/* reply message from DSP */
 	if (ipcx & SHIM_IPCX_DONE) {
-
 		/* Handle Immediate reply from DSP Core */
 		snd_sof_ipc_reply(sdev, ipcx);
 
 		/* clear DONE bit - tell DSP we have completed */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BDW_DSP_BAR, SHIM_IPCX,
-			SHIM_IPCX_DONE, 0);
+						   SHIM_IPCX_DONE, 0);
 
 		/* unmask Done interrupt */
 		snd_sof_dsp_update_bits64_unlocked(sdev, BDW_DSP_BAR, SHIM_IMRX,
-			SHIM_IMRX_DONE, 0);
+						   SHIM_IMRX_DONE, 0);
 	}
 
 	ipcd = snd_sof_dsp_read64(sdev, BDW_DSP_BAR, SHIM_IPCD);
 
 	/* new message from DSP */
 	if (ipcd & SHIM_IPCD_BUSY) {
-
 		/* Handle messages from DSP Core */
 		snd_sof_ipc_msgs_rx(sdev);
 	}
@@ -375,16 +395,17 @@ static int bdw_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
 	bdw_block_read(sdev, offset, fw_ready, sizeof(*fw_ready));
 
 	snd_sof_dsp_mailbox_init(sdev, fw_ready->dspbox_offset,
-		fw_ready->dspbox_size, fw_ready->hostbox_offset,
-		fw_ready->hostbox_size);
+				 fw_ready->dspbox_size,
+				 fw_ready->hostbox_offset,
+				 fw_ready->hostbox_size);
 
 	dev_dbg(sdev->dev, " mailbox DSP initiated 0x%x - size 0x%x\n",
 		fw_ready->dspbox_offset, fw_ready->dspbox_size);
 	dev_dbg(sdev->dev, " mailbox Host initiated 0x%x - size 0x%x\n",
 		fw_ready->hostbox_offset, fw_ready->hostbox_size);
-	
-	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n", 
-		v->major, v->minor, v->tag, v->build, v->date, v->time);
+
+	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n",
+		 v->major, v->minor, v->tag, v->build, v->date, v->time);
 
 	return 0;
 }
@@ -394,7 +415,7 @@ static int bdw_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
  */
 
 static void bdw_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+			      void *message, size_t bytes)
 {
 	void __iomem *dest = sdev->bar[sdev->mailbox_bar] + offset;
 
@@ -402,7 +423,7 @@ static void bdw_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
 }
 
 static void bdw_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+			     void *message, size_t bytes)
 {
 	void __iomem *src = sdev->bar[sdev->mailbox_bar] + offset;
 
@@ -411,7 +432,7 @@ static void bdw_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
 
 static int bdw_is_ready(struct snd_sof_dev *sdev)
 {
-	uint64_t val;
+	u64 val;
 
 	val = snd_sof_dsp_read64(sdev, BDW_DSP_BAR, SHIM_IPCX);
 	if (val & SHIM_IPCX_BUSY)
@@ -425,8 +446,8 @@ static int bdw_send_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 	u64 cmd = msg->header;
 
 	/* send the message */
-	bdw_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data, 
-		msg->msg_size);
+	bdw_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data,
+			  msg->msg_size);
 	snd_sof_dsp_write64(sdev, BDW_DSP_BAR, SHIM_IPCX, cmd | SHIM_IPCX_BUSY);
 
 	return 0;
@@ -457,7 +478,8 @@ static int bdw_get_reply(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 
 	/* read the message */
 	if (msg->msg_data && size > 0)
-		bdw_mailbox_read(sdev, sdev->host_box.offset, msg->reply_data, size);
+		bdw_mailbox_read(sdev, sdev->host_box.offset, msg->reply_data,
+				 size);
 
 	return ret;
 }
@@ -466,12 +488,12 @@ static int bdw_cmd_done(struct snd_sof_dev *sdev)
 {
 	/* clear BUSY bit and set DONE bit - accept new messages */
 	snd_sof_dsp_update_bits64_unlocked(sdev, BDW_DSP_BAR, SHIM_IPCD,
-		SHIM_IPCD_BUSY | SHIM_IPCD_DONE,
-		SHIM_IPCD_DONE);
+					   SHIM_IPCD_BUSY | SHIM_IPCD_DONE,
+					   SHIM_IPCD_DONE);
 
 	/* unmask busy interrupt */
 	snd_sof_dsp_update_bits64_unlocked(sdev, BDW_DSP_BAR, SHIM_IMRX,
-		SHIM_IMRX_BUSY, 0);
+					   SHIM_IMRX_BUSY, 0);
 
 	return 0;
 }
@@ -491,7 +513,7 @@ static int bdw_probe(struct snd_sof_dev *sdev)
 
 	/* LPE base */
 	mmio = platform_get_resource(pdev, IORESOURCE_MEM,
-		desc->resindex_lpe_base);
+				     desc->resindex_lpe_base);
 	if (mmio) {
 		base = mmio->start;
 		size = resource_size(mmio);
@@ -503,8 +525,8 @@ static int bdw_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "LPE PHY base at 0x%x size 0x%x", base, size);
 	sdev->bar[BDW_DSP_BAR] = ioremap(base, size);
-	if (sdev->bar[BDW_DSP_BAR] == NULL) {
-		dev_err(sdev->dev, 
+	if (!sdev->bar[BDW_DSP_BAR]) {
+		dev_err(sdev->dev,
 			"error: failed to ioremap LPE base 0x%x size 0x%x\n",
 			base, size);
 		return -ENODEV;
@@ -517,7 +539,7 @@ static int bdw_probe(struct snd_sof_dev *sdev)
 
 	/* PCI base */
 	mmio = platform_get_resource(pdev, IORESOURCE_MEM,
-		desc->resindex_pcicfg_base);
+				     desc->resindex_pcicfg_base);
 	if (mmio) {
 		base = mmio->start;
 		size = resource_size(mmio);
@@ -530,8 +552,8 @@ static int bdw_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "PCI base at 0x%x size 0x%x", base, size);
 	sdev->bar[BDW_PCI_BAR] = ioremap(base, size);
-	if (sdev->bar[BDW_PCI_BAR] == NULL) {
-		dev_err(sdev->dev, 
+	if (!sdev->bar[BDW_PCI_BAR]) {
+		dev_err(sdev->dev,
 			"error: failed to ioremap PCI base 0x%x size 0x%x\n",
 			base, size);
 		ret = -ENODEV;
@@ -550,17 +572,17 @@ static int bdw_probe(struct snd_sof_dev *sdev)
 
 	dev_dbg(sdev->dev, "using IRQ %d\n", sdev->ipc_irq);
 	ret = request_threaded_irq(sdev->ipc_irq, bdw_irq_handler,
-		bdw_irq_thread, 0, "AudioDSP", sdev);
+				   bdw_irq_thread, 0, "AudioDSP", sdev);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to register IRQ %d\n",
 			sdev->ipc_irq);
-		goto irq_err;		
+		goto irq_err;
 	}
 
 	/* enable the DSP SHIM */
 	ret = bdw_set_dsp_D0(sdev);
 	if (ret < 0) {
-		dev_err(sdev->dev, "error: failed to set DSP D0 \n");
+		dev_err(sdev->dev, "error: failed to set DSP D0\n");
 		return ret;
 	}
 
@@ -593,11 +615,10 @@ static int bdw_remove(struct snd_sof_dev *sdev)
 
 /* broadwell ops */
 struct snd_sof_dsp_ops snd_sof_bdw_ops = {
-
 	/*Device init */
 	.probe          = bdw_probe,
 	.remove         = bdw_remove,
-	
+
 	/* DSP Core Control */
 	.run            = bdw_run,
 	.reset          = bdw_reset,
