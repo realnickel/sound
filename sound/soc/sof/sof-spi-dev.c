@@ -33,7 +33,8 @@ static void sof_spi_fw_cb(const struct firmware *fw, void *context)
 
 	sof_pdata->fw = fw;
 	if (!fw) {
-		dev_err(dev, "Cannot load firmware %s\n", mach->sof_fw_filename);
+		dev_err(dev, "Cannot load firmware %s\n",
+			mach->sof_fw_filename);
 		return;
 	}
 
@@ -45,13 +46,12 @@ static void sof_spi_fw_cb(const struct firmware *fw, void *context)
 		dev_err(dev, "Cannot register device sof-audio. Error %d\n",
 			(int)PTR_ERR(priv->pdev_pcm));
 	}
-
-	return;
 }
 
 static const struct dev_pm_ops sof_spi_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(snd_sof_suspend, snd_sof_resume)
-	SET_RUNTIME_PM_OPS(snd_sof_runtime_suspend, snd_sof_runtime_resume, NULL)
+	SET_RUNTIME_PM_OPS(snd_sof_runtime_suspend, snd_sof_runtime_resume,
+			   NULL)
 	.suspend_late = snd_sof_suspend_late,
 };
 
@@ -67,19 +67,19 @@ static int sof_spi_probe(struct spi_device *spi)
 	dev_dbg(&spi->dev, "SPI DSP detected");
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-	if (priv == NULL)
+	if (!priv)
 		return -ENOMEM;
 	spi_set_drvdata(spi, priv);
 
 	sof_pdata = devm_kzalloc(dev, sizeof(*sof_pdata), GFP_KERNEL);
-	if (sof_pdata == NULL)
+	if (!sof_pdata)
 		return -ENOMEM;
 
 	/* use nocodec machine atm */
 	dev_err(dev, "No matching ASoC machine driver found - using nocodec\n");
 	sof_pdata->drv_name = "sof-nocodec";
 	m = devm_kzalloc(dev, sizeof(*mach), GFP_KERNEL);
-	if (m == NULL)
+	if (!m)
 		return -ENOMEM;
 
 	m->drv_name = "sof-nocodec";
@@ -92,7 +92,7 @@ static int sof_spi_probe(struct spi_device *spi)
 	sof_pdata->id = pci_id->device;
 	sof_pdata->name = spi_name(spi);
 	sof_pdata->machine = mach;
-	sof_pdata->desc = (struct sof_dev_desc*) pci_id->driver_data;
+	sof_pdata->desc = (struct sof_dev_desc *)pci_id->driver_data;
 	priv->sof_pdata = sof_pdata;
 	sof_pdata->spi = spi;
 	sof_pdata->dev = dev;
@@ -135,7 +135,6 @@ static struct spi_driver wm8731_spi_driver = {
 	.remove		= sof_spi_remove,
 };
 
-
 static const struct snd_sof_machine sof_spi_machines[] = {
 	{ "INT343A", "bxt_alc298s_i2s", "intel/reef-spi.ri",
 		"intel/reef-spi.tplg", "0000:00:0e.0", &snd_sof_spi_ops },
@@ -153,8 +152,7 @@ static int __init sof_spi_modinit(void)
 
 	ret = spi_register_driver(&sof_spi_driver);
 	if (ret != 0) {
-		printk(KERN_ERR "Failed to register SOF SPI driver: %d\n",
-		       ret);
+		pr_err("Failed to register SOF SPI driver: %d\n", ret);
 	}
 
 	return ret;
