@@ -11,7 +11,6 @@
 #ifndef __SOF_INTEL_H
 #define __SOF_INTEL_H
 
-
 /*
  * SHIM registers for BYT, BSW, CHT HSW, BDW
  */
@@ -36,9 +35,7 @@
 #define SHIM_LTRC		(SHIM_OFFSET + 0xE0)
 #define SHIM_HMDC		(SHIM_OFFSET + 0xE8)
 
-
 #define SHIM_PWMCTRL		0x1000
-
 
 /*
  * SST SHIM register bits for BYT, BSW, CHT HSW, BDW
@@ -55,7 +52,8 @@
 #define SHIM_CSR_S0IOCS		(0x1 << 21)
 #define SHIM_CSR_S1IOCS		(0x1 << 23)
 #define SHIM_CSR_LPCS		(0x1 << 31)
-#define SHIM_CSR_24MHZ_LPCS	(SHIM_CSR_SBCS0 | SHIM_CSR_SBCS1 | SHIM_CSR_LPCS)
+#define SHIM_CSR_24MHZ_LPCS \
+	(SHIM_CSR_SBCS0 | SHIM_CSR_SBCS1 | SHIM_CSR_LPCS)
 #define SHIM_CSR_24MHZ_NO_LPCS	(SHIM_CSR_SBCS0 | SHIM_CSR_SBCS1)
 #define SHIM_BYT_CSR_RST	(0x1 << 0)
 #define SHIM_BYT_CSR_VECTOR_SEL	(0x1 << 1)
@@ -99,13 +97,13 @@
 /* CLKCTL */
 #define SHIM_CLKCTL_SMOS(x)	(x << 24)
 #define SHIM_CLKCTL_MASK	(3 << 24)
-#define SHIM_CLKCTL_DCPLCG	(1 << 18)
-#define SHIM_CLKCTL_SCOE1	(1 << 17)
-#define SHIM_CLKCTL_SCOE0	(1 << 16)
+#define SHIM_CLKCTL_DCPLCG	BIT(18)
+#define SHIM_CLKCTL_SCOE1	BIT(17)
+#define SHIM_CLKCTL_SCOE0	BIT(16)
 
 /* CSR2 / CS2 */
-#define SHIM_CSR2_SDFD_SSP0	(1 << 1)
-#define SHIM_CSR2_SDFD_SSP1	(1 << 2)
+#define SHIM_CSR2_SDFD_SSP0	BIT(1)
+#define SHIM_CSR2_SDFD_SSP1	BIT(2)
 
 /* LTRC */
 #define SHIM_LTRC_VAL(x)	(x << 0)
@@ -121,11 +119,12 @@
 #define SHIM_HMDC_HDDA_E1_CH1	SHIM_HMDC_HDDA1(SHIM_HMDC_HDDA_E0_CH1)
 #define SHIM_HMDC_HDDA_E1_CH2	SHIM_HMDC_HDDA1(SHIM_HMDC_HDDA_E0_CH2)
 #define SHIM_HMDC_HDDA_E1_CH3	SHIM_HMDC_HDDA1(SHIM_HMDC_HDDA_E0_CH3)
-#define SHIM_HMDC_HDDA_E0_ALLCH	(SHIM_HMDC_HDDA_E0_CH0 | SHIM_HMDC_HDDA_E0_CH1 | \
-				 SHIM_HMDC_HDDA_E0_CH2 | SHIM_HMDC_HDDA_E0_CH3)
-#define SHIM_HMDC_HDDA_E1_ALLCH	(SHIM_HMDC_HDDA_E1_CH0 | SHIM_HMDC_HDDA_E1_CH1 | \
-				 SHIM_HMDC_HDDA_E1_CH2 | SHIM_HMDC_HDDA_E1_CH3)
-
+#define SHIM_HMDC_HDDA_E0_ALLCH	\
+	(SHIM_HMDC_HDDA_E0_CH0 | SHIM_HMDC_HDDA_E0_CH1 | \
+	 SHIM_HMDC_HDDA_E0_CH2 | SHIM_HMDC_HDDA_E0_CH3)
+#define SHIM_HMDC_HDDA_E1_ALLCH	\
+	(SHIM_HMDC_HDDA_E1_CH0 | SHIM_HMDC_HDDA_E1_CH1 | \
+	 SHIM_HMDC_HDDA_E1_CH2 | SHIM_HMDC_HDDA_E1_CH3)
 
 /* Audio DSP PCI registers */
 #define PCI_VDRTCTL0		0xa0
@@ -134,17 +133,17 @@
 #define PCI_VDRTCTL3		0xaC
 
 /* VDRTCTL0 */
-#define PCI_VDRTCL0_D3PGD		(1 << 0)
-#define PCI_VDRTCL0_D3SRAMPGD		(1 << 1)
+#define PCI_VDRTCL0_D3PGD		BIT(0)
+#define PCI_VDRTCL0_D3SRAMPGD		BIT(1)
 #define PCI_VDRTCL0_DSRAMPGE_SHIFT	12
 #define PCI_VDRTCL0_DSRAMPGE_MASK	(0xfffff << PCI_VDRTCL0_DSRAMPGE_SHIFT)
 #define PCI_VDRTCL0_ISRAMPGE_SHIFT	2
 #define PCI_VDRTCL0_ISRAMPGE_MASK	(0x3ff << PCI_VDRTCL0_ISRAMPGE_SHIFT)
 
 /* VDRTCTL2 */
-#define PCI_VDRTCL2_DCLCGE		(1 << 1)
-#define PCI_VDRTCL2_DTCGE		(1 << 10)
-#define PCI_VDRTCL2_APLLSE_MASK		(1 << 31)
+#define PCI_VDRTCL2_DCLCGE		BIT(1)
+#define PCI_VDRTCL2_DTCGE		BIT(10)
+#define PCI_VDRTCL2_APLLSE_MASK		BIT(31)
 
 /* PMCS */
 #define PCI_PMCS		0x84
@@ -155,12 +154,13 @@
 #define PCI_CGCTL			0x48
 
 /* PCI_CGCTL bits */
-#define PCI_CGCTL_MISCBDCGE_MASK	(1 << 6)
+#define PCI_CGCTL_MISCBDCGE_MASK	BIT(6)
 
 /* Legacy HDA registers and bits used - widths are variable */
 #define SOF_HDA_GCAP			0x0
 #define SOF_HDA_GCTL			0x8
-#define SOF_HDA_GCTL_UNSOL		(1 << 8)   /* accept unsol. response enable */
+/* accept unsol. response enable */
+#define SOF_HDA_GCTL_UNSOL		BIT(8)
 #define SOF_HDA_LLCH			0x14
 #define SOF_HDA_INTCTL			0x20
 #define SOF_HDA_INTSTS			0x24
@@ -168,11 +168,11 @@
 #define SOF_HDA_WAKESTS_INT_MASK	((1 << 8) - 1)
 
 /* SOF_HDA_GCTL register bist */
-#define SOF_HDA_GCTL_RESET		(1 << 0)	
+#define SOF_HDA_GCTL_RESET		BIT(0)
 
 /* SOF_HDA_INCTL and SOF_HDA_INTSTS regs */
-#define SOF_HDA_INT_GLOBAL_EN		(1 << 31)
-#define SOF_HDA_INT_CTRL_EN		(1 << 30)
+#define SOF_HDA_INT_GLOBAL_EN		BIT(31)
+#define SOF_HDA_INT_CTRL_EN		BIT(30)
 #define SOF_HDA_INT_ALL_STREAM		0xff
 
 #define SOF_HDA_MAX_CAPS		10
@@ -183,8 +183,8 @@
 #define SOF_HDA_PP_CAP_ID		0x3
 #define SOF_HDA_REG_PP_PPCH		0x10
 #define SOF_HDA_REG_PP_PPCTL		0x04
-#define SOF_HDA_PPCTL_PIE		(1<<31)
-#define SOF_HDA_PPCTL_GPROCEN		(1<<30)
+#define SOF_HDA_PPCTL_PIE		BIT(31)
+#define SOF_HDA_PPCTL_GPROCEN		BIT(30)
 
 #define SOF_HDA_SPIB_CAP_ID		0x4
 #define SOF_HDA_DRSM_CAP_ID		0x5
@@ -204,11 +204,15 @@
 #define SOF_HDA_DRSM_BASE		0x08
 #define SOF_HDA_DRSM_INTERVAL		0x08
 
+/* Descriptor error interrupt */
+#define SOF_HDA_CL_DMA_SD_INT_DESC_ERR		0x10
 
+/* FIFO error interrupt */
+#define SOF_HDA_CL_DMA_SD_INT_FIFO_ERR		0x08
 
-#define SOF_HDA_CL_DMA_SD_INT_DESC_ERR		0x10 /* Descriptor error interrupt */
-#define SOF_HDA_CL_DMA_SD_INT_FIFO_ERR		0x08 /* FIFO error interrupt */
-#define SOF_HDA_CL_DMA_SD_INT_COMPLETE		0x04 /* Buffer completion interrupt */
+/* Buffer completion interrupt */
+#define SOF_HDA_CL_DMA_SD_INT_COMPLETE		0x04
+
 #define SOF_HDA_CL_DMA_SD_INT_MASK \
 	(SOF_HDA_CL_DMA_SD_INT_DESC_ERR | \
 	SOF_HDA_CL_DMA_SD_INT_FIFO_ERR | \
@@ -220,7 +224,6 @@
 #define SOF_HDA_ADSP_DPLBASE			0x70
 #define SOF_HDA_ADSP_DPUBASE			0x74
 #define SOF_HDA_ADSP_DPLBASE_ENABLE		0x01
-
 
 /* Stream Registers */
 #define SOF_HDA_ADSP_REG_CL_SD_CTL		0x00
@@ -235,19 +238,18 @@
 #define SOF_HDA_ADSP_REG_CL_SD_BDLPL		0x18
 #define SOF_HDA_ADSP_REG_CL_SD_BDLPU		0x1C
 
-
 /* CL: Software Position Based FIFO Capability Registers */
-#define SOF_DSP_REG_CL_SPBFIFO			(SOF_HDA_ADSP_LOADER_BASE + 0x20)
+#define SOF_DSP_REG_CL_SPBFIFO \
+	(SOF_HDA_ADSP_LOADER_BASE + 0x20)
 #define SOF_HDA_ADSP_REG_CL_SPBFIFO_SPBFCH	0x0
 #define SOF_HDA_ADSP_REG_CL_SPBFIFO_SPBFCCTL	0x4
 #define SOF_HDA_ADSP_REG_CL_SPBFIFO_SPIB	0x8
 #define SOF_HDA_ADSP_REG_CL_SPBFIFO_MAXFIFOS	0xc
 
-
 /* Stream Number */
 #define SOF_HDA_CL_SD_CTL_STREAM_TAG_SHIFT	20
-#define SOF_HDA_CL_SD_CTL_STREAM_TAG_MASK	(0xf << SOF_HDA_CL_SD_CTL_STREAM_TAG_SHIFT)
-
+#define SOF_HDA_CL_SD_CTL_STREAM_TAG_MASK \
+	(0xf << SOF_HDA_CL_SD_CTL_STREAM_TAG_SHIFT)
 
 enum skl_cl_dma_wake_states {
 	APL_CL_DMA_STATUS_NONE = 0,
@@ -256,8 +258,8 @@ enum skl_cl_dma_wake_states {
 };
 
 struct stream_sample_format {
-	uint32_t sample_rate;
-	uint8_t code;
+	u32 sample_rate;
+	u8 code;
 };
 
 static struct stream_sample_format sample_format[] = {
@@ -291,8 +293,8 @@ static inline uint8_t get_sample_code(uint32_t sample_rate)
 }
 
 struct stream_bits_format {
-	uint32_t bits;
-	uint8_t code;
+	u32 bits;
+	u8 code;
 };
 
 static struct stream_bits_format bits_format[] = {
