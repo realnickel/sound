@@ -22,7 +22,6 @@
 #include "sof-priv.h"
 #include "ops.h"
 
-
 static int sof_dfsentry_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -76,7 +75,8 @@ static const struct file_operations sof_dfs_fops = {
 };
 
 int snd_sof_debugfs_create_item(struct snd_sof_dev *sdev,
-	void __iomem *base, size_t size, const char *name)
+				void __iomem *base, size_t size,
+				const char *name)
 {
 	struct snd_sof_dfsentry *dfse;
 
@@ -116,11 +116,11 @@ int snd_sof_dbg_init(struct snd_sof_dev *sdev)
 	}
 
 	for (i = 0; i < ops->debug_map_count; i++) {
-
 		map = &ops->debug_map[i];
 
-		err = snd_sof_debugfs_create_item(sdev,
-			sdev->bar[map->bar] + map->offset, map->size, map->name);
+		err = snd_sof_debugfs_create_item(sdev, sdev->bar[map->bar] +
+						  map->offset, map->size,
+						  map->name);
 		if (err < 0)
 			dev_err(sdev->dev, "cannot create debugfs for %s\n",
 				map->name);
