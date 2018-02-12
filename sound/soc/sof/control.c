@@ -10,7 +10,6 @@
 
 /* Mixer Controls */
 
-
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/module.h>
@@ -80,7 +79,7 @@ static inline u32 ipc_to_mixer(u32 value)
 }
 
 int snd_sof_volume_get(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
+		       struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_mixer_control *sm =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -93,7 +92,8 @@ int snd_sof_volume_get(struct snd_kcontrol *kcontrol,
 
 	/* get all the mixer data from DSP */
 	snd_sof_ipc_get_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_GET_VALUE,
-		SOF_CTRL_TYPE_VALUE_CHAN_GET, SOF_CTRL_CMD_VOLUME);
+				  SOF_CTRL_TYPE_VALUE_CHAN_GET,
+				  SOF_CTRL_CMD_VOLUME);
 
 	/* read back each channel */
 	for (i = 0; i < channels; i++)
@@ -106,7 +106,7 @@ int snd_sof_volume_get(struct snd_kcontrol *kcontrol,
 }
 
 int snd_sof_volume_put(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
+		       struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_mixer_control *sm =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -126,7 +126,8 @@ int snd_sof_volume_put(struct snd_kcontrol *kcontrol,
 
 	/* notify DSP of mixer updates */
 	snd_sof_ipc_set_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_SET_VALUE,
-		SOF_CTRL_TYPE_VALUE_CHAN_GET, SOF_CTRL_CMD_VOLUME);
+				  SOF_CTRL_TYPE_VALUE_CHAN_GET,
+				  SOF_CTRL_CMD_VOLUME);
 
 	pm_runtime_mark_last_busy(sdev->dev);
 	pm_runtime_put_autosuspend(sdev->dev);
@@ -134,7 +135,7 @@ int snd_sof_volume_put(struct snd_kcontrol *kcontrol,
 }
 
 int snd_sof_enum_get(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
+		     struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_enum *se =
 		(struct soc_enum *)kcontrol->private_value;
@@ -147,7 +148,8 @@ int snd_sof_enum_get(struct snd_kcontrol *kcontrol,
 
 	/* get all the mixer data from DSP */
 	snd_sof_ipc_get_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_GET_VALUE,
-		SOF_CTRL_TYPE_VALUE_CHAN_GET, SOF_CTRL_CMD_ENUM);
+				  SOF_CTRL_TYPE_VALUE_CHAN_GET,
+				  SOF_CTRL_CMD_ENUM);
 
 	/* read back each channel */
 	for (i = 0; i < channels; i++)
@@ -159,7 +161,7 @@ int snd_sof_enum_get(struct snd_kcontrol *kcontrol,
 }
 
 int snd_sof_enum_put(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
+		     struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_enum *se =
 		(struct soc_enum *)kcontrol->private_value;
@@ -176,7 +178,8 @@ int snd_sof_enum_put(struct snd_kcontrol *kcontrol,
 
 	/* notify DSP of mixer updates */
 	snd_sof_ipc_set_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_SET_VALUE,
-		SOF_CTRL_TYPE_VALUE_CHAN_SET, SOF_CTRL_CMD_ENUM);
+				  SOF_CTRL_TYPE_VALUE_CHAN_SET,
+				  SOF_CTRL_CMD_ENUM);
 
 	pm_runtime_mark_last_busy(sdev->dev);
 	pm_runtime_put_autosuspend(sdev->dev);
@@ -184,7 +187,7 @@ int snd_sof_enum_put(struct snd_kcontrol *kcontrol,
 }
 
 int snd_sof_bytes_get(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
+		      struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_bytes_ext *be =
 		(struct soc_bytes_ext *)kcontrol->private_value;
@@ -197,7 +200,7 @@ int snd_sof_bytes_get(struct snd_kcontrol *kcontrol,
 
 	/* get all the mixer data from DSP */
 	snd_sof_ipc_get_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_GET_DATA,
-		SOF_CTRL_TYPE_DATA_GET, scontrol->cmd);
+				  SOF_CTRL_TYPE_DATA_GET, scontrol->cmd);
 
 	/* TODO: copy back to userspace */
 
@@ -207,7 +210,7 @@ int snd_sof_bytes_get(struct snd_kcontrol *kcontrol,
 }
 
 int snd_sof_bytes_put(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
+		      struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_bytes_ext *be =
 		(struct soc_bytes_ext *)kcontrol->private_value;
@@ -222,10 +225,9 @@ int snd_sof_bytes_put(struct snd_kcontrol *kcontrol,
 
 	/* notify DSP of mixer updates */
 	snd_sof_ipc_set_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_SET_DATA,
-		SOF_CTRL_TYPE_DATA_SET, scontrol->cmd);
+				  SOF_CTRL_TYPE_DATA_SET, scontrol->cmd);
 
 	pm_runtime_mark_last_busy(sdev->dev);
 	pm_runtime_put_autosuspend(sdev->dev);
 	return 0;
 }
-
