@@ -8,7 +8,6 @@
  * Author: Liam Girdwood <liam.r.girdwood@linux.intel.com>
  */
 
-
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
@@ -89,18 +88,18 @@ static int is_byt_cr(struct device *dev)
 	if (status) {
 		dev_err(dev, "error: could not read PUNIT BIOS_CONFIG\n");
 		return -EIO;
-	} else {
-		/* bits 26:27 mirror PMIC options */
-		bios_status = (bios_status >> 26) & 3;
-
-		if ((bios_status == 1) || (bios_status == 3)) {
-			dev_info(dev, "BYT-CR detected\n");
-			return 1;
-		} else {
-			dev_info(dev, "BYT-CR not detected\n");
-			return 0;
-		}
 	}
+
+	/* bits 26:27 mirror PMIC options */
+	bios_status = (bios_status >> 26) & 3;
+
+	if (bios_status == 1 || bios_status == 3) {
+		dev_info(dev, "BYT-CR detected\n");
+		return 1;
+	}
+
+	dev_info(dev, "BYT-CR not detected\n");
+	return 0;
 }
 
 static struct sof_dev_desc sof_acpi_cherrytrail_desc = {
@@ -114,7 +113,7 @@ static struct sof_dev_desc sof_acpi_cherrytrail_desc = {
 };
 #endif
 
-static struct platform_device * 
+static struct platform_device *
 	mfld_new_mach_data(struct snd_sof_pdata *sof_pdata)
 {
 	struct snd_soc_acpi_mach pmach;
@@ -123,12 +122,12 @@ static struct platform_device *
 	struct platform_device *pdev = NULL;
 
 	memset(&pmach, 0, sizeof(pmach));
-	memcpy((void*)pmach.id, mach->id, ACPI_ID_LEN);
+	memcpy((void *)pmach.id, mach->id, ACPI_ID_LEN);
 	pmach.drv_name = mach->drv_name;
 	//pmach.board;
 
 	pdev = platform_device_register_data(dev, mach->drv_name, -1,
-		&pmach, sizeof(pmach));
+					     &pmach, sizeof(pmach));
 	return pdev;
 }
 
@@ -146,7 +145,8 @@ static void sof_acpi_fw_cb(const struct firmware *fw, void *context)
 
 	sof_pdata->fw = fw;
 	if (!fw) {
-		dev_err(dev, "Cannot load firmware %s\n", mach->sof_fw_filename);
+		dev_err(dev, "Cannot load firmware %s\n",
+			mach->sof_fw_filename);
 		return;
 	}
 
@@ -158,13 +158,12 @@ static void sof_acpi_fw_cb(const struct firmware *fw, void *context)
 		dev_err(dev, "Cannot register device sof-audio. Error %d\n",
 			(int)PTR_ERR(priv->pdev_pcm));
 	}
-
-	return;
 }
 
 static const struct dev_pm_ops sof_acpi_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(snd_sof_suspend, snd_sof_resume)
-	SET_RUNTIME_PM_OPS(snd_sof_runtime_suspend, snd_sof_runtime_resume, NULL)
+	SET_RUNTIME_PM_OPS(snd_sof_runtime_suspend, snd_sof_runtime_resume,
+			   NULL)
 	.suspend_late = snd_sof_suspend_late,
 };
 
@@ -183,29 +182,28 @@ static int sof_acpi_probe(struct platform_device *pdev)
 	dev_dbg(&pdev->dev, "ACPI DSP detected");
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-	if (priv == NULL)
+	if (!priv)
 		return -ENOMEM;
 
 	sof_pdata = devm_kzalloc(dev, sizeof(*sof_pdata), GFP_KERNEL);
-	if (sof_pdata == NULL)
+	if (!sof_pdata)
 		return -ENOMEM;
 
 	id = acpi_match_device(dev->driver->acpi_match_table, dev);
 	if (!id)
 		return -ENODEV;
-	desc = (const struct sof_dev_desc*)id->driver_data;
+	desc = (const struct sof_dev_desc *)id->driver_data;
 
 	/* FIXME: is there a better way to write this */
-	if (0) ;
+	if (0)
+		;
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HASWELL)
-	else if (desc == &sof_acpi_haswell_desc) {
+	else if (desc == &sof_acpi_haswell_desc)
 		ops = &snd_sof_hsw_ops;
-	}
 #endif
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_BROADWELL)
-	else if (desc == &sof_acpi_broadwell_desc) {
+	else if (desc == &sof_acpi_broadwell_desc)
 		ops = &snd_sof_bdw_ops;
-	}
 #endif
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_BAYTRAIL)
 	else if (desc == &sof_acpi_baytrail_desc) {
@@ -213,23 +211,23 @@ static int sof_acpi_probe(struct platform_device *pdev)
 			desc = &sof_acpi_baytrailcr_desc;
 		ops = &snd_sof_byt_ops;
 		new_mach_data = mfld_new_mach_data;
-	}
-	else if (desc == &sof_acpi_cherrytrail_desc) {
+	} else if (desc == &sof_acpi_cherrytrail_desc) {
 		ops = &snd_sof_cht_ops;
 		new_mach_data = mfld_new_mach_data;
 	}
 #endif
-	else return -ENODEV;
+	else
+		return -ENODEV;
 
 	/* find machine */
 	mach = snd_soc_acpi_find_machine(desc->machines);
-	if (mach == NULL) {
+	if (!mach) {
 		struct snd_soc_acpi_mach *m;
 		/* dont bind to any particular codec, just initialse the DSP */
 		dev_err(dev, "No matching ASoC machine driver found - using nocodec\n");
 		sof_pdata->drv_name = "sof-nocodec";
 		m = devm_kzalloc(dev, sizeof(*mach), GFP_KERNEL);
-		if (m == NULL)
+		if (!m)
 			return -ENOMEM;
 
 		m->drv_name = "sof-nocodec";
@@ -246,20 +244,24 @@ static int sof_acpi_probe(struct platform_device *pdev)
 	//sof_pdata->id = acpi_id->device;
 	//sof_pdata->name = acpi_name(pci);
 	sof_pdata->machine = mach;
-	// FIXME, this can't work for baytrail cr: sof_pdata->desc = (struct sof_dev_desc*) id->driver_data;
+	/*
+	 * FIXME, this can't work for baytrail cr:
+	 * sof_pdata->desc = (struct sof_dev_desc*) id->driver_data;
+	 */
 	sof_pdata->desc = desc;
 	priv->sof_pdata = sof_pdata;
 	sof_pdata->pdev = pdev;
 	dev_set_drvdata(&pdev->dev, priv);
 
-	/* do we need to generate any machine plat data ? */ 
+	/* do we need to generate any machine plat data ? */
 	if (mach->new_mach_data)
 		sof_pdata->pdev_mach = mach->new_mach_data(sof_pdata);
 	else
 		/* register machine driver, pass machine info as pdata */
 		sof_pdata->pdev_mach =
 			platform_device_register_data(dev, mach->drv_name, -1,
-						      (const void *)mach, sizeof(*mach));
+						      (const void *)mach,
+						      sizeof(*mach));
 	if (IS_ERR(sof_pdata->pdev_mach))
 		return PTR_ERR(sof_pdata->pdev_mach);
 	dev_dbg(dev, "created machine %s\n",
