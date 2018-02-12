@@ -8,7 +8,6 @@
  * Author: Liam Girdwood <liam.r.girdwood@linux.intel.com>
  */
 
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -22,10 +21,10 @@
 #include <sound/jack.h>
 
 static int sof_nocodec_codec_fixup(struct snd_soc_pcm_runtime *rtd,
-                           struct snd_pcm_hw_params *params)
+				   struct snd_pcm_hw_params *params)
 {
 	// TODO: read this from topology
-       return 0;
+	return 0;
 }
 
 static struct snd_soc_ops sof_nocodec_ops = {};
