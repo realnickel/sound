@@ -31,19 +31,18 @@
 #include "ops.h"
 #include "intel.h"
 
-
 /*
  * Memory copy.
  */
 
 static void spi_block_write(struct snd_sof_dev *sdev, u32 offset, void *src,
-	size_t size)
+			    size_t size)
 {
 	// use spi_write() to copy data to DSP
 }
 
 static void spi_block_read(struct snd_sof_dev *sdev, u32 offset, void *dest,
-	size_t size)
+			   size_t size)
 {
 	// use spi_read() to copy data from DSP
 }
@@ -60,22 +59,8 @@ static int spi_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
 
 	// read local buffer with SPI data
 
-#if 0
-	/* copy data from the DSP FW ready offset */
-	spi_block_read(sdev, offset, fw_ready, sizeof(*fw_ready));
-
-	snd_sof_dsp_mailbox_init(sdev, fw_ready->dspbox_offset,
-		fw_ready->dspbox_size, fw_ready->hostbox_offset,
-		fw_ready->hostbox_size);
-
-	dev_dbg(sdev->dev, " mailbox DSP initiated 0x%x - size 0x%x\n",
-		fw_ready->dspbox_offset, fw_ready->dspbox_size);
-	dev_dbg(sdev->dev, " mailbox Host initiated 0x%x - size 0x%x\n",
-		fw_ready->hostbox_offset, fw_ready->hostbox_size);
-
-#endif
-	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n", 
-		v->major, v->minor, v->tag, v->build, v->date, v->time);
+	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n",
+		 v->major, v->minor, v->tag, v->build, v->date, v->time);
 
 	return 0;
 }
@@ -85,23 +70,27 @@ static int spi_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
  */
 
 static void spi_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+			      void *message, size_t bytes)
 {
 	void __iomem *dest = sdev->bar[sdev->mailbox_bar] + offset;
 
 	//memcpy_toio(dest, message, bytes);
-
-	// this will copy to a local memory buffer that will be sent to DSP via SPI at next IPC
-
+	/*
+	 * this will copy to a local memory buffer that will be sent to DSP via
+	 * SPI at next IPC
+	 */
 }
 
 static void spi_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
-	void *message, size_t bytes)
+			     void *message, size_t bytes)
 {
 	void __iomem *src = sdev->bar[sdev->mailbox_bar] + offset;
 
 	//memcpy_fromio(message, src, bytes);
-	// this will copy from a local memory buffer that will be received from DSP via SPI at last IPC
+	/*
+	 * this will copy from a local memory buffer that will be received from
+	 * DSP via SPI at last IPC
+	 */
 }
 
 /*
@@ -110,7 +99,7 @@ static void spi_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
 
 static irqreturn_t spi_irq_handler(int irq, void *context)
 {
-	struct snd_sof_dev *sdev = (struct snd_sof_dev *) context;
+	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
 	int ret = IRQ_NONE;
 
 	// on SPI based devices this will likely come via a SoC GPIO IRQ
@@ -122,14 +111,16 @@ static irqreturn_t spi_irq_handler(int irq, void *context)
 
 static irqreturn_t spi_irq_thread(int irq, void *context)
 {
-	struct snd_sof_dev *sdev = (struct snd_sof_dev *) context;
-	
+	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
+
 	// read SPI data into local buffer and determine IPC cmd or reply
-		
-	/* if reply. Handle Immediate reply from DSP Core  and set DSP state to ready */
+
+	/*
+	 * if reply. Handle Immediate reply from DSP Core and set DSP
+	 * state to ready
+	 */
 	//snd_sof_ipc_reply(sdev, ipcx);
 
-		
 	/* if cmd, Handle messages from DSP Core */
 	//snd_sof_ipc_msgs_rx(sdev);
 
@@ -141,7 +132,7 @@ static irqreturn_t spi_irq_thread(int irq, void *context)
 
 static int spi_is_ready(struct snd_sof_dev *sdev)
 {
-	// use local variable to store DSP comand state. either DSP is ready
+	// use local variable to store DSP command state. either DSP is ready
 	// for new cmd or still processing current cmd.
 
 	return 1;
@@ -152,7 +143,8 @@ static int spi_send_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 	u64 cmd = msg->header;
 
 	/* send the message */
-	spi_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data, msg->msg_size);
+	spi_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data,
+			  msg->msg_size);
 
 	return 0;
 }
@@ -182,11 +174,11 @@ static int spi_get_reply(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 
 	/* read the message */
 	if (msg->msg_data && size > 0)
-		spi_mailbox_read(sdev, sdev->host_box.offset, msg->reply_data, size);
+		spi_mailbox_read(sdev, sdev->host_box.offset, msg->reply_data,
+				 size);
 
 	return ret;
 }
-
 
 /*
  * Probe and remove.
@@ -201,22 +193,14 @@ static int spi_sof_probe(struct snd_sof_dev *sdev)
 	int ret = 0;
 
 	/* get IRQ from Device tree or ACPI - register our IRQ */
-#if 0
-	sdev->ipc_irq = platform_get_irq(pdev, desc->irqindex_host_ipc);
-	if (sdev->ipc_irq < 0) {
-		dev_err(sdev->dev, "error: failed to get IRQ at index %d\n",
-			desc->irqindex_host_ipc);
-		ret = sdev->ipc_irq;
-		goto irq_err;
-	}
-#endif
 	dev_dbg(sdev->dev, "using IRQ %d\n", sdev->ipc_irq);
 	ret = request_threaded_irq(sdev->ipc_irq, spi_irq_handler,
-		spi_irq_thread, IRQF_SHARED, "AudioDSP", sdev);
+				   spi_irq_thread, IRQF_SHARED, "AudioDSP",
+				   sdev);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to register IRQ %d\n",
 			sdev->ipc_irq);
-		goto irq_err;		
+		goto irq_err;
 	}
 
 	return ret;
@@ -228,10 +212,8 @@ static int spi_sof_remove(struct snd_sof_dev *sdev)
 	return 0;
 }
 
-
 /* baytrail ops */
 struct snd_sof_dsp_ops snd_sof_spi_ops = {
-
 	/* device init */
 	.probe		= spi_sof_probe,
 	.remove		= spi_sof_remove,
@@ -264,7 +246,7 @@ struct snd_sof_dsp_ops snd_sof_spi_ops = {
 	.load_module	= snd_sof_parse_module_memcpy,
 
 	/*Firmware loading */
- 	.load_firmware	= snd_sof_load_firmware_memcpy,
+	.load_firmware	= snd_sof_load_firmware_memcpy,
 };
 EXPORT_SYMBOL(snd_sof_spi_ops);
 
