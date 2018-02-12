@@ -22,7 +22,7 @@
 #include "ops.h"
 
 static int get_ext_windows(struct snd_sof_dev *sdev,
-	struct sof_ipc_ext_data_hdr *ext_hdr)
+			   struct sof_ipc_ext_data_hdr *ext_hdr)
 {
 	struct sof_ipc_window *w = (struct sof_ipc_window *)ext_hdr;
 
@@ -36,7 +36,7 @@ static int get_ext_windows(struct snd_sof_dev *sdev,
 
 	/* keep a local copy of the data */
 	sdev->info_window = kzalloc(size, GFP_KERNEL);
-	if (sdev->info_window == NULL)
+	if (!sdev->info_window)
 		return -ENOMEM;
 	memcpy(sdev->info_window, w, size);
 
@@ -50,7 +50,7 @@ int snd_sof_fw_parse_ext_data(struct snd_sof_dev *sdev, u32 offset)
 	int ret = 0;
 
 	ext_data = kzalloc(PAGE_SIZE, GFP_KERNEL);
-	if (ext_data == NULL)
+	if (!ext_data)
 		return -ENOMEM;
 
 	/* get first header */
@@ -58,12 +58,11 @@ int snd_sof_fw_parse_ext_data(struct snd_sof_dev *sdev, u32 offset)
 	ext_hdr = (struct sof_ipc_ext_data_hdr *)ext_data;
 
 	while (ext_hdr->hdr.cmd == SOF_IPC_FW_READY) {
-
 		/* read in ext structure */
 		offset += sizeof(*ext_hdr);
 		snd_sof_dsp_block_read(sdev, offset,
-			ext_data + sizeof(*ext_hdr),
-			ext_hdr->hdr.size - sizeof(*ext_hdr));
+				       ext_data + sizeof(*ext_hdr),
+				       ext_hdr->hdr.size - sizeof(*ext_hdr));
 
 		dev_dbg(sdev->dev, "found ext header type %d size 0x%x\n",
 			ext_hdr->type, ext_hdr->hdr.size);
@@ -86,8 +85,9 @@ int snd_sof_fw_parse_ext_data(struct snd_sof_dev *sdev, u32 offset)
 
 		/* move to next header */
 		offset += ext_hdr->hdr.size;
-		snd_sof_dsp_block_read(sdev, offset, ext_data, sizeof(*ext_hdr));
-		ext_hdr = (struct sof_ipc_ext_data_hdr *) ext_data;
+		snd_sof_dsp_block_read(sdev, offset, ext_data,
+				       sizeof(*ext_hdr));
+		ext_hdr = (struct sof_ipc_ext_data_hdr *)ext_data;
 	}
 
 	kfree(ext_data);
@@ -97,7 +97,7 @@ EXPORT_SYMBOL(snd_sof_fw_parse_ext_data);
 
 /* generic module parser for mmaped DSPs */
 int snd_sof_parse_module_memcpy(struct snd_sof_dev *sdev,
-	struct snd_sof_mod_hdr *module)
+				struct snd_sof_mod_hdr *module)
 {
 	struct snd_sof_blk_hdr *block;
 	int count;
@@ -109,12 +109,11 @@ int snd_sof_parse_module_memcpy(struct snd_sof_dev *sdev,
 	block = (void *)module + sizeof(*module);
 
 	for (count = 0; count < module->num_blocks; count++) {
-
 		if (block->size == 0) {
 			dev_warn(sdev->dev,
-				"warning: block %d size zero\n", count);
+				 "warning: block %d size zero\n", count);
 			dev_warn(sdev->dev, " type 0x%x offset 0x%x\n",
-				block->type, block->offset);
+				 block->type, block->offset);
 			continue;
 		}
 
@@ -135,12 +134,13 @@ int snd_sof_parse_module_memcpy(struct snd_sof_dev *sdev,
 			return -EINVAL;
 		}
 
-		dev_dbg(sdev->dev, "block %d type 0x%x "
-			"size 0x%x ==>  offset 0x%x\n",
+		dev_dbg(sdev->dev,
+			"block %d type 0x%x size 0x%x ==>  offset 0x%x\n",
 			count, block->type, block->size, offset);
 
-		snd_sof_dsp_block_write(sdev, offset, 
-			(void*)block + sizeof(*block), block->size);
+		snd_sof_dsp_block_write(sdev, offset,
+					(void *)block + sizeof(*block),
+					block->size);
 
 		/* next block */
 		block = (void *)block + sizeof(*block) + block->size;
@@ -182,18 +182,17 @@ static int load_modules(struct snd_sof_dev *sdev, const struct firmware *fw)
 	struct snd_sof_fw_header *header;
 	struct snd_sof_mod_hdr *module;
 	int (*load_module)(struct snd_sof_dev *sof_dev,
-		struct snd_sof_mod_hdr *hdr);
+			   struct snd_sof_mod_hdr *hdr);
 	int ret, count;
 
 	header = (struct snd_sof_fw_header *)fw->data;
 	load_module = sdev->ops->load_module;
-	if (load_module == NULL)
+	if (!load_module)
 		return -EINVAL;
 
 	/* parse each module */
 	module = (void *)fw->data + sizeof(*header);
 	for (count = 0; count < header->num_modules; count++) {
-
 		/* module */
 		ret = load_module(sdev, module);
 		if (ret < 0) {
@@ -207,10 +206,10 @@ static int load_modules(struct snd_sof_dev *sdev, const struct firmware *fw)
 }
 
 int snd_sof_load_firmware_memcpy(struct snd_sof_dev *sdev,
-	const struct firmware *fw)
+				 const struct firmware *fw)
 {
 	int ret;
-	
+
 	/* make sure the FW header and file is valid */
 	ret = check_header(sdev, fw);
 	if (ret < 0) {
@@ -231,14 +230,14 @@ int snd_sof_load_firmware_memcpy(struct snd_sof_dev *sdev,
 		dev_err(sdev->dev, "error: invalid FW modules\n");
 		return ret;
 	}
-	
+
 	return ret;
 }
 EXPORT_SYMBOL(snd_sof_load_firmware_memcpy);
 
 int snd_sof_load_firmware(struct snd_sof_dev *sdev,
-	const struct firmware *fw)
-{	
+			  const struct firmware *fw)
+{
 	dev_dbg(sdev->dev, "loading firmware\n");
 
 	if (sdev->ops->load_firmware)
@@ -265,14 +264,15 @@ int snd_sof_run_firmware(struct snd_sof_dev *sdev)
 
 	/* now wait for the DSP to boot */
 	ret = wait_event_timeout(sdev->boot_wait, sdev->boot_complete,
-		msecs_to_jiffies(sdev->boot_timeout));
+				 msecs_to_jiffies(sdev->boot_timeout));
 	if (ret == 0) {
 		dev_err(sdev->dev, "error: firmware boot timeout\n");
 		snd_sof_dsp_dbg_dump(sdev, SOF_DBG_REGS | SOF_DBG_MBOX |
 			SOF_DBG_TEXT | SOF_DBG_PCI);
 		return -EIO;
-	} else
-		dev_info(sdev->dev, "firmware boot complete\n");
+	}
+
+	dev_info(sdev->dev, "firmware boot complete\n");
 
 	return 0;
 }
@@ -280,7 +280,5 @@ EXPORT_SYMBOL(snd_sof_run_firmware);
 
 void snd_sof_fw_unload(struct snd_sof_dev *sdev)
 {
-
 }
 EXPORT_SYMBOL(snd_sof_fw_unload);
-
