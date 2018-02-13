@@ -26,10 +26,10 @@
 #include <sound/compress_driver.h>
 
 /* debug flags */
-#define SOF_DBG_REGS	(1 << 1)
-#define SOF_DBG_MBOX	(1 << 2)
-#define SOF_DBG_TEXT	(1 << 3)
-#define SOF_DBG_PCI	(1 << 4)
+#define SOF_DBG_REGS	BIT(1)
+#define SOF_DBG_MBOX	BIT(2)
+#define SOF_DBG_TEXT	BIT(3)
+#define SOF_DBG_PCI	BIT(4)
 
 /* max BARs mmaped devices can use */
 #define SND_SOF_BARS	8
@@ -51,7 +51,6 @@ struct snd_soc_tplg_ops;
 struct snd_soc_component;
 
 struct snd_sof_dsp_ops {
-
 	/* probe and remove */
 	int (*remove)(struct snd_sof_dev *sof_dev);
 	int (*probe)(struct snd_sof_dev *sof_dev);
@@ -70,17 +69,17 @@ struct snd_sof_dsp_ops {
 
 	/* Register IO */
 	void (*write)(struct snd_sof_dev *sof_dev, void __iomem *addr,
-		u32 value);
+		      u32 value);
 	u32 (*read)(struct snd_sof_dev *sof_dev, void __iomem *addr);
 	void (*write64)(struct snd_sof_dev *sof_dev, void __iomem *addr,
-		u64 value);
+			u64 value);
 	u64 (*read64)(struct snd_sof_dev *sof_dev, void __iomem *addr);
 
 	/* memcpy IO */
 	void (*block_read)(struct snd_sof_dev *sof_dev,
-		u32 offset, void *dest, size_t size);
+			   u32 offset, void *dest, size_t size);
 	void (*block_write)(struct snd_sof_dev *sof_dev,
-		u32 offset, void *src, size_t size);
+			    u32 offset, void *src, size_t size);
 
 	/* doorbell */
 	irqreturn_t (*irq_handler)(int irq, void *context);
@@ -88,13 +87,15 @@ struct snd_sof_dsp_ops {
 
 	/* mailbox */
 	void (*mailbox_read)(struct snd_sof_dev *sof_dev, u32 offset,
-		void __iomem *addr, size_t bytes);
+			     void __iomem *addr, size_t bytes);
 	void (*mailbox_write)(struct snd_sof_dev *sof_dev, u32 offset,
-		void __iomem *addr, size_t bytes);
+			      void __iomem *addr, size_t bytes);
 
 	/* ipc */
-	int (*send_msg)(struct snd_sof_dev *sof_dev, struct snd_sof_ipc_msg *msg);
-	int (*get_reply)(struct snd_sof_dev *sof_dev, struct snd_sof_ipc_msg *msg);
+	int (*send_msg)(struct snd_sof_dev *sof_dev,
+			struct snd_sof_ipc_msg *msg);
+	int (*get_reply)(struct snd_sof_dev *sof_dev,
+			 struct snd_sof_ipc_msg *msg);
 	int (*is_ready)(struct snd_sof_dev *sof_dev);
 	int (*cmd_done)(struct snd_sof_dev *sof_dev);
 
@@ -105,23 +106,26 @@ struct snd_sof_dsp_ops {
 
 	/* connect pcm substream to a host stream */
 	int (*host_stream_open)(struct snd_sof_dev *sdev,
-		struct snd_pcm_substream *substream);
+				struct snd_pcm_substream *substream);
 	/* disconnect pcm substream to a host stream */
 	int (*host_stream_close)(struct snd_sof_dev *sdev,
-		struct snd_pcm_substream *substream);
+				 struct snd_pcm_substream *substream);
 
 	/* host stream prepare */
 	int (*host_stream_prepare)(struct snd_sof_dev *sdev,
-	struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params);
+				   struct snd_pcm_substream *substream,
+				   struct snd_pcm_hw_params *params);
 
 	/* host stream trigger */
 	int (*host_stream_trigger)(struct snd_sof_dev *sdev,
-		struct snd_pcm_substream *substream, int cmd);
+				   struct snd_pcm_substream *substream,
+				   int cmd);
 
 	/* FW loading */
-	int (*load_firmware)(struct snd_sof_dev *sof_dev, const struct firmware *fw);
+	int (*load_firmware)(struct snd_sof_dev *sof_dev,
+			     const struct firmware *fw);
 	int (*load_module)(struct snd_sof_dev *sof_dev,
-		struct snd_sof_mod_hdr *hdr);
+			   struct snd_sof_mod_hdr *hdr);
 	int (*fw_ready)(struct snd_sof_dev *sdev, u32 msg_id);
 
 };
@@ -169,7 +173,7 @@ struct snd_sof_pcm {
 	struct snd_sof_dev *sdev;
 	struct snd_soc_tplg_pcm pcm;
 	struct snd_sof_pcm_stream stream[2];
-	struct mutex mutex;
+	struct mutex mutex;	/* TODO: not used ? remove ? */
 	struct list_head list;	/* list in sdev pcm list */
 };
 
@@ -177,12 +181,12 @@ struct snd_sof_control {
 	struct snd_sof_dev *sdev;
 	int comp_id;
 	int num_channels;
-	uint32_t readback_offset; /* offset to mmaped data if used */
+	u32 readback_offset; /* offset to mmaped data if used */
 	struct sof_ipc_ctrl_data *control_data;
-	uint32_t size;	/* cdata size */
+	u32 size;	/* cdata size */
 	enum sof_ipc_ctrl_cmd cmd;
 
-	struct mutex mutex;
+	struct mutex mutex;	/* TODO: not used ? remove ? */
 	struct list_head list;	/* list in sdev control list */
 };
 
@@ -194,7 +198,7 @@ struct snd_sof_widget {
 	int id;
 
 	struct snd_soc_dapm_widget *widget;
-	struct mutex mutex;
+	struct mutex mutex;	/* TODO: not used ? remove ? */
 	struct list_head list;	/* list in sdev widget list */
 
 	void *private;			/* core does not touch this */
@@ -246,8 +250,8 @@ struct snd_sof_hda_stream {
 	struct snd_dma_buffer bdl;
 	void __iomem *sd_addr;	/* stream descriptor pointer */
 
-	int sd_offset; /* Stream descriptor offset */ 
-         
+	int sd_offset; /* Stream descriptor offset */
+
 	/* CORB/RIRB and position buffers */
 	struct snd_dma_buffer posbuffer;
 	struct snd_dma_buffer ringbuffer;
@@ -260,10 +264,9 @@ struct snd_sof_hda_stream {
 	unsigned int bufsize;	/* size of the play buffer in bytes */
 	unsigned int fifo_size;	/* FIFO size */
 	unsigned char index;		/* stream index */
-	/*PCM Support*/
-	struct snd_pcm_substream *substream; 	/*Assigned substream
-						* set in PCM open
-						*/
+	/* PCM Support */
+	/* Assigned substream set in PCM open */
+	struct snd_pcm_substream *substream;
 };
 
 #define SOF_HDA_PLAYBACK_STREAMS	16
@@ -274,14 +277,14 @@ struct snd_sof_hda_stream {
 struct snd_sof_hda_dev {
 	struct snd_sof_hda_stream pstream[SOF_HDA_PLAYBACK_STREAMS];
 	struct snd_sof_hda_stream cstream[SOF_HDA_CAPTURE_STREAMS];
-	
+
 	int num_capture;
 	int num_playback;
-	
+
 	/* CORB/RIRB */
 	struct snd_sof_hda_rb corb;
 	struct snd_sof_hda_rb rirb;
-	        
+
 	/* CORB/RIRB and position buffers */
 	struct snd_dma_buffer posbuffer;
 	struct snd_dma_buffer ringbuffer;
@@ -293,8 +296,8 @@ struct snd_sof_hda_dev {
 struct snd_sof_dev {
 	struct device *dev;
 	struct device *parent;
-	spinlock_t ipc_lock;
-	spinlock_t hw_lock;
+	spinlock_t ipc_lock;	/* lock for IPC users */
+	spinlock_t hw_lock;	/* lock for HW IO access */
 
 	/* ASoC components */
 	struct snd_soc_platform_driver plat_drv;
@@ -350,7 +353,7 @@ struct snd_sof_dev {
 	/* IPC timeouts in ms */
 	int ipc_timeout;
 	int boot_timeout;
-	
+
 	/* Wait queue for code loading */
 	wait_queue_head_t waitq;
 	int code_loading;
@@ -360,7 +363,7 @@ struct snd_sof_dev {
 	struct snd_dma_buffer dmatp;
 	int dma_trace_pages;
 	wait_queue_head_t trace_sleep;
-	uint32_t host_offset;
+	u32 host_offset;
 	bool dtrace_is_enabled;
 
 	void *private;			/* core does not touch this */
@@ -381,18 +384,19 @@ void snd_sof_new_platform_drv(struct snd_sof_dev *sdev);
 void snd_sof_new_dai_drv(struct snd_sof_dev *sdev);
 
 int snd_sof_create_page_table(struct snd_sof_dev *sdev,
-	struct snd_dma_buffer *dmab, unsigned char *page_table, size_t size);
+			      struct snd_dma_buffer *dmab,
+			      unsigned char *page_table, size_t size);
 
 /*
  * Firmware loading.
  */
 int snd_sof_load_firmware(struct snd_sof_dev *sdev,
-	const struct firmware *fw);
+			  const struct firmware *fw);
 int snd_sof_load_firmware_memcpy(struct snd_sof_dev *sdev,
-	const struct firmware *fw);
+				 const struct firmware *fw);
 int snd_sof_run_firmware(struct snd_sof_dev *sdev);
 int snd_sof_parse_module_memcpy(struct snd_sof_dev *sdev,
-	struct snd_sof_mod_hdr *module);
+				struct snd_sof_mod_hdr *module);
 void snd_sof_fw_unload(struct snd_sof_dev *sdev);
 int snd_sof_fw_parse_ext_data(struct snd_sof_dev *sdev, u32 offset);
 
@@ -400,55 +404,56 @@ int snd_sof_fw_parse_ext_data(struct snd_sof_dev *sdev, u32 offset);
 /*
  * IPC low level APIs.
  */
-
 struct snd_sof_ipc *snd_sof_ipc_init(struct snd_sof_dev *sdev);
 void snd_sof_ipc_free(struct snd_sof_dev *sdev);
 void snd_sof_ipc_reply(struct snd_sof_dev *sdev, u32 msg_id);
 void snd_sof_ipc_msgs_rx(struct snd_sof_dev *sdev);
 void snd_sof_ipc_msgs_tx(struct snd_sof_dev *sdev);
 int snd_sof_ipc_stream_pcm_params(struct snd_sof_dev *sdev,
-	struct sof_ipc_pcm_params *params);
+				  struct sof_ipc_pcm_params *params);
 int snd_sof_dsp_mailbox_init(struct snd_sof_dev *sdev, u32 dspbox,
-		size_t dspbox_size, u32 hostbox, size_t hostbox_size);
-int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
-	void *tx_data, size_t tx_bytes, void *rx_data, size_t rx_bytes);
+			     size_t dspbox_size, u32 hostbox,
+			     size_t hostbox_size);
+int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header, void *tx_data,
+		       size_t tx_bytes, void *rx_data, size_t rx_bytes);
 struct snd_sof_widget *snd_sof_find_swidget(struct snd_sof_dev *sdev,
-	char *name);
+					    char *name);
 struct snd_sof_dai *snd_sof_find_dai(struct snd_sof_dev *sdev,
 				     char *name);
 struct snd_sof_pcm *snd_sof_find_spcm_dai(struct snd_sof_dev *sdev,
-	struct snd_soc_pcm_runtime *rtd);
+					  struct snd_soc_pcm_runtime *rtd);
 struct snd_sof_pcm *snd_sof_find_spcm_name(struct snd_sof_dev *sdev,
-	char *name);
+					   char *name);
 struct snd_sof_pcm *snd_sof_find_spcm_comp(struct snd_sof_dev *sdev,
-	unsigned int comp_id, int *direction);
+					   unsigned int comp_id,
+					   int *direction);
 struct snd_sof_pcm *snd_sof_find_spcm_pcm_id(struct snd_sof_dev *sdev,
-	unsigned int pcm_id);
+					     unsigned int pcm_id);
 
 /*
  * Stream IPC
  */
 int snd_sof_ipc_stream_posn(struct snd_sof_dev *sdev,
-	struct snd_sof_pcm *spcm, int direction,
-	struct sof_ipc_stream_posn *posn);
+			    struct snd_sof_pcm *spcm, int direction,
+			    struct sof_ipc_stream_posn *posn);
 
 /*
  * Mixer IPC
  */
 int snd_sof_ipc_set_comp_data(struct snd_sof_ipc *ipc,
-	struct snd_sof_control *scontrol, u32 ipc_cmd,
-	enum sof_ipc_ctrl_type ctrl_type,
-	enum sof_ipc_ctrl_cmd ctrl_cmd);
+			      struct snd_sof_control *scontrol, u32 ipc_cmd,
+			      enum sof_ipc_ctrl_type ctrl_type,
+			      enum sof_ipc_ctrl_cmd ctrl_cmd);
 int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
-	struct snd_sof_control *scontrol, u32 ipc_cmd,
-	enum sof_ipc_ctrl_type ctrl_type,
-	enum sof_ipc_ctrl_cmd ctrl_cmd);
+			      struct snd_sof_control *scontrol, u32 ipc_cmd,
+			      enum sof_ipc_ctrl_type ctrl_type,
+			      enum sof_ipc_ctrl_cmd ctrl_cmd);
 
 /*
  * Topology.
  */
 int snd_sof_init_topology(struct snd_sof_dev *sdev,
-	struct snd_soc_tplg_ops *ops);
+			  struct snd_soc_tplg_ops *ops);
 int snd_sof_load_topology(struct snd_sof_dev *sdev, const char *file);
 void snd_sof_free_topology(struct snd_sof_dev *sdev);
 	
@@ -461,9 +466,10 @@ void snd_sof_release_trace(struct snd_sof_dev *sdev);
 int snd_sof_dbg_init(struct snd_sof_dev *sdev);
 void snd_sof_free_debug(struct snd_sof_dev *sdev);
 int snd_sof_debugfs_create_item(struct snd_sof_dev *sdev,
-	void __iomem *base, size_t size, const char *name);
+				void __iomem *base, size_t size,
+				const char *name);
 int snd_sof_trace_update_pos(struct snd_sof_dev *sdev,
-	struct sof_ipc_dma_trace_posn *posn);
+			     struct sof_ipc_dma_trace_posn *posn);
 void snd_sof_trace_notify_for_error(struct snd_sof_dev *sdev);
 
 /*
@@ -488,16 +494,16 @@ extern struct snd_compr_ops sof_compressed_ops;
  */
 
 int snd_sof_volume_get(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol);
+		       struct snd_ctl_elem_value *ucontrol);
 int snd_sof_volume_put(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol);
+		       struct snd_ctl_elem_value *ucontrol);
 int snd_sof_enum_get(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol);
+		     struct snd_ctl_elem_value *ucontrol);
 int snd_sof_enum_put(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol);
+		     struct snd_ctl_elem_value *ucontrol);
 int snd_sof_bytes_get(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol);
+		      struct snd_ctl_elem_value *ucontrol);
 int snd_sof_bytes_put(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol);
+		      struct snd_ctl_elem_value *ucontrol);
 
 #endif
