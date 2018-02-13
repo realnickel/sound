@@ -23,12 +23,11 @@
 #define TIMEOUT_BOOT	100
 
 struct snd_sof_pcm *snd_sof_find_spcm_dai(struct snd_sof_dev *sdev,
-	struct snd_soc_pcm_runtime *rtd)
+					  struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_sof_pcm *spcm = NULL;
 
 	list_for_each_entry(spcm, &sdev->pcm_list, list) {
-
 		if (spcm->pcm.dai_id == rtd->dai_link->id)
 			return spcm;
 	}
@@ -37,12 +36,11 @@ struct snd_sof_pcm *snd_sof_find_spcm_dai(struct snd_sof_dev *sdev,
 }
 
 struct snd_sof_pcm *snd_sof_find_spcm_name(struct snd_sof_dev *sdev,
-	char *name)
+					   char *name)
 {
 	struct snd_sof_pcm *spcm = NULL;
 
 	list_for_each_entry(spcm, &sdev->pcm_list, list) {
-
 		if (strcmp(spcm->pcm.dai_name, name) == 0)
 			return spcm;
 
@@ -51,19 +49,20 @@ struct snd_sof_pcm *snd_sof_find_spcm_name(struct snd_sof_dev *sdev,
 
 		if (strcmp(spcm->pcm.caps[1].name, name) == 0)
 			return spcm;
-
 	}
 
 	return NULL;
 }
 
 struct snd_sof_pcm *snd_sof_find_spcm_comp(struct snd_sof_dev *sdev,
-	unsigned int comp_id, int *direction)
+					   unsigned int comp_id,
+					   int *direction)
 {
 	struct snd_sof_pcm *spcm = NULL;
 
 	list_for_each_entry(spcm, &sdev->pcm_list, list) {
-		if (spcm->stream[SNDRV_PCM_STREAM_PLAYBACK].comp_id == comp_id) {
+		if (spcm->stream[SNDRV_PCM_STREAM_PLAYBACK].comp_id ==
+			comp_id) {
 			*direction = SNDRV_PCM_STREAM_PLAYBACK;
 			return spcm;
 		}
@@ -77,7 +76,7 @@ struct snd_sof_pcm *snd_sof_find_spcm_comp(struct snd_sof_dev *sdev,
 }
 
 struct snd_sof_pcm *snd_sof_find_spcm_pcm_id(struct snd_sof_dev *sdev,
-	unsigned int pcm_id)
+					     unsigned int pcm_id)
 {
 	struct snd_sof_pcm *spcm = NULL;
 
@@ -90,12 +89,11 @@ struct snd_sof_pcm *snd_sof_find_spcm_pcm_id(struct snd_sof_dev *sdev,
 }
 
 struct snd_sof_widget *snd_sof_find_swidget(struct snd_sof_dev *sdev,
-	char *name)
+					    char *name)
 {
 	struct snd_sof_widget *swidget = NULL;
 
 	list_for_each_entry(swidget, &sdev->widget_list, list) {
-
 		if (strcmp(name, swidget->widget->name) == 0)
 			return swidget;
 	}
@@ -123,20 +121,21 @@ static int sof_probe(struct platform_device *pdev)
 	int ret;
 
 	sdev = devm_kzalloc(&pdev->dev, sizeof(*sdev), GFP_KERNEL);
-	if (sdev == NULL)
+	if (!sdev)
 		return -ENOMEM;
 
 	dev_dbg(&pdev->dev, "probing SOF DSP device....\n");
 
-	/* intialise sof device */
+	/* initialize sof device */
 	sdev->dev = &pdev->dev;
 	if (plat_data->pci) {
 		sdev->pci = plat_data->pci;
 		sdev->parent = &plat_data->pci->dev;
 	} else if (plat_data->pdev) {
 		sdev->parent = &plat_data->pdev->dev;
-	} else
+	} else {
 		sdev->parent = plat_data->dev;
+	}
 	sdev->ops = plat_data->machine->pdata;
 
 	sdev->pdata = plat_data;
@@ -172,7 +171,8 @@ static int sof_probe(struct platform_device *pdev)
 	/* register any debug/trace capabilities */
 	ret = snd_sof_dbg_init(sdev);
 	if (ret < 0) {
-		dev_err(sdev->dev, "error: failed to init DSP trace/debug %d\n", ret);
+		dev_err(sdev->dev, "error: failed to init DSP trace/debug %d\n",
+			ret);
 		goto dbg_err;
 	}
 
@@ -186,14 +186,16 @@ static int sof_probe(struct platform_device *pdev)
 	/* load the firmware */
 	ret = snd_sof_load_firmware(sdev, plat_data->fw);
 	if (ret < 0) {
-		dev_err(sdev->dev, "error: failed to load DSP firmware %d\n", ret);
+		dev_err(sdev->dev, "error: failed to load DSP firmware %d\n",
+			ret);
 		goto fw_load_err;
 	}
 
 	/* boot the firmware */
 	ret = snd_sof_run_firmware(sdev);
 	if (ret < 0) {
-		dev_err(sdev->dev, "error: failed to boot DSP firmware %d\n", ret);
+		dev_err(sdev->dev, "error: failed to boot DSP firmware %d\n",
+			ret);
 		goto fw_run_err;
 	}
 
@@ -201,12 +203,13 @@ static int sof_probe(struct platform_device *pdev)
 	ret = snd_soc_register_platform(&pdev->dev, &sdev->plat_drv);
 	if (ret < 0) {
 		dev_err(sdev->dev,
-			"error: failed to register DSP platform driver %d\n", ret);
+			"error: failed to register DSP platform driver %d\n",
+			 ret);
 		goto fw_run_err;
 	}
 
 	ret = snd_soc_register_component(&pdev->dev,  sdev->cmpnt_drv,
-			 &sdev->dai_drv, sdev->num_dai);
+					 &sdev->dai_drv, sdev->num_dai);
 	if (ret < 0) {
 		dev_err(sdev->dev,
 			"error: failed to register DSP DAI driver %d\n", ret);
@@ -216,7 +219,7 @@ static int sof_probe(struct platform_device *pdev)
 	ret = snd_sof_init_trace(sdev);
 	if (ret < 0) {
 		dev_warn(sdev->dev,
-			"warning: failed to initialize trace %d\n", ret);
+			 "warning: failed to initialize trace %d\n", ret);
 	}
 
 	return 0;
@@ -250,14 +253,14 @@ static int sof_remove(struct platform_device *pdev)
 	return 0;
 }
 
-
 void snd_sof_shutdown(struct device *dev)
 {
 }
 EXPORT_SYMBOL(snd_sof_shutdown);
 
 int snd_sof_create_page_table(struct snd_sof_dev *sdev,
-	struct snd_dma_buffer *dmab, unsigned char *page_table, size_t size)
+			      struct snd_dma_buffer *dmab,
+			      unsigned char *page_table, size_t size)
 {
 	int i, pages;
 
