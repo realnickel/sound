@@ -26,10 +26,9 @@
 #include <uapi/sound/sof-ipc.h>
 #include "sof-priv.h"
 
-
 /* Create DMA buffer page table for DSP */
 static int create_page_table(struct snd_pcm_substream *substream,
-	unsigned char *dma_area, size_t size)
+			     unsigned char *dma_area, size_t size)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_sof_dev *sdev =
@@ -44,7 +43,7 @@ static int create_page_table(struct snd_pcm_substream *substream,
 
 /* this may get called several times by oss emulation */
 static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
-			      struct snd_pcm_hw_params *params)
+			     struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -75,7 +74,7 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	/* craete compressed page table for audio firmware */
 	ret = create_page_table(substream, runtime->dma_area,
-		runtime->dma_bytes);
+				runtime->dma_bytes);
 	if (ret < 0)
 		return ret;
 
@@ -89,7 +88,8 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 	pcm.hdr.size = sizeof(pcm);
 	pcm.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_PARAMS;
 	pcm.comp_id = spcm->stream[substream->stream].comp_id;
-	pcm.params.buffer.phy_addr = spcm->stream[substream->stream].page_table.addr;
+	pcm.params.buffer.phy_addr =
+		spcm->stream[substream->stream].page_table.addr;
 	pcm.params.buffer.size = runtime->dma_bytes;
 	pcm.params.buffer.offset = 0;
 	pcm.params.direction = substream->stream;
@@ -144,8 +144,8 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	/* send IPC to the DSP */
 	ret = sof_ipc_tx_message(sdev->ipc,
-		pcm.hdr.cmd, &pcm, sizeof(pcm),
-		&ipc_params_reply, sizeof(ipc_params_reply));
+				 pcm.hdr.cmd, &pcm, sizeof(pcm),
+				 &ipc_params_reply, sizeof(ipc_params_reply));
 
 	return ret;
 }
@@ -173,7 +173,7 @@ static int sof_pcm_hw_free(struct snd_pcm_substream *substream)
 
 	/* send IPC to the DSP */
 	ret = sof_ipc_tx_message(sdev->ipc, stream.hdr.cmd, &stream,
-		sizeof(stream), &reply, sizeof(reply));
+				 sizeof(stream), &reply, sizeof(reply));
 
 	snd_pcm_lib_free_pages(substream);
 	return ret;
@@ -210,7 +210,7 @@ static int sof_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_STOP;
-		break;		
+		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_PAUSE;
 		break;
@@ -224,7 +224,7 @@ static int sof_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 	/* send IPC to the DSP */
 	ret = sof_ipc_tx_message(sdev->ipc, stream.hdr.cmd, &stream,
-		sizeof(stream), &reply, sizeof(reply));
+				 sizeof(stream), &reply, sizeof(reply));
 
 	if (ops && ops->host_stream_trigger)
 		ret = ops->host_stream_trigger(sdev, substream, cmd);
@@ -246,16 +246,15 @@ static snd_pcm_uframes_t sof_pcm_pointer(struct snd_pcm_substream *substream)
 
 	/* TODO: call HW position callback */
 	host = bytes_to_frames(substream->runtime,
-		spcm->stream[substream->stream].posn.host_posn);
+			       spcm->stream[substream->stream].posn.host_posn);
 	dai = bytes_to_frames(substream->runtime,
-		spcm->stream[substream->stream].posn.dai_posn);
+			      spcm->stream[substream->stream].posn.dai_posn);
 
 	dev_dbg(sdev->dev, "PCM: stream %d dir %d DMA position %lu DAI position %lu\n",
 		spcm->pcm.pcm_id, substream->stream, host, dai);
 
 	return host;
 }
-
 
 static int sof_pcm_open(struct snd_pcm_substream *substream)
 {
@@ -264,7 +263,7 @@ static int sof_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_sof_dev *sdev =
 		snd_soc_platform_get_drvdata(rtd->platform);
 	struct snd_sof_pcm *spcm = rtd->sof;
-	struct snd_soc_tplg_stream_caps *caps = 
+	struct snd_soc_tplg_stream_caps *caps =
 		&spcm->pcm.caps[substream->stream];
 	const struct snd_sof_dsp_ops *ops = sdev->ops;
 
@@ -281,9 +280,11 @@ static int sof_pcm_open(struct snd_pcm_substream *substream)
 
 	/* set any runtime constraints based on topology */
 	snd_pcm_hw_constraint_step(substream->runtime, 0,
-		SNDRV_PCM_HW_PARAM_BUFFER_SIZE, caps->period_size_min);
+				   SNDRV_PCM_HW_PARAM_BUFFER_SIZE,
+				   caps->period_size_min);
 	snd_pcm_hw_constraint_step(substream->runtime, 0,
-		SNDRV_PCM_HW_PARAM_PERIOD_SIZE, caps->period_size_min);
+				   SNDRV_PCM_HW_PARAM_PERIOD_SIZE,
+				   caps->period_size_min);
 
 	/* set runtime config */
 	runtime->hw.info = SNDRV_PCM_INFO_MMAP |
@@ -361,7 +362,6 @@ static struct snd_pcm_ops sof_pcm_ops = {
 	.page		= snd_pcm_sgbuf_ops_page,
 };
 
-
 static int sof_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_sof_dev *sdev =
@@ -373,9 +373,9 @@ static int sof_pcm_new(struct snd_soc_pcm_runtime *rtd)
 
 	spcm = snd_sof_find_spcm_dai(sdev, rtd);
 
-	if (spcm == NULL) {
+	if (!spcm) {
 		dev_warn(sdev->dev, "warn: cant find PCM with DAI ID %d\n",
-			rtd->dai_link->id);
+			 rtd->dai_link->id);
 		return 0;
 	}
 	rtd->sof = spcm;
@@ -393,8 +393,9 @@ static int sof_pcm_new(struct snd_soc_pcm_runtime *rtd)
 		caps->name, caps->buffer_size_min, caps->buffer_size_max);
 
 	ret = snd_pcm_lib_preallocate_pages(pcm->streams[stream].substream,
-		SNDRV_DMA_TYPE_DEV_SG, sdev->parent,
-		caps->buffer_size_min, caps->buffer_size_max);
+					    SNDRV_DMA_TYPE_DEV_SG, sdev->parent,
+					    caps->buffer_size_min,
+					    caps->buffer_size_max);
 	if (ret) {
 		dev_err(sdev->dev, "error: cant alloc DMA buffer size 0x%x/0x%x for %s %d\n",
 			caps->buffer_size_min, caps->buffer_size_max,
@@ -404,7 +405,7 @@ static int sof_pcm_new(struct snd_soc_pcm_runtime *rtd)
 
 	/* allocate playback page table buffer */
 	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, sdev->parent,
-		PAGE_SIZE, &spcm->stream[stream].page_table);
+				  PAGE_SIZE, &spcm->stream[stream].page_table);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: cant alloc page table for %s %d\n",
 			caps->name, ret);
@@ -425,8 +426,9 @@ capture:
 		caps->name, caps->buffer_size_min, caps->buffer_size_max);
 
 	ret = snd_pcm_lib_preallocate_pages(pcm->streams[stream].substream,
-		SNDRV_DMA_TYPE_DEV_SG, sdev->parent,
-		caps->buffer_size_min, caps->buffer_size_max);
+					    SNDRV_DMA_TYPE_DEV_SG, sdev->parent,
+					    caps->buffer_size_min,
+					    caps->buffer_size_max);
 	if (ret) {
 		dev_err(sdev->dev, "error: cant alloc DMA buffer size 0x%x/0x%x for %s %d\n",
 			caps->buffer_size_min, caps->buffer_size_max,
@@ -437,7 +439,7 @@ capture:
 
 	/* allocate capture page table buffer */
 	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, sdev->parent,
-		PAGE_SIZE, &spcm->stream[stream].page_table);
+				  PAGE_SIZE, &spcm->stream[stream].page_table);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: cant alloc page table for %s %d\n",
 			caps->name, ret);
@@ -446,13 +448,6 @@ capture:
 	}
 
 	/* TODO: assign channel maps from topology */
-#if 0
-	int snd_pcm_add_chmap_ctls(struct snd_pcm *pcm, int stream,
-			   const struct snd_pcm_chmap_elem *chmap,
-			   int max_channels,
-			   unsigned long private_value,
-			   struct snd_pcm_chmap **info_ret);
-#endif
 
 	return ret;
 }
@@ -465,9 +460,9 @@ static void sof_pcm_free(struct snd_pcm *pcm)
 		snd_soc_platform_get_drvdata(rtd->platform);
 
 	spcm = snd_sof_find_spcm_dai(sdev, rtd);
-	if (spcm == NULL) {
+	if (!spcm) {
 		dev_warn(sdev->dev, "warn: cant find PCM with DAI ID %d\n",
-			rtd->dai_link->id);
+			 rtd->dai_link->id);
 		return;
 	}
 
@@ -481,7 +476,7 @@ static void sof_pcm_free(struct snd_pcm *pcm)
 }
 
 static int sof_pcm_dai_link_fixup(struct snd_soc_pcm_runtime *rtd,
-			struct snd_pcm_hw_params *params)
+				  struct snd_pcm_hw_params *params)
 {
 	struct snd_interval *rate = hw_param_interval(params,
 			SNDRV_PCM_HW_PARAM_RATE);
@@ -548,7 +543,8 @@ static int sof_pcm_probe(struct snd_soc_platform *platform)
 
 	/* load the default topology */
 	sdev->component = &platform->component;
-	ret = snd_sof_load_topology(sdev, plat_data->machine->sof_tplg_filename);
+	ret = snd_sof_load_topology(sdev,
+				    plat_data->machine->sof_tplg_filename);
 	if (ret < 0) {
 		dev_err(sdev->dev, "error: failed to load DSP topology %d\n",
 			ret);
@@ -557,7 +553,7 @@ static int sof_pcm_probe(struct snd_soc_platform *platform)
 
 	/* enable runtime PM with auto suspend */
 	pm_runtime_set_autosuspend_delay(platform->dev,
-		SND_SOF_SUSPEND_DELAY);
+					 SND_SOF_SUSPEND_DELAY);
 	pm_runtime_use_autosuspend(platform->dev);
 	pm_runtime_enable(platform->dev);
 	pm_runtime_idle(platform->dev);
@@ -578,8 +574,8 @@ void snd_sof_new_platform_drv(struct snd_sof_dev *sdev)
 	struct snd_soc_platform_driver *pd = &sdev->plat_drv;
 	struct snd_sof_pdata *plat_data = sdev->pdata;
 
-	dev_dbg(sdev->dev, "using platform alias %s\n", 
-		plat_data->machine->asoc_plat_name);	
+	dev_dbg(sdev->dev, "using platform alias %s\n",
+		plat_data->machine->asoc_plat_name);
 
 	pd->probe = sof_pcm_probe;
 	pd->remove = sof_pcm_remove;
@@ -594,20 +590,7 @@ void snd_sof_new_platform_drv(struct snd_sof_dev *sdev)
 }
 
 static const struct snd_soc_dai_ops sof_dai_ops = {
-#if 0
-	.startup	= sof_dai_startup,
-	.shutdown	= sof_dai_shutdown,
-	.trigger	= sof_dai_trigger,
-	.hw_params	= sof_dai_hw_params,
-	.set_sysclk	= sof_dai_set_dai_sysclk,
-	.set_clkdiv	= sof_dai_set_dai_clkdiv,
-	.set_pll	= sof_dai_set_dai_pll,
-	.set_fmt	= sof_dai_set_dai_fmt,
-	.set_tdm_slot	= sof_dai_set_dai_tdm_slot,
-	.set_tristate	= sof_dai_set_dai_tristate,
-#endif
 };
-
 
 static const struct snd_soc_component_driver sof_dai_component = {
 	.name		= "sof-dai",
@@ -633,5 +616,3 @@ void snd_sof_new_dai_drv(struct snd_sof_dev *sdev)
 	dd->ops = &sof_dai_ops;
 	sdev->num_dai = 1;
 }
-
-
