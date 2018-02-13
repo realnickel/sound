@@ -27,7 +27,7 @@
 #include "ops.h"
 
 static int sof_wait_trace_avail(struct snd_sof_dev *sdev, size_t *count,
-	loff_t pos, size_t size)
+				loff_t pos, size_t size)
 {
 	size_t avail;
 	wait_queue_entry_t wait;
@@ -72,7 +72,7 @@ _host_end:
 }
 
 static ssize_t sof_dfsentry_trace_read(struct file *file, char __user *buffer,
-	size_t count, loff_t *ppos)
+				       size_t count, loff_t *ppos)
 {
 	struct snd_sof_dfsentry *dfse = file->private_data;
 	struct snd_sof_dev *sdev = dfse->sdev;
@@ -166,7 +166,7 @@ int snd_sof_init_trace(struct snd_sof_dev *sdev)
 
 	/* allocate trace page table buffer */
 	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, sdev->parent,
-		PAGE_SIZE, &sdev->dmatp);
+				  PAGE_SIZE, &sdev->dmatp);
 	if (ret < 0) {
 		dev_err(sdev->dev,
 			"error: cant alloc page table for trace %d\n", ret);
@@ -175,7 +175,7 @@ int snd_sof_init_trace(struct snd_sof_dev *sdev)
 
 	/* allocate trace data buffer */
 	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV_SG, sdev->parent,
-		DMA_BUF_SIZE_FOR_TRACE, &sdev->dmatb);
+				  DMA_BUF_SIZE_FOR_TRACE, &sdev->dmatb);
 	if (ret < 0) {
 		dev_err(sdev->dev,
 			"error: cant alloc buffer for trace%d\n", ret);
@@ -184,7 +184,7 @@ int snd_sof_init_trace(struct snd_sof_dev *sdev)
 
 	/* craete compressed page table for audio firmware */
 	ret = snd_sof_create_page_table(sdev, &sdev->dmatb, sdev->dmatp.area,
-		sdev->dmatb.bytes);
+					sdev->dmatb.bytes);
 	if (ret < 0)
 		goto table_err;
 
@@ -205,8 +205,8 @@ int snd_sof_init_trace(struct snd_sof_dev *sdev)
 
 	/* send IPC to the DSP */
 	ret = sof_ipc_tx_message(sdev->ipc,
-		params.hdr.cmd, &params, sizeof(params),
-		&ipc_reply, sizeof(ipc_reply));
+				 params.hdr.cmd, &params, sizeof(params),
+				 &ipc_reply, sizeof(ipc_reply));
 	if (ret < 0) {
 		dev_err(sdev->dev,
 			"error: can't set params for DMA for trace %d\n", ret);
@@ -224,9 +224,10 @@ page_err:
 	snd_dma_free_pages(&sdev->dmatp);
 	return ret;
 }
+EXPORT_SYMBOL(snd_sof_init_trace);
 
 int snd_sof_trace_update_pos(struct snd_sof_dev *sdev,
-	struct sof_ipc_dma_trace_posn *posn)
+			     struct sof_ipc_dma_trace_posn *posn)
 {
 	if (sdev->dtrace_is_enabled && sdev->host_offset != posn->host_offset) {
 		sdev->host_offset = posn->host_offset;
@@ -234,8 +235,9 @@ int snd_sof_trace_update_pos(struct snd_sof_dev *sdev,
 	}
 
 	if (posn->overflow != 0)
-		dev_err(sdev->dev, "error: DSP trace buffer overflow %u bytes."
-			" Total messages %d\n", posn->overflow, posn->messages);
+		dev_err(sdev->dev,
+			"error: DSP trace buffer overflow %u bytes. Total messages %d\n",
+			posn->overflow, posn->messages);
 
 	return 0;
 }
@@ -248,8 +250,6 @@ void snd_sof_trace_notify_for_error(struct snd_sof_dev *sdev)
 	}
 }
 
-EXPORT_SYMBOL(snd_sof_init_trace);
-
 void snd_sof_release_trace(struct snd_sof_dev *sdev)
 {
 	if (!sdev->dtrace_is_enabled)
@@ -259,4 +259,3 @@ void snd_sof_release_trace(struct snd_sof_dev *sdev)
 	snd_dma_free_pages(&sdev->dmatp);
 }
 EXPORT_SYMBOL(snd_sof_release_trace);
-
