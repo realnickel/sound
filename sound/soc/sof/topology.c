@@ -1036,11 +1036,20 @@ static int sof_link_ssp_load(struct snd_soc_component *scomp, int index,
 	sof_parse_tokens(scomp, config, ssp_tokens,
 			 ARRAY_SIZE(ssp_tokens), private->array, private->size);
 
+	config->ssp.mclk_rate = hw_config->mclk_rate;
+	config->ssp.bclk_rate = hw_config->bclk_rate;
+	config->ssp.fsync_rate = hw_config->fsync_rate;
+	config->ssp.tdm_slots = hw_config->tdm_slots;
+	config->ssp.tdm_slot_width = hw_config->tdm_slot_width;
+	config->ssp.mclk_direction = hw_config->mclk_direction;
+	config->ssp.rx_slots = hw_config->rx_slots;
+	config->ssp.tx_slots = hw_config->tx_slots;
+
 	dev_dbg(sdev->dev, "tplg: config SSP%d fmt 0x%x mclk %d bclk %d fclk %d width (%d)%d slots %d\n",
 		config->id, config->format,
-		config->mclk_rate, config->bclk_rate,
-		config->fsync_rate, config->sample_valid_bits,
-		config->tdm_slot_width, config->tdm_slots);
+		config->ssp.mclk_rate, config->ssp.bclk_rate,
+		config->ssp.fsync_rate, config->sample_valid_bits,
+		config->ssp.tdm_slot_width, config->ssp.tdm_slots);
 
 	/* send message to DSP */
 	ret = sof_ipc_tx_message(sdev->ipc,
@@ -1075,10 +1084,8 @@ static int sof_link_dmic_load(struct snd_soc_component *scomp, int index,
 			 ARRAY_SIZE(dmic_tokens), private->array,
 			 private->size);
 
-	dev_dbg(sdev->dev, "tplg: config DMIC%d fmt 0x%x mclk %d bclk %d fclk %d width %d slots %d\n",
-		config->id, config->format,
-		config->mclk_rate, config->bclk_rate,
-		config->fsync_rate, config->tdm_slot_width, config->tdm_slots);
+	dev_dbg(sdev->dev, "tplg: config DMIC%d fmt 0x%x\n",
+		config->id, config->format);
 
 	/* send message to DSP */
 	ret = sof_ipc_tx_message(sdev->ipc,
@@ -1112,10 +1119,8 @@ static int sof_link_hda_load(struct snd_soc_component *scomp, int index,
 	sof_parse_tokens(scomp, config, hda_tokens,
 			 ARRAY_SIZE(hda_tokens), private->array, private->size);
 
-	dev_dbg(sdev->dev, "tplg: config HDA%d fmt 0x%x mclk %d bclk %d fclk %d width %d slots %d\n",
-		config->id, config->format,
-		config->mclk_rate, config->bclk_rate,
-		config->fsync_rate, config->tdm_slot_width, config->tdm_slots);
+	dev_dbg(sdev->dev, "tplg: config HDA%d fmt 0x%x\n",
+		config->id, config->format);
 
 	/* send message to DSP */
 	ret = sof_ipc_tx_message(sdev->ipc,
@@ -1174,14 +1179,6 @@ static int sof_link_load(struct snd_soc_component *scomp, int index,
 	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
 	config.id = hw_config->id;
 	config.format = hw_config->fmt;
-	config.mclk_rate = hw_config->mclk_rate;
-	config.bclk_rate = hw_config->bclk_rate;
-	config.fsync_rate = hw_config->fsync_rate;
-	config.tdm_slots = hw_config->tdm_slots;
-	config.tdm_slot_width = hw_config->tdm_slot_width;
-	config.mclk_direction = hw_config->mclk_direction;
-	config.rx_slots = hw_config->rx_slots;
-	config.tx_slots = hw_config->tx_slots;
 
 	/* clock directions wrt codec */
 	if (hw_config->bclk_master) {
