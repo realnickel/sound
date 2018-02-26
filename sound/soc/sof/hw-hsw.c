@@ -46,6 +46,7 @@
 #define MBOX_OFFSET     0x7E000
 #define MBOX_SIZE       0x1000
 #define MBOX_DUMP_SIZE 0x30
+#define EXCEPT_OFFSET	0x800
 
 /* DSP peripherals */
 #define DMAC0_OFFSET    0xFE000
@@ -54,6 +55,8 @@
 #define SSP0_OFFSET     0xFC000
 #define SSP1_OFFSET     0xFD000
 #define SSP_SIZE	0x100
+
+#define HSW_STACK_DUMP_SIZE	32
 
 static const struct snd_sof_debugfs_map hsw_debugfs[] = {
 	{"dmac0", HSW_DSP_BAR, DMAC0_OFFSET, DMAC_SIZE},
@@ -98,6 +101,22 @@ static void hsw_block_read(struct snd_sof_dev *sdev, u32 offset, void *dest,
 	void __iomem *src = sdev->bar[sdev->mmio_bar] + offset;
 
 	memcpy_fromio(dest, src, size);
+}
+
+static void hsw_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
+			      void *message, size_t bytes)
+{
+	void __iomem *dest = sdev->bar[sdev->mailbox_bar] + offset;
+
+	memcpy_toio(dest, message, bytes);
+}
+
+static void hsw_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
+			     void *message, size_t bytes)
+{
+	void __iomem *src = sdev->bar[sdev->mailbox_bar] + offset;
+
+	memcpy_fromio(message, src, bytes);
 }
 
 /*
@@ -270,42 +289,32 @@ finish:
 	return 0;
 }
 
+static void hsw_get_registers(struct snd_sof_dev *sdev,
+			      struct sof_ipc_dsp_oops_xtensa *xoops,
+			      u32 *stack, size_t stack_words)
+{
+	/* first read regsisters */
+	hsw_mailbox_read(sdev, sdev->host_box.offset + EXCEPT_OFFSET,
+			 xoops, sizeof(*xoops));
+
+	/* the get the stack */
+	hsw_mailbox_read(sdev, sdev->host_box.offset + EXCEPT_OFFSET +
+			 sizeof(*xoops), stack,
+			 stack_words * sizeof(u32));
+}
+
 static void hsw_dump(struct snd_sof_dev *sdev, u32 flags)
 {
-	int i;
+	struct sof_ipc_dsp_oops_xtensa xoops;
+	u32 stack[HSW_STACK_DUMP_SIZE];
+	u32 status, panic;
 
-	if (flags & SOF_DBG_REGS) {
-		for (i = SHIM_OFFSET; i < SHIM_OFFSET  + SHIM_SIZE; i += 8) {
-			dev_dbg(sdev->dev, "shim 0x%2.2x value 0x%16.16llx\n",
-				i - SHIM_OFFSET,
-			snd_sof_dsp_read64(sdev, HSW_DSP_BAR, i));
-		}
-	}
-
-	if (flags & SOF_DBG_MBOX) {
-		for (i = MBOX_OFFSET; i < MBOX_OFFSET + MBOX_DUMP_SIZE;
-			i += 4) {
-			dev_dbg(sdev->dev, "mbox: 0x%2.2x value 0x%8.8x\n",
-				i - MBOX_OFFSET,
-			readl(sdev->bar[HSW_DSP_BAR] + i));
-		}
-	}
-
-	if (flags & SOF_DBG_TEXT) {
-		for (i = IRAM_OFFSET; i < IRAM_OFFSET + MBOX_DUMP_SIZE;
-			i += 4) {
-			dev_dbg(sdev->dev, "iram: 0x%2.2x value 0x%8.8x\n",
-				i - IRAM_OFFSET,
-			readl(sdev->bar[HSW_DSP_BAR] + i));
-		}
-	}
-
-	if (flags & SOF_DBG_PCI) {
-		for (i = 0; i < 0xff; i += 4) {
-			dev_dbg(sdev->dev, "pci: 0x%2.2x value 0x%8.8x\n",
-				i, readl(sdev->bar[HSW_PCI_BAR] + i));
-		}
-	}
+	/* now try generic SOF status messages */
+	status = snd_sof_dsp_read(sdev, HSW_DSP_BAR, SHIM_IPCD);
+	panic = snd_sof_dsp_read(sdev, HSW_DSP_BAR, SHIM_IPCX);
+	hsw_get_registers(sdev, &xoops, stack, HSW_STACK_DUMP_SIZE);
+	snd_sof_get_status(sdev, status, panic, &xoops, stack,
+			   HSW_STACK_DUMP_SIZE);
 }
 
 /*
@@ -315,26 +324,26 @@ static void hsw_dump(struct snd_sof_dev *sdev, u32 flags)
 static irqreturn_t hsw_irq_handler(int irq, void *context)
 {
 	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
-	u64 isr;
+	u32 isr;
 	int ret = IRQ_NONE;
 
 	spin_lock(&sdev->hw_lock);
 
 	/* Interrupt arrived, check src */
-	isr = snd_sof_dsp_read64(sdev, HSW_DSP_BAR, SHIM_ISRX);
+	isr = snd_sof_dsp_read(sdev, HSW_DSP_BAR, SHIM_ISRX);
 	if (isr & SHIM_ISRX_DONE) {
 		/* Mask Done interrupt before return */
-		snd_sof_dsp_update_bits64_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
-						   SHIM_IMRX_DONE,
-						   SHIM_IMRX_DONE);
+		snd_sof_dsp_update_bits_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
+						 SHIM_IMRX_DONE,
+						 SHIM_IMRX_DONE);
 		ret = IRQ_WAKE_THREAD;
 	}
 
 	if (isr & SHIM_ISRX_BUSY) {
 		/* Mask Busy interrupt before return */
-		snd_sof_dsp_update_bits64_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
-						   SHIM_IMRX_BUSY,
-						   SHIM_IMRX_BUSY);
+		snd_sof_dsp_update_bits_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
+						 SHIM_IMRX_BUSY,
+						 SHIM_IMRX_BUSY);
 		ret = IRQ_WAKE_THREAD;
 	}
 
@@ -345,9 +354,9 @@ static irqreturn_t hsw_irq_handler(int irq, void *context)
 static irqreturn_t hsw_irq_thread(int irq, void *context)
 {
 	struct snd_sof_dev *sdev = (struct snd_sof_dev *)context;
-	u64 ipcx, ipcd;
+	u32 ipcx, ipcd;
 
-	ipcx = snd_sof_dsp_read64(sdev, HSW_DSP_BAR, SHIM_IPCX);
+	ipcx = snd_sof_dsp_read(sdev, HSW_DSP_BAR, SHIM_IPCX);
 
 	/* reply message from DSP */
 	if (ipcx & SHIM_IPCX_DONE) {
@@ -355,15 +364,15 @@ static irqreturn_t hsw_irq_thread(int irq, void *context)
 		snd_sof_ipc_reply(sdev, ipcx);
 
 		/* clear DONE bit - tell DSP we have completed */
-		snd_sof_dsp_update_bits64_unlocked(sdev, HSW_DSP_BAR, SHIM_IPCX,
-						   SHIM_IPCX_DONE, 0);
+		snd_sof_dsp_update_bits_unlocked(sdev, HSW_DSP_BAR, SHIM_IPCX,
+						 SHIM_IPCX_DONE, 0);
 
 		/* unmask Done interrupt */
-		snd_sof_dsp_update_bits64_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
-						   SHIM_IMRX_DONE, 0);
+		snd_sof_dsp_update_bits_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
+						 SHIM_IMRX_DONE, 0);
 	}
 
-	ipcd = snd_sof_dsp_read64(sdev, HSW_DSP_BAR, SHIM_IPCD);
+	ipcd = snd_sof_dsp_read(sdev, HSW_DSP_BAR, SHIM_IPCD);
 
 	/* new message from DSP */
 	if (ipcd & SHIM_IPCD_BUSY) {
@@ -415,27 +424,11 @@ static int hsw_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
  * IPC Mailbox IO
  */
 
-static void hsw_mailbox_write(struct snd_sof_dev *sdev, u32 offset,
-			      void *message, size_t bytes)
-{
-	void __iomem *dest = sdev->bar[sdev->mailbox_bar] + offset;
-
-	memcpy_toio(dest, message, bytes);
-}
-
-static void hsw_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
-			     void *message, size_t bytes)
-{
-	void __iomem *src = sdev->bar[sdev->mailbox_bar] + offset;
-
-	memcpy_fromio(message, src, bytes);
-}
-
 static int hsw_is_ready(struct snd_sof_dev *sdev)
 {
-	u64 val;
+	u32 val;
 
-	val = snd_sof_dsp_read64(sdev, HSW_DSP_BAR, SHIM_IPCX);
+	val = snd_sof_dsp_read(sdev, HSW_DSP_BAR, SHIM_IPCX);
 	if (val & SHIM_IPCX_BUSY)
 		return 0;
 
@@ -444,12 +437,12 @@ static int hsw_is_ready(struct snd_sof_dev *sdev)
 
 static int hsw_send_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 {
-	u64 cmd = msg->header;
+	u32 cmd = msg->header;
 
 	/* send the message */
 	hsw_mailbox_write(sdev, sdev->host_box.offset, msg->msg_data,
 			  msg->msg_size);
-	snd_sof_dsp_write64(sdev, HSW_DSP_BAR, SHIM_IPCX, cmd | SHIM_IPCX_BUSY);
+	snd_sof_dsp_write(sdev, HSW_DSP_BAR, SHIM_IPCX, cmd | SHIM_IPCX_BUSY);
 
 	return 0;
 }
@@ -487,13 +480,13 @@ static int hsw_get_reply(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
 static int hsw_cmd_done(struct snd_sof_dev *sdev)
 {
 	/* clear BUSY bit and set DONE bit - accept new messages */
-	snd_sof_dsp_update_bits64_unlocked(sdev, HSW_DSP_BAR, SHIM_IPCD,
-					   SHIM_IPCD_BUSY | SHIM_IPCD_DONE,
-					   SHIM_IPCD_DONE);
+	snd_sof_dsp_update_bits_unlocked(sdev, HSW_DSP_BAR, SHIM_IPCD,
+					 SHIM_IPCD_BUSY | SHIM_IPCD_DONE,
+					 SHIM_IPCD_DONE);
 
 	/* unmask busy interrupt */
-	snd_sof_dsp_update_bits64_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
-					   SHIM_IMRX_BUSY, 0);
+	snd_sof_dsp_update_bits_unlocked(sdev, HSW_DSP_BAR, SHIM_IMRX,
+					 SHIM_IMRX_BUSY, 0);
 
 	return 0;
 }
@@ -595,6 +588,9 @@ static int hsw_probe(struct snd_sof_dev *sdev)
 
 	/* set BARS */
 	sdev->cl_bar = HSW_DSP_BAR;
+
+	/* set default mailbox */
+	snd_sof_dsp_mailbox_init(sdev, MBOX_OFFSET, MBOX_SIZE, 0, 0);
 
 	return ret;
 
