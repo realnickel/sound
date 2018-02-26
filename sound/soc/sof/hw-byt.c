@@ -37,6 +37,7 @@
 #define SHIM_SIZE		0x100
 #define MBOX_OFFSET		0x144000
 #define MBOX_SIZE		0x1000
+#define EXCEPT_OFFSET		0x800
 
 /* DSP peripherals */
 #define DMAC0_OFFSET		0x098000
@@ -50,6 +51,8 @@
 #define SSP4_OFFSET		0x0a5000
 #define SSP5_OFFSET		0x0a6000
 #define SSP_SIZE		0x100
+
+#define BYT_STACK_DUMP_SIZE	32
 
 #define BYT_PCI_BAR_SIZE	0x200000
 
@@ -91,46 +94,6 @@ static const struct snd_sof_debugfs_map cht_debugfs[] = {
 	{"shim", BYT_DSP_BAR, SHIM_OFFSET, SHIM_SIZE},
 	{"mbox", BYT_DSP_BAR, MBOX_OFFSET, MBOX_SIZE},
 };
-
-static void byt_dump(struct snd_sof_dev *sdev, u32 flags)
-{
-	u32 val;
-	int i;
-
-	if (flags & SOF_DBG_REGS) {
-		for (i = SHIM_OFFSET; i < SHIM_OFFSET  + SHIM_SIZE; i += 8) {
-			dev_dbg(sdev->dev, "shim 0x%2.2x value 0x%16.16llx\n",
-				i - SHIM_OFFSET,
-				snd_sof_dsp_read64(sdev, BYT_DSP_BAR, i));
-		}
-	}
-
-	if (flags & SOF_DBG_MBOX) {
-		for (i = MBOX_OFFSET; i < MBOX_OFFSET + MBOX_DUMP_SIZE;
-			i += 4) {
-			dev_dbg(sdev->dev, "mbox: 0x%2.2x value 0x%8.8x\n",
-				i - MBOX_OFFSET,
-				readl(sdev->bar[BYT_DSP_BAR] + i));
-		}
-	}
-
-	if (flags & SOF_DBG_TEXT) {
-		for (i = IRAM_OFFSET; i < IRAM_OFFSET + MBOX_DUMP_SIZE;
-			i += 4) {
-			dev_dbg(sdev->dev, "iram: 0x%2.2x value 0x%8.8x\n",
-				i - IRAM_OFFSET,
-				readl(sdev->bar[BYT_DSP_BAR] + i));
-		}
-	}
-
-	if (flags & SOF_DBG_PCI && sdev->pci) {
-		for (i = 0; i < 0xff; i += 4) {
-			pci_read_config_dword(sdev->pci, i, &val);
-			dev_dbg(sdev->dev, "pci: 0x%2.2x value 0x%8.8x\n",
-				i, val);
-		}
-	}
-}
 
 /*
  * Register IO
@@ -246,6 +209,38 @@ static void byt_mailbox_read(struct snd_sof_dev *sdev, u32 offset,
 	void __iomem *src = sdev->bar[sdev->mailbox_bar] + offset;
 
 	memcpy_fromio(message, src, bytes);
+}
+
+/*
+ * Debug
+ */
+
+static void byt_get_registers(struct snd_sof_dev *sdev,
+			      struct sof_ipc_dsp_oops_xtensa *xoops,
+			      u32 *stack, size_t stack_words)
+{
+	/* first read regsisters */
+	byt_mailbox_read(sdev, sdev->host_box.offset + EXCEPT_OFFSET,
+			 xoops, sizeof(*xoops));
+
+	/* the get the stack */
+	byt_mailbox_read(sdev, sdev->host_box.offset + EXCEPT_OFFSET +
+			 sizeof(*xoops), stack,
+			 stack_words * sizeof(u32));
+}
+
+static void byt_dump(struct snd_sof_dev *sdev, u32 flags)
+{
+	struct sof_ipc_dsp_oops_xtensa xoops;
+	u32 stack[BYT_STACK_DUMP_SIZE];
+	u32 status, panic;
+
+	/* now try generic SOF status messages */
+	status = snd_sof_dsp_read(sdev, BYT_DSP_BAR, SHIM_IPCD);
+	panic = snd_sof_dsp_read(sdev, BYT_DSP_BAR, SHIM_IPCX);
+	byt_get_registers(sdev, &xoops, stack, BYT_STACK_DUMP_SIZE);
+	snd_sof_get_status(sdev, status, panic, &xoops, stack,
+			   BYT_STACK_DUMP_SIZE);
 }
 
 /*
