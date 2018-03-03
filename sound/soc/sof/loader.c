@@ -35,10 +35,9 @@ static int get_ext_windows(struct snd_sof_dev *sdev,
 	size = sizeof(*w) + sizeof(struct sof_ipc_window_elem) * w->num_windows;
 
 	/* keep a local copy of the data */
-	sdev->info_window = kzalloc(size, GFP_KERNEL);
+	sdev->info_window = kmemdup(w, size, GFP_KERNEL);
 	if (!sdev->info_window)
 		return -ENOMEM;
-	memcpy(sdev->info_window, w, size);
 
 	return ret;
 }
