@@ -31,6 +31,7 @@
 
 /* buffers */
 #define SOF_TKN_BUF_SIZE			100
+#define SOF_TKN_BUF_CAPS			101
 
 /* DAI */
 #define SOF_TKN_DAI_DMAC			151

@@ -150,6 +150,8 @@ static int get_token_dai_type(void *elem, void *object, u32 offset, u32 size)
 static const struct sof_topology_token buffer_tokens[] = {
 	{SOF_TKN_BUF_SIZE, SND_SOC_TPLG_TUPLE_TYPE_WORD, get_token_u32,
 		offsetof(struct sof_ipc_buffer, size), 0},
+	{SOF_TKN_BUF_CAPS, SND_SOC_TPLG_TUPLE_TYPE_WORD, get_token_u32,
+		offsetof(struct sof_ipc_buffer, caps), 0},
 };
 
 /* DAI */
