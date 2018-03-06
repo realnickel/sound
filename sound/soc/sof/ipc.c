@@ -603,3 +603,68 @@ int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
 	return 0;
 }
 EXPORT_SYMBOL(snd_sof_ipc_get_comp_data);
+
+int snd_sof_ipc_pipe_params(struct snd_sof_ipc *ipc,
+			    struct snd_sof_control *scontrol)
+{
+	struct snd_sof_dev *sdev = ipc->sdev;
+	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
+	struct sof_ipc_pcm_params pcm;
+	struct sof_ipc_pcm_params_reply ipc_params_reply;
+	int err;
+
+	/* read firmware byte counters */
+	if (scontrol->readback_offset != 0) {
+		/* we can read values via mmaped region */
+		snd_sof_dsp_block_read(sdev, scontrol->readback_offset,
+				       cdata->chanv,
+				       sizeof(struct sof_ipc_ctrl_value_chan) *
+				       cdata->num_elems);
+
+	} else {
+		memset(&pcm, 0, sizeof(pcm));
+		/* set IPC PCM parameters */
+		pcm.hdr.size = sizeof(pcm);
+		pcm.hdr.cmd =
+			SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_PARAMS;
+		pcm.comp_id = scontrol->comp_id;
+
+		/* send IPC to the DSP */
+		err = sof_ipc_tx_message(sdev->ipc,
+					 pcm.hdr.cmd, &pcm, sizeof(pcm),
+					 &ipc_params_reply,
+					 sizeof(ipc_params_reply));
+		if (err < 0) {
+			dev_err(sdev->dev, "error: failed to get control %d values\n",
+				cdata->comp_id);
+			return err;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(snd_sof_ipc_pipe_params);
+
+int snd_sof_ipc_stream_message(struct snd_sof_ipc *ipc,
+			       struct snd_sof_control *scontrol, int cmd)
+{
+	struct sof_ipc_stream stream;
+	struct sof_ipc_reply reply;
+	struct snd_sof_dev *sdev = ipc->sdev;
+	int ret;
+
+	/* read position via slower IPC */
+	stream.hdr.size = sizeof(stream);
+	stream.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | cmd;
+	stream.comp_id = scontrol->comp_id;
+
+	/* send IPC to the DSP */
+	ret = sof_ipc_tx_message(sdev->ipc, stream.hdr.cmd,
+				 &stream, sizeof(stream), &reply,
+				 sizeof(reply));
+	if (ret < 0)
+		dev_err(sdev->dev, "failed stream cmd %d\n", cmd);
+
+	return 0;
+}
+EXPORT_SYMBOL(snd_sof_ipc_stream_message);

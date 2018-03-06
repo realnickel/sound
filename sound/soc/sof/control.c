@@ -78,6 +78,20 @@ static inline u32 ipc_to_mixer(u32 value)
 	return i - 1;
 }
 
+bool is_siggen_control(struct snd_sof_dev *sdev,
+		       struct snd_sof_control *scontrol)
+{
+	struct snd_sof_widget *swidget;
+
+	list_for_each_entry(swidget, &sdev->widget_list, list) {
+		if (swidget->comp_id == scontrol->comp_id)
+			if (swidget->id == snd_soc_dapm_siggen)
+				return true;
+	}
+
+	return false;
+}
+
 int snd_sof_volume_get(struct snd_kcontrol *kcontrol,
 		       struct snd_ctl_elem_value *ucontrol)
 {
@@ -87,13 +101,22 @@ int snd_sof_volume_get(struct snd_kcontrol *kcontrol,
 	struct snd_sof_dev *sdev = scontrol->sdev;
 	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
 	unsigned int i, channels = scontrol->num_channels;
+	/* max value 1 indicates switch type control */
+	bool switch_control = (sm->max == 1) ? true : false;
 
 	pm_runtime_get_sync(sdev->dev);
 
 	/* get all the mixer data from DSP */
-	snd_sof_ipc_get_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_GET_VALUE,
-				  SOF_CTRL_TYPE_VALUE_CHAN_GET,
-				  SOF_CTRL_CMD_VOLUME);
+	if (switch_control)
+		snd_sof_ipc_get_comp_data(sdev->ipc, scontrol,
+					  SOF_IPC_COMP_GET_VALUE,
+					  SOF_CTRL_TYPE_VALUE_CHAN_GET,
+					  SOF_CTRL_CMD_SWITCH);
+	else
+		snd_sof_ipc_get_comp_data(sdev->ipc, scontrol,
+					  SOF_IPC_COMP_GET_VALUE,
+					  SOF_CTRL_TYPE_VALUE_CHAN_GET,
+					  SOF_CTRL_CMD_VOLUME);
 
 	/* read back each channel */
 	for (i = 0; i < channels; i++)
@@ -114,20 +137,53 @@ int snd_sof_volume_put(struct snd_kcontrol *kcontrol,
 	struct snd_sof_dev *sdev = scontrol->sdev;
 	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
 	unsigned int i, channels = scontrol->num_channels;
+	int cmd;
+
+	/* max value 1 indicates switch type control */
+	bool switch_control = (sm->max == 1) ? true : false;
 
 	pm_runtime_get_sync(sdev->dev);
-
-	/* update each channel */
-	for (i = 0; i < channels; i++) {
-		cdata->chanv[i].value =
-			mixer_to_ipc(ucontrol->value.integer.value[i]);
-		cdata->chanv[i].channel = i;
+	if (switch_control) {
+		for (i = 0; i < channels; i++) {
+			cdata->chanv[i].value =
+				ucontrol->value.integer.value[i];
+			cdata->chanv[i].channel = i;
+		}
+		cmd = SOF_CTRL_CMD_SWITCH;
+	} else {
+		for (i = 0; i < channels; i++) {
+			cdata->chanv[i].value =
+				mixer_to_ipc(ucontrol->value.integer.value[i]);
+			cdata->chanv[i].channel = i;
+		}
+		cmd = SOF_CTRL_CMD_VOLUME;
 	}
 
-	/* notify DSP of mixer updates */
-	snd_sof_ipc_set_comp_data(sdev->ipc, scontrol, SOF_IPC_COMP_SET_VALUE,
-				  SOF_CTRL_TYPE_VALUE_CHAN_GET,
-				  SOF_CTRL_CMD_VOLUME);
+	/* Set the component values */
+	snd_sof_ipc_set_comp_data(sdev->ipc, scontrol,
+				  SOF_IPC_COMP_SET_VALUE,
+				  SOF_CTRL_TYPE_VALUE_CHAN_SET, cmd);
+
+	/* enable/disable pipeline if the kcontrol is attached to a siggen */
+	if (is_siggen_control(sdev, scontrol)) {
+		if (cdata->chanv[0].value == 1) {
+			/* set pcm params and prepare pipeline */
+			snd_sof_ipc_pipe_params(sdev->ipc, scontrol);
+			/* start stream */
+			snd_sof_ipc_stream_message(sdev->ipc,
+						   scontrol,
+						   SOF_IPC_STREAM_TRIG_START);
+		} else if (cdata->chanv[0].value == 0) {
+			/* stop stream */
+			snd_sof_ipc_stream_message(sdev->ipc,
+						   scontrol,
+						   SOF_IPC_STREAM_TRIG_STOP);
+			/* reset pipeline */
+			snd_sof_ipc_stream_message(sdev->ipc,
+						   scontrol,
+						   SOF_IPC_STREAM_PCM_FREE);
+		}
+	}
 
 	pm_runtime_mark_last_busy(sdev->dev);
 	pm_runtime_put_autosuspend(sdev->dev);

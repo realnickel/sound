@@ -719,7 +719,8 @@ static int sof_widget_load_pga(struct snd_soc_component *scomp, int index,
 	struct snd_soc_tplg_private *private = &tw->priv;
 	struct sof_ipc_comp_volume volume;
 
-	if (tw->num_kcontrols != 1) {
+	/* Check if there is at least one kcontrol for PGA */
+	if (tw->num_kcontrols == 0) {
 		dev_err(sdev->dev, "error: invalid kcontrol count %d for volume\n",
 			tw->num_kcontrols);
 		return -EINVAL;
@@ -794,8 +795,24 @@ static int sof_widget_load_siggen(struct snd_soc_component *scomp, int index,
 	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(scomp);
 	struct snd_soc_tplg_private *private = &tw->priv;
 	struct sof_ipc_comp_tone tone;
+	struct snd_soc_dapm_widget *widget = swidget->widget;
+	struct snd_kcontrol_new kcontrol_new;
+	struct soc_mixer_control *sm;
+	int i = 0;
 
-	/* configure mixer IPC message */
+	/* check if siggen widget has a switch type control */
+	for (i = 0; i < tw->num_kcontrols ; i++) {
+		kcontrol_new = widget->kcontrol_news[i];
+		sm = (struct soc_mixer_control *)kcontrol_new.private_value;
+		if (sm->max)
+			goto ipc;
+	}
+
+	dev_err(sdev->dev, "error: no switch type control for siggen widget\n");
+	return -EINVAL;
+
+ipc:
+	/* configure siggen IPC message */
 	memset(&tone, 0, sizeof(tone));
 	tone.comp.hdr.size = sizeof(tone);
 	tone.comp.hdr.cmd = SOF_IPC_GLB_TPLG_MSG | SOF_IPC_TPLG_COMP_NEW;
@@ -910,6 +927,13 @@ static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 		break;
 	case snd_soc_dapm_siggen:
 		ret = sof_widget_load_siggen(scomp, index, swidget, tw, &reply);
+		/* Find scontrol for this siggen and set readback offset*/
+		list_for_each_entry(scontrol, &sdev->kcontrol_list, list) {
+			if (scontrol->comp_id == swidget->comp_id) {
+				scontrol->readback_offset = reply.offset;
+				break;
+			}
+		}
 		break;
 	case snd_soc_dapm_mux:
 	case snd_soc_dapm_demux:

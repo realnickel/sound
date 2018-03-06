@@ -436,6 +436,10 @@ struct snd_sof_pcm *snd_sof_find_spcm_pcm_id(struct snd_sof_dev *sdev,
 int snd_sof_ipc_stream_posn(struct snd_sof_dev *sdev,
 			    struct snd_sof_pcm *spcm, int direction,
 			    struct sof_ipc_stream_posn *posn);
+int snd_sof_ipc_stream_message(struct snd_sof_ipc *ipc,
+			       struct snd_sof_control *scontrol, int cmd);
+int snd_sof_ipc_pipe_params(struct snd_sof_ipc *ipc,
+			    struct snd_sof_control *scontrol);
 
 /*
  * Mixer IPC
