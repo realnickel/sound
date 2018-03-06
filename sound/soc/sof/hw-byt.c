@@ -233,11 +233,15 @@ static void byt_get_windows(struct snd_sof_dev *sdev)
 
 	snd_sof_dsp_mailbox_init(sdev, inbox_offset, inbox_size,
 				 outbox_offset, outbox_size);
+	sdev->stream_box.offset = stream_offset;
+	sdev->stream_box.size = stream_size;
 
 	dev_dbg(sdev->dev, " mailbox upstream 0x%x - size 0x%x\n",
 		inbox_offset, inbox_size);
 	dev_dbg(sdev->dev, " mailbox downstream 0x%x - size 0x%x\n",
 		outbox_offset, outbox_size);
+	dev_dbg(sdev->dev, " stream region 0x%x - size 0x%x\n",
+		stream_offset, stream_size);
 }
 
 static int byt_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)

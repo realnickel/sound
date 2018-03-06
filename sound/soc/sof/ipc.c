@@ -249,22 +249,41 @@ EXPORT_SYMBOL(snd_sof_dsp_mailbox_init);
 
 static void ipc_period_elapsed(struct snd_sof_dev *sdev, u32 msg_id)
 {
-	struct snd_sof_pcm *spcm;
 	struct sof_ipc_stream_posn posn;
+	struct snd_sof_pcm *spcm;
+	u32 posn_offset;
 	int direction;
 
-	/* read back full message */
-	snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
-				 sizeof(posn));
-	dev_dbg(sdev->dev,  "posn: host 0x%llx dai 0x%llx wall 0x%llx\n",
-		posn.host_posn, posn.dai_posn, posn.wallclock);
+	/* check if we have stream box */
+	if (sdev->stream_box.size == 0) {
+		/* read back full message */
+		snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
+					 sizeof(posn));
 
-	spcm = snd_sof_find_spcm_comp(sdev, posn.comp_id, &direction);
+		spcm = snd_sof_find_spcm_comp(sdev, posn.comp_id, &direction);
+	} else {
+		spcm = snd_sof_find_spcm_comp(sdev, msg_id, &direction);
+	}
+
 	if (!spcm) {
-		dev_err(sdev->dev, "error: period elapsed for unknown component %d\n",
+		dev_err(sdev->dev,
+			"error: period elapsed for unknown component %d\n",
 			posn.comp_id);
 		return;
 	}
+
+	/* have stream box read from stream box */
+	if (sdev->stream_box.size != 0) {
+		posn_offset = spcm->posn_offset[direction];
+		snd_sof_dsp_mailbox_read(sdev, posn_offset, &posn,
+					 sizeof(posn));
+
+		dev_dbg(sdev->dev, "posn mailbox: posn offset is 0x%x",
+			posn_offset);
+	}
+
+	dev_dbg(sdev->dev, "posn : host 0x%llx dai 0x%llx wall 0x%llx\n",
+		posn.host_posn, posn.dai_posn, posn.wallclock);
 
 	memcpy(&spcm->stream[direction].posn, &posn, sizeof(posn));
 	snd_pcm_period_elapsed(spcm->stream[direction].substream);
@@ -272,19 +291,36 @@ static void ipc_period_elapsed(struct snd_sof_dev *sdev, u32 msg_id)
 
 static void ipc_xrun(struct snd_sof_dev *sdev, u32 msg_id)
 {
-	struct snd_sof_pcm *spcm;
 	struct sof_ipc_stream_posn posn;
+	struct snd_sof_pcm *spcm;
+	u32 posn_offset;
 	int direction;
 
-	/* read back full message */
-	snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
-				 sizeof(posn));
+	/* check if we have stream box */
+	if (sdev->stream_box.size == 0) {
+		/* read back full message */
+		snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, &posn,
+					 sizeof(posn));
 
-	spcm = snd_sof_find_spcm_comp(sdev, posn.comp_id, &direction);
+		spcm = snd_sof_find_spcm_comp(sdev, posn.comp_id, &direction);
+	} else {
+		spcm = snd_sof_find_spcm_comp(sdev, msg_id, &direction);
+	}
+
 	if (!spcm) {
 		dev_err(sdev->dev, "error: XRUN for unknown component %d\n",
 			posn.comp_id);
 		return;
+	}
+
+	/* have stream box read from stream box */
+	if (sdev->stream_box.size != 0) {
+		posn_offset = spcm->posn_offset[direction];
+		snd_sof_dsp_mailbox_read(sdev, posn_offset, &posn,
+					 sizeof(posn));
+
+		dev_dbg(sdev->dev, "posn mailbox: posn offset is 0x%x",
+			posn_offset);
 	}
 
 	dev_dbg(sdev->dev,  "posn XRUN: host %llx comp %d size %d\n",
@@ -296,9 +332,13 @@ static void ipc_xrun(struct snd_sof_dev *sdev, u32 msg_id)
 	snd_pcm_stop_xrun(spcm->stream[direction].substream);
 }
 
-static void ipc_stream_message(struct snd_sof_dev *sdev, u32 msg_id)
+static void ipc_stream_message(struct snd_sof_dev *sdev, u32 msg_cmd)
 {
-	switch (msg_id) {
+	/* get msg cmd type and msd id */
+	u32 msg_type = msg_cmd & SOF_CMD_TYPE_MASK;
+	u32 msg_id = SOF_IPC_MESSAGE_ID(msg_cmd);
+
+	switch (msg_type) {
 	case SOF_IPC_STREAM_POSITION:
 		ipc_period_elapsed(sdev, msg_id);
 		break;
@@ -372,7 +412,8 @@ static void ipc_msgs_rx(struct work_struct *work)
 	case SOF_IPC_GLB_COMP_MSG:
 		break;
 	case SOF_IPC_GLB_STREAM_MSG:
-		ipc_stream_message(sdev, type);
+		/* need to pass msg id into the function */
+		ipc_stream_message(sdev, hdr.cmd);
 		break;
 	case SOF_IPC_GLB_TRACE_MSG:
 		ipc_trace_message(sdev, type);

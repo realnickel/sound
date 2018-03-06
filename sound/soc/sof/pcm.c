@@ -53,6 +53,7 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_sof_pcm *spcm = rtd->sof;
 	struct sof_ipc_pcm_params pcm;
 	struct sof_ipc_pcm_params_reply ipc_params_reply;
+	int posn_offset;
 	int ret;
 
 	/* nothing todo for BE */
@@ -132,9 +133,6 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	/* copy offset */
-	//spcm->posn_offset[substream->stream] = ipc_params_reply.posn_offset;
-
 	/* firmware already configured host stream */
 	if (ops && ops->host_stream_prepare) {
 		pcm.params.stream_tag =
@@ -146,6 +144,18 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 	ret = sof_ipc_tx_message(sdev->ipc,
 				 pcm.hdr.cmd, &pcm, sizeof(pcm),
 				 &ipc_params_reply, sizeof(ipc_params_reply));
+
+	/* validate offset */
+	posn_offset = ipc_params_reply.posn_offset;
+	/* check if offset is overflow or it is not aligned */
+	if (posn_offset > sdev->stream_box.size ||
+	    posn_offset % sizeof(struct sof_ipc_stream_posn) != 0) {
+		dev_err(sdev->dev, "error: got wrong posn offset 0x%x for PCM %d\n",
+			posn_offset, ret);
+		return ret;
+	}
+	spcm->posn_offset[substream->stream] =
+		sdev->stream_box.offset + posn_offset;
 
 	return ret;
 }

@@ -173,6 +173,7 @@ struct snd_sof_pcm {
 	struct snd_sof_dev *sdev;
 	struct snd_soc_tplg_pcm pcm;
 	struct snd_sof_pcm_stream stream[2];
+	u32 posn_offset[2];
 	struct mutex mutex;	/* TODO: not used ? remove ? */
 	struct list_head list;	/* list in sdev pcm list */
 };
@@ -321,6 +322,7 @@ struct snd_sof_dev {
 	struct snd_sof_ipc *ipc;
 	struct snd_sof_mailbox dsp_box;		/* DSP initiated IPC */
 	struct snd_sof_mailbox host_box;	/* Host initiated IPC */
+	struct snd_sof_mailbox stream_box;	/* Stream position update */
 	u64 irq_status;
 	int ipc_irq;
 	u32 next_comp_id; /* monotonic - reset during S3 */
