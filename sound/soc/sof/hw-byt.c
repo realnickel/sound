@@ -76,7 +76,6 @@ static const struct snd_sof_debugfs_map byt_debugfs[] = {
 	{"iram", BYT_DSP_BAR, IRAM_OFFSET, IRAM_SIZE},
 	{"dram", BYT_DSP_BAR, DRAM_OFFSET, DRAM_SIZE},
 	{"shim", BYT_DSP_BAR, SHIM_OFFSET, SHIM_SIZE},
-	{"mbox", BYT_DSP_BAR, MBOX_OFFSET, MBOX_SIZE},
 };
 
 static const struct snd_sof_debugfs_map cht_debugfs[] = {
@@ -92,7 +91,6 @@ static const struct snd_sof_debugfs_map cht_debugfs[] = {
 	{"iram", BYT_DSP_BAR, IRAM_OFFSET, IRAM_SIZE},
 	{"dram", BYT_DSP_BAR, DRAM_OFFSET, DRAM_SIZE},
 	{"shim", BYT_DSP_BAR, SHIM_OFFSET, SHIM_SIZE},
-	{"mbox", BYT_DSP_BAR, MBOX_OFFSET, MBOX_SIZE},
 };
 
 /*
@@ -160,6 +158,88 @@ static void byt_block_read(struct snd_sof_dev *sdev, u32 offset, void *dest,
 /*
  * IPC Firmware ready.
  */
+static void byt_get_windows(struct snd_sof_dev *sdev)
+{
+	struct sof_ipc_window_elem *elem;
+	u32 outbox_offset = 0;
+	u32 stream_offset = 0;
+	u32 inbox_offset = 0;
+	u32 outbox_size = 0;
+	u32 stream_size = 0;
+	u32 inbox_size = 0;
+	int i;
+
+	if (!sdev->info_window) {
+		dev_err(sdev->dev, "error: have no window info\n");
+		return;
+	}
+
+	for (i = 0; i < sdev->info_window->num_windows; i++) {
+		elem = &sdev->info_window->window[i];
+
+		switch (elem->type) {
+		case SOF_IPC_REGION_UPBOX:
+			inbox_offset = elem->offset + MBOX_OFFSET;
+			inbox_size = elem->size;
+			snd_sof_debugfs_create_item(sdev,
+						    sdev->bar[BYT_DSP_BAR] +
+						    inbox_offset,
+						    elem->size, "inbox");
+			break;
+		case SOF_IPC_REGION_DOWNBOX:
+			outbox_offset = elem->offset + MBOX_OFFSET;
+			outbox_size = elem->size;
+			snd_sof_debugfs_create_item(sdev,
+						    sdev->bar[BYT_DSP_BAR] +
+						    outbox_offset,
+						    elem->size, "outbox");
+			break;
+		case SOF_IPC_REGION_TRACE:
+			snd_sof_debugfs_create_item(sdev,
+						    sdev->bar[BYT_DSP_BAR] +
+						    elem->offset + MBOX_OFFSET,
+						    elem->size, "etrace");
+			break;
+		case SOF_IPC_REGION_DEBUG:
+			snd_sof_debugfs_create_item(sdev,
+						    sdev->bar[BYT_DSP_BAR] +
+						    elem->offset + MBOX_OFFSET,
+						    elem->size, "debug");
+			break;
+		case SOF_IPC_REGION_STREAM:
+			stream_offset = elem->offset + MBOX_OFFSET;
+			stream_size = elem->size;
+			snd_sof_debugfs_create_item(sdev,
+						    sdev->bar[BYT_DSP_BAR] +
+						    stream_offset,
+						    elem->size, "stream");
+			break;
+		case SOF_IPC_REGION_REGS:
+			snd_sof_debugfs_create_item(sdev,
+						    sdev->bar[BYT_DSP_BAR] +
+						    elem->offset + MBOX_OFFSET,
+						    elem->size, "regs");
+			break;
+		default:
+			dev_err(sdev->dev, "error: get illegal window info\n");
+			return;
+		}
+	}
+
+	if (outbox_size == 0 || inbox_size == 0) {
+		dev_err(sdev->dev, "error: get illegal mailbox window\n");
+		return;
+	}
+
+	snd_sof_dsp_mailbox_init(sdev, inbox_offset, inbox_size,
+				 outbox_offset, outbox_size);
+
+	dev_dbg(sdev->dev, " mailbox upstream 0x%x - size 0x%x\n",
+		inbox_offset, inbox_size);
+	dev_dbg(sdev->dev, " mailbox downstream 0x%x - size 0x%x\n",
+		outbox_offset, outbox_size);
+}
+
 static int byt_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
 {
 	struct sof_ipc_fw_ready *fw_ready = &sdev->fw_ready;
@@ -180,13 +260,15 @@ static int byt_fw_ready(struct snd_sof_dev *sdev, u32 msg_id)
 				 fw_ready->hostbox_offset,
 				 fw_ready->hostbox_size);
 
-	dev_dbg(sdev->dev, " mailbox DSP initiated 0x%x - size 0x%x\n",
-		fw_ready->dspbox_offset, fw_ready->dspbox_size);
-	dev_dbg(sdev->dev, " mailbox Host initiated 0x%x - size 0x%x\n",
-		fw_ready->hostbox_offset, fw_ready->hostbox_size);
-
-	dev_info(sdev->dev, " Firmware info: version %d:%d-%s build %d on %s:%s\n",
+	dev_info(sdev->dev,
+		 " Firmware info: version %d:%d-%s build %d on %s:%s\n",
 		 v->major, v->minor, v->tag, v->build, v->date, v->time);
+
+	/* now check for extended data */
+	snd_sof_fw_parse_ext_data(sdev, MBOX_OFFSET +
+				  sizeof(struct sof_ipc_fw_ready));
+
+	byt_get_windows(sdev);
 
 	return 0;
 }

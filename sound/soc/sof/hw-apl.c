@@ -1089,12 +1089,18 @@ error:
 static void apl_get_windows(struct snd_sof_dev *sdev)
 {
 	struct sof_ipc_window_elem *elem;
+	u32 outbox_offset = 0;
+	u32 stream_offset = 0;
+	u32 inbox_offset = 0;
+	u32 outbox_size = 0;
+	u32 stream_size = 0;
+	u32 inbox_size = 0;
 	int i;
-	u32 inbox_offset = 0, outbox_offset = 0;
-	u32 inbox_size = 0, outbox_size = 0;
 
-	if (!sdev->info_window)
+	if (!sdev->info_window) {
+		dev_err(sdev->dev, "error: have no window info\n");
 		return;
+	}
 
 	for (i = 0; i < sdev->info_window->num_windows; i++) {
 		elem = &sdev->info_window->window[i];
@@ -1135,6 +1141,9 @@ static void apl_get_windows(struct snd_sof_dev *sdev)
 						    elem->size, "debug");
 			break;
 		case SOF_IPC_REGION_STREAM:
+			stream_offset =
+				elem->offset + SRAM_WINDOW_OFFSET(elem->id);
+			stream_size = elem->size;
 			snd_sof_debugfs_create_item(sdev,
 						    sdev->bar[APL_DSP_BAR] +
 						    elem->offset +
@@ -1151,8 +1160,14 @@ static void apl_get_windows(struct snd_sof_dev *sdev)
 						    elem->size, "regs");
 			break;
 		default:
-			break;
+			dev_err(sdev->dev, "error: get illegal window info\n");
+			return;
 		}
+	}
+
+	if (outbox_size == 0 || inbox_size == 0) {
+		dev_err(sdev->dev, "error: get illegal mailbox window\n");
+		return;
 	}
 
 	snd_sof_dsp_mailbox_init(sdev, inbox_offset, inbox_size,
