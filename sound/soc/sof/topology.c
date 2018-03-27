@@ -1204,6 +1204,12 @@ static int sof_link_load(struct snd_soc_component *scomp, int index,
 	config.rx_slot_mask = hw_config->rx_slots;
 	config.tx_slot_mask = hw_config->tx_slots;
 
+	/* handle backwards-compatibility issue */
+	hw_config->bclk_master = (hw_config->bclk_master ==
+				  SND_SOC_TPLG_BCLK_CM);
+	hw_config->fsync_master = (hw_config->fsync_master ==
+				  SND_SOC_TPLG_FSYNC_CM);
+
 	/* clock directions wrt codec */
 	if (hw_config->bclk_master) {
 		/* codec is bclk master */
