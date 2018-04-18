@@ -241,6 +241,7 @@ static int cdns_set_wait(struct sdw_cdns *cdns, int offset, u32 value)
 
 	return -EAGAIN;
 }
+
 /*
  * debugfs
  */
