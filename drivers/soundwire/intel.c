@@ -449,6 +449,15 @@ intel_pdi_get_ch_cap(struct sdw_intel *sdw, unsigned int pdi_num, bool pcm)
 
 	if (pcm) {
 		count = intel_readw(shim, SDW_SHIM_PCMSYCHC(link_id, pdi_num));
+
+		/*
+		 * TODO: pdi number 2 reports channel count as 1 even though
+		 * it supports 8 channel. Performing hardcoding for pdi
+		 * number 2.
+		 */
+		if (pdi_num == 2)
+			count = 7;
+
 	} else {
 		count = intel_readw(shim, SDW_SHIM_PDMSCAP(link_id));
 		count = ((count & SDW_SHIM_PDMSCAP_CPSS) >>
@@ -821,8 +830,55 @@ static int intel_pdm_set_sdw_stream(struct snd_soc_dai *dai,
 	return cdns_set_sdw_stream(dai, stream, false, direction);
 }
 
+static int intel_trigger(struct snd_pcm_substream *substream,
+			int cmd, struct snd_soc_dai *dai)
+{
+
+	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
+	struct sdw_intel *sdw = cdns_to_intel(cdns);
+	struct sdw_cdns_dma_data *dma;
+	struct sdw_cdns_port *port = NULL;
+	int i;
+
+	dma = snd_soc_dai_get_dma_data(dai, substream);
+	if (!dma)
+		return -EIO;
+
+	/* TODO: add support for snd_pcm_link() later */
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+	case SNDRV_PCM_TRIGGER_RESUME:
+
+		/*
+		 * Workaround to fix first playback/capture noise issue
+		 * TODO: Remove this when fix is done in firmware.
+		 */
+		if (dma->stream_type == SDW_STREAM_PCM) {
+			for (i = 0; i < dma->nr_ports; i++) {
+				port = dma->port[i];
+				intel_pdi_alh_configure(sdw, port->pdi);
+			}
+		}
+
+		break;
+
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_STOP:
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static const struct snd_soc_dai_ops intel_pcm_dai_ops = {
 	.hw_params = intel_hw_params,
+	.trigger = intel_trigger,
 	.hw_free = intel_hw_free,
 	.shutdown = sdw_cdns_shutdown,
 	.set_sdw_stream = intel_pcm_set_sdw_stream,
@@ -830,6 +886,7 @@ static const struct snd_soc_dai_ops intel_pcm_dai_ops = {
 
 static const struct snd_soc_dai_ops intel_pdm_dai_ops = {
 	.hw_params = intel_hw_params,
+	.trigger = intel_trigger,
 	.hw_free = intel_hw_free,
 	.shutdown = sdw_cdns_shutdown,
 	.set_sdw_stream = intel_pdm_set_sdw_stream,
@@ -962,14 +1019,18 @@ static int intel_prop_read(struct sdw_bus *bus)
 	sdw_master_read_prop(bus);
 
 	/* BIOS is not giving some values correctly. So, lets override them */
+	bus->prop.max_freq = 12000000;
+	bus->prop.num_clk_gears = 0;
+	bus->prop.clk_gears = NULL;
 	bus->prop.num_freq = 1;
-	bus->prop.freq = devm_kcalloc(bus->dev, sizeof(*bus->prop.freq),
-					bus->prop.num_freq, GFP_KERNEL);
+	bus->prop.freq = devm_kcalloc(bus->dev, bus->prop.num_freq,
+				sizeof(*bus->prop.freq), GFP_KERNEL);
 	if (!bus->prop.freq)
 		return -ENOMEM;
 
 	bus->prop.freq[0] = bus->prop.max_freq;
-	bus->prop.err_threshold = 5;
+	bus->prop.err_threshold = 0;
+	bus->prop.clk_stop_mode = SDW_CLK_STOP_MODE0 | SDW_CLK_STOP_MODE1;
 
 	return 0;
 }
@@ -1032,6 +1093,8 @@ static int intel_probe(struct platform_device *pdev)
 		goto err_init;
 
 	ret = sdw_cdns_enable_interrupt(&sdw->cdns);
+	if (ret)
+		goto err_init;
 
 	/* Read the PDI config and initialize cadence PDI */
 	intel_pdi_init(sdw, &config);

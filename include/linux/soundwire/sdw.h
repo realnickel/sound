@@ -397,6 +397,19 @@ struct sdw_master_prop {
 
 int sdw_master_read_prop(struct sdw_bus *bus);
 int sdw_slave_read_prop(struct sdw_slave *slave);
+int sdw_slave_read_dpn(struct sdw_slave *slave,
+		struct sdw_dpn_prop *dpn, int count, int ports, char *type);
+
+/*
+ * SDW sysfs APIs
+ */
+struct sdw_slave_sysfs;
+struct sdw_master_sysfs;
+
+int sdw_sysfs_bus_init(struct sdw_bus *bus);
+void sdw_sysfs_bus_exit(struct sdw_bus *bus);
+int sdw_sysfs_slave_init(struct sdw_slave *slave);
+void sdw_sysfs_slave_exit(struct sdw_slave *slave);
 
 /*
  * SDW sysfs APIs

@@ -55,6 +55,8 @@ int sdw_add_bus_master(struct sdw_bus *bus)
 	if (!bus->compute_params)
 		bus->compute_params = &sdw_compute_params;
 
+	sdw_sysfs_bus_init(bus);
+
 	/*
 	 * Device numbers in SoundWire are 0 thru 15. Enumeration device
 	 * number (0), Broadcast device number (15), Group numbers (12 and
@@ -240,6 +242,7 @@ int sdw_transfer(struct sdw_bus *bus, struct sdw_msg *msg)
 		dev_err(bus->dev, "trf on Slave %d failed:%d\n",
 				msg->dev_num, ret);
 
+	trace_sdw_rw(bus, msg, ret);
 	if (msg->page)
 		sdw_reset_page(bus, msg->dev_num);
 
@@ -269,6 +272,7 @@ int sdw_transfer_defer(struct sdw_bus *bus, struct sdw_msg *msg,
 		dev_err(bus->dev, "Defer trf on Slave %d failed:%d\n",
 				msg->dev_num, ret);
 
+	trace_sdw_rw(bus, msg, ret);
 	if (msg->page)
 		sdw_reset_page(bus, msg->dev_num);
 
@@ -760,7 +764,6 @@ int sdw_bus_prep_clk_stop(struct sdw_bus *bus)
 	bool simple_clk_stop = true;
 	int ret = 0;
 
-
 	/*
 	 * In order to save on transition time, prepare
 	 * each Slave and then wait for all Slave(s) to be
@@ -870,6 +873,8 @@ int sdw_bus_clk_stop(struct sdw_bus *bus)
 
 		if (mode == SDW_CLK_STOP_MODE1)
 			sdw_modify_slave_status(slave, SDW_SLAVE_UNATTACHED);
+
+		sdw_modify_slave_status(slave, SDW_SLAVE_UNATTACHED);
 	}
 
 	return 0;
@@ -1227,7 +1232,7 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 		return ret;
 	}
 
-	ret = sdw_nread(slave, SDW_SCP_INTSTAT2, 2, buf2);
+	ret = sdw_nread(slave, SDW_SCP_INTSTAT2, 3, buf2);
 	if (ret < 0) {
 		dev_err(slave->bus->dev,
 					"SDW_SCP_INT2/3 read failed:%d", ret);
