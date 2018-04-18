@@ -37,6 +37,11 @@ struct snd_soc_acpi_mach snd_soc_acpi_intel_cnl_machines[] = {
 		.sof_fw_filename = "sof-cnl.ri",
 		.sof_tplg_filename = "sof-cml-rt5682.tplg",
 	},
+	{
+		.id = "dummy",
+		.drv_name = "cnl_rt700",
+		.fw_filename = "intel/dsp_fw_cnl.bin",
+	},
 	{},
 };
 EXPORT_SYMBOL_GPL(snd_soc_acpi_intel_cnl_machines);

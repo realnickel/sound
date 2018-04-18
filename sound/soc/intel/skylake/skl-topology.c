@@ -22,6 +22,7 @@
 #include <linux/uuid.h>
 #include <sound/soc.h>
 #include <sound/soc-topology.h>
+#include <sound/pcm_params.h>
 #include <uapi/sound/snd_sst_tokens.h>
 #include <uapi/sound/skl-tplg-interface.h>
 #include "skl-sst-dsp.h"
@@ -1850,6 +1851,11 @@ static u8 skl_tplg_be_link_type(int dev_type)
 		ret = NHLT_LINK_HDA;
 		break;
 
+	case SKL_DEVICE_SDW_PCM:
+	case SKL_DEVICE_SDW_PDM:
+		ret = NHLT_LINK_SDW;
+		break;
+
 	default:
 		ret = NHLT_LINK_INVALID;
 		break;
@@ -1865,12 +1871,12 @@ static u8 skl_tplg_be_link_type(int dev_type)
  * The port can have multiple settings so pick based on the PCM
  * parameters
  */
-static int skl_tplg_be_fill_pipe_params(struct snd_soc_dai *dai,
+static int skl_tplg_be_fill_pipe_params(struct device *dev,
 				struct skl_module_cfg *mconfig,
 				struct skl_pipe_params *params)
 {
 	struct nhlt_specific_cfg *cfg;
-	struct skl *skl = get_skl_ctx(dai->dev);
+	struct skl *skl = get_skl_ctx(dev);
 	int link_type = skl_tplg_be_link_type(mconfig->dev_type);
 	u8 dev_type = skl_tplg_be_dev_type(mconfig->dev_type);
 
@@ -1878,6 +1884,30 @@ static int skl_tplg_be_fill_pipe_params(struct snd_soc_dai *dai,
 
 	if (link_type == NHLT_LINK_HDA)
 		return 0;
+
+       if (link_type == NHLT_LINK_SDW) {
+		struct skl_sdw_cfg *sdw_cfg;
+		size_t sz;
+
+		sz = sizeof(struct skl_sdw_agg) + 2;
+
+		/* TODO: who frees this mem */
+		sdw_cfg = kzalloc(sz, GFP_KERNEL);
+		if (!sdw_cfg)
+			return -ENOMEM;
+
+		mconfig->formats_config.caps_size = sz;
+		sdw_cfg->count = 1;
+
+		/* TODO: dont see how ch_mask is configured so set to 0 for
+		 * now
+		 */
+		sdw_cfg->data[0].ch_mask = 0;
+		sdw_cfg->data[0].alh_stream = mconfig->sdw_stream_num;
+
+		mconfig->formats_config.caps = (u32 *)sdw_cfg;
+		return 0;
+	}
 
 	/* update the blob based on virtual bus_id*/
 	cfg = skl_get_ep_blob(skl, mconfig->vbus_id, link_type,
@@ -1888,18 +1918,17 @@ static int skl_tplg_be_fill_pipe_params(struct snd_soc_dai *dai,
 		mconfig->formats_config.caps_size = cfg->size;
 		mconfig->formats_config.caps = (u32 *) &cfg->caps;
 	} else {
-		dev_err(dai->dev, "Blob NULL for id %x type %d dirn %d\n",
+		dev_err(dev, "Blob NULL for id %x type %d dirn %d\n",
 					mconfig->vbus_id, link_type,
 					params->stream);
-		dev_err(dai->dev, "PCM: ch %d, freq %d, fmt %d\n",
+		dev_err(dev, "PCM: ch %d, freq %d, fmt %d\n",
 				 params->ch, params->s_freq, params->s_fmt);
 		return -EINVAL;
 	}
-
 	return 0;
 }
 
-static int skl_tplg_be_set_src_pipe_params(struct snd_soc_dai *dai,
+static int skl_tplg_be_set_src_pipe_params(struct device *dev,
 				struct snd_soc_dapm_widget *w,
 				struct skl_pipe_params *params)
 {
@@ -1910,12 +1939,12 @@ static int skl_tplg_be_set_src_pipe_params(struct snd_soc_dai *dai,
 		if (p->connect && is_skl_dsp_widget_type(p->source, dai->dev) &&
 						p->source->priv) {
 
-			ret = skl_tplg_be_fill_pipe_params(dai,
+			ret = skl_tplg_be_fill_pipe_params(dev,
 						p->source->priv, params);
 			if (ret < 0)
 				return ret;
 		} else {
-			ret = skl_tplg_be_set_src_pipe_params(dai,
+			ret = skl_tplg_be_set_src_pipe_params(dev,
 						p->source, params);
 			if (ret < 0)
 				return ret;
@@ -1925,8 +1954,8 @@ static int skl_tplg_be_set_src_pipe_params(struct snd_soc_dai *dai,
 	return ret;
 }
 
-static int skl_tplg_be_set_sink_pipe_params(struct snd_soc_dai *dai,
-	struct snd_soc_dapm_widget *w, struct skl_pipe_params *params)
+static int skl_tplg_be_set_sink_pipe_params(struct device *dev,
+		struct snd_soc_dapm_widget *w, struct skl_pipe_params *params)
 {
 	struct snd_soc_dapm_path *p = NULL;
 	int ret = -EIO;
@@ -1935,13 +1964,13 @@ static int skl_tplg_be_set_sink_pipe_params(struct snd_soc_dai *dai,
 		if (p->connect && is_skl_dsp_widget_type(p->sink, dai->dev) &&
 						p->sink->priv) {
 
-			ret = skl_tplg_be_fill_pipe_params(dai,
+			ret = skl_tplg_be_fill_pipe_params(dev,
 						p->sink->priv, params);
 			if (ret < 0)
 				return ret;
 		} else {
 			ret = skl_tplg_be_set_sink_pipe_params(
-						dai, p->sink, params);
+						dev, p->sink, params);
 			if (ret < 0)
 				return ret;
 		}
@@ -1955,7 +1984,7 @@ static int skl_tplg_be_set_sink_pipe_params(struct snd_soc_dai *dai,
  * (playback). Based on sink and source we need to either find the source
  * list or the sink list and set the pipeline parameters
  */
-int skl_tplg_be_update_params(struct snd_soc_dai *dai,
+int skl_tplg_be_update_params(struct device *dev, struct snd_soc_dai *dai,
 				struct skl_pipe_params *params)
 {
 	struct snd_soc_dapm_widget *w;
@@ -1963,13 +1992,36 @@ int skl_tplg_be_update_params(struct snd_soc_dai *dai,
 	if (params->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		w = dai->playback_widget;
 
-		return skl_tplg_be_set_src_pipe_params(dai, w, params);
+		return skl_tplg_be_set_src_pipe_params(dev, w, params);
 
 	} else {
 		w = dai->capture_widget;
 
-		return skl_tplg_be_set_sink_pipe_params(dai, w, params);
+		return skl_tplg_be_set_sink_pipe_params(dev, w, params);
 	}
+
+	return 0;
+}
+
+int skl_tplg_be_sdw_update_params(struct device *dev, struct snd_soc_dai *dai,
+				struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params, int pdi)
+{
+	struct skl_pipe_params p_params = {0};
+	struct skl_module_cfg *m_cfg;
+
+	p_params.s_fmt = snd_pcm_format_width(params_format(params));
+	p_params.ch = params_channels(params);
+	p_params.s_freq = params_rate(params);
+	p_params.stream = substream->stream;
+
+	m_cfg = skl_tplg_be_get_cpr_module(dai, substream->stream);
+	if (!m_cfg)
+		return -EIO;
+
+	m_cfg->sdw_stream_num = pdi;
+
+	skl_tplg_be_update_params(dev, dai, &p_params);
 
 	return 0;
 }

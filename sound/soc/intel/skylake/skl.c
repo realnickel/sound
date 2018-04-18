@@ -28,6 +28,7 @@
 #include <linux/firmware.h>
 #include <linux/delay.h>
 #include <sound/pcm.h>
+#include <sound/soc.h>
 #include <sound/soc-acpi.h>
 #include <sound/soc-acpi-intel-match.h>
 #include <sound/hda_register.h>
@@ -37,6 +38,7 @@
 #include "skl.h"
 #include "skl-sst-dsp.h"
 #include "skl-sst-ipc.h"
+#include "skl-topology.h"
 #if IS_ENABLED(CONFIG_SND_SOC_INTEL_SKYLAKE_HDAUDIO_CODEC)
 #include "../../../soc/codecs/hdac_hda.h"
 #endif
@@ -500,6 +502,17 @@ static int skl_find_machine(struct skl *skl, void *driver_data)
 	}
 
 	skl->mach = mach;
+
+	// FIXME: PLB
+	if ((skl->pci->device == 0x9df0) || (skl->pci->device == 0x9dc8)
+	    || (skl->pci->device == 0x34c8) || (skl->pci->device == 0x24f0))
+		goto out;
+
+	if (mach == NULL) {
+		dev_err(bus->dev, "No matching machine driver found\n");
+		return -ENODEV;
+	}
+out:
 	skl->fw_name = mach->fw_filename;
 	pdata = mach->pdata;
 
@@ -786,11 +799,13 @@ static void skl_probe_work(struct work_struct *work)
 	struct hdac_ext_link *hlink = NULL;
 	int err;
 
+#if 0
 	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
 		err = skl_i915_init(bus);
 		if (err < 0)
 			return;
 	}
+#endif
 
 	err = skl_init_chip(bus, true);
 	if (err < 0) {
@@ -801,10 +816,18 @@ static void skl_probe_work(struct work_struct *work)
 	/* codec detection */
 	if (!bus->codec_mask)
 		dev_info(bus->dev, "no hda codecs found!\n");
-
+#if 0
 	/* create codec instances */
 	skl_codec_create(bus);
 
+	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
+		err = snd_hdac_display_power(bus, false);
+		if (err < 0) {
+			dev_err(bus->dev, "Cannot turn off display power on i915\n");
+			return;
+		}
+	}
+#endif
 	/* register platform dai and controls */
 	err = skl_platform_register(bus->dev);
 	if (err < 0) {
@@ -828,8 +851,8 @@ static void skl_probe_work(struct work_struct *work)
 		snd_hdac_display_power(bus, HDA_CODEC_IDX_CONTROLLER, false);
 
 	/* configure PM */
-	pm_runtime_put_noidle(bus->dev);
-	pm_runtime_allow(bus->dev);
+//	pm_runtime_put_noidle(bus->dev);
+//	pm_runtime_allow(bus->dev);
 	skl->init_done = 1;
 
 	return;
@@ -907,6 +930,14 @@ static int skl_first_init(struct hdac_bus *bus)
 
 	snd_hdac_bus_reset_link(bus, true);
 
+	/* TODO: Shreyas to check if required */
+	skl_enable_miscbdcge(bus->dev, false);
+	snd_hdac_chip_writew(bus, STATESTS, STATESTS_INT_MASK);
+	/* reset controller */
+	snd_hdac_bus_enter_link_reset(bus);
+	/* Bring controller out of reset */
+	snd_hdac_bus_exit_link_reset(bus);
+	skl_enable_miscbdcge(bus->dev, true);
 	snd_hdac_bus_parse_capabilities(bus);
 
 	/* check if PPCAP exists */
@@ -1044,7 +1075,6 @@ static int skl_probe(struct pci_dev *pci,
 
 	pci_set_drvdata(skl->pci, bus);
 
-
 	err = skl_find_machine(skl, (void *)pci_id->driver_data);
 	if (err < 0) {
 		dev_err(bus->dev, "skl_find_machine failed with err: %d\n", err);
@@ -1056,9 +1086,12 @@ static int skl_probe(struct pci_dev *pci,
 		dev_dbg(bus->dev, "error failed to register dsp\n");
 		goto out_nhlt_free;
 	}
+	// FIXME: PLB: next line was commented out
 	skl->skl_sst->enable_miscbdcge = skl_enable_miscbdcge;
 	skl->skl_sst->clock_power_gating = skl_clock_power_gating;
-
+	// FIXME: PLB: not sure what the next line does
+	skl->skl_sst->update_params = skl_tplg_be_sdw_update_params;
+ 
 	if (bus->mlcap)
 		snd_hdac_ext_bus_get_ml_capabilities(bus);
 

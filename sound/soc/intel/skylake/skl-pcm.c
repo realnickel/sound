@@ -22,6 +22,7 @@
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
+#include <linux/soundwire/sdw.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include "skl.h"
@@ -62,10 +63,18 @@ static const struct snd_pcm_hardware azx_pcm_hw = {
 	.fifo_size =		0,
 };
 
+struct skl_stream {
+	struct hdac_ext_stream *hda;
+	void *ctx;
+	char *sdw_stream_name;
+};
+
 static inline
 struct hdac_ext_stream *get_hdac_ext_stream(struct snd_pcm_substream *substream)
 {
-	return substream->runtime->private_data;
+	struct skl_stream *stream = substream->runtime->private_data;
+
+	return stream->hda;
 }
 
 static struct hdac_bus *get_bus_ctx(struct snd_pcm_substream *substream)
@@ -223,11 +232,15 @@ static int skl_pcm_open(struct snd_pcm_substream *substream,
 	struct skl_dma_params *dma_params;
 	struct skl *skl = get_skl_ctx(dai->dev);
 	struct skl_module_cfg *mconfig;
+	struct skl_stream *skl_stream;
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
 
+	skl_stream = runtime->private_data;
+
 	stream = snd_hdac_ext_stream_assign(bus, substream,
 					skl_get_host_stream_type(bus));
+
 	if (stream == NULL)
 		return -EBUSY;
 
@@ -242,7 +255,7 @@ static int skl_pcm_open(struct snd_pcm_substream *substream,
 		runtime->hw.info &= ~SNDRV_PCM_INFO_HAS_LINK_ATIME;
 	}
 
-	runtime->private_data = stream;
+	skl_stream->hda = stream;
 
 	dma_params = kzalloc(sizeof(*dma_params), GFP_KERNEL);
 	if (!dma_params)
@@ -350,7 +363,7 @@ static void skl_pcm_close(struct snd_pcm_substream *substream,
 	struct skl *skl = bus_to_skl(bus);
 	struct skl_module_cfg *mconfig;
 
-	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
+	dev_err(dai->dev, "%s: %s\n", __func__, dai->name);
 
 	snd_hdac_ext_stream_release(stream, skl_get_host_stream_type(bus));
 
@@ -388,7 +401,7 @@ static int skl_pcm_hw_free(struct snd_pcm_substream *substream,
 	struct skl_module_cfg *mconfig;
 	int ret;
 
-	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
+	dev_err(dai->dev, "%s: %s %p\n", __func__, dai->name, stream);
 
 	mconfig = skl_tplg_fe_get_cpr_module(dai, substream->stream);
 
@@ -416,7 +429,7 @@ static int skl_be_hw_params(struct snd_pcm_substream *substream,
 	p_params.s_freq = params_rate(params);
 	p_params.stream = substream->stream;
 
-	return skl_tplg_be_update_params(dai, &p_params);
+	return skl_tplg_be_update_params(dai->dev, dai, &p_params);
 }
 
 static int skl_decoupled_trigger(struct snd_pcm_substream *substream,
@@ -593,7 +606,7 @@ static int skl_link_hw_params(struct snd_pcm_substream *substream,
 	else
 		p_params.link_bps = codec_dai->driver->capture.sig_bits;
 
-	return skl_tplg_be_update_params(dai, &p_params);
+	return skl_tplg_be_update_params(dai->dev, dai, &p_params);
 }
 
 static int skl_link_pcm_prepare(struct snd_pcm_substream *substream,
@@ -1082,14 +1095,74 @@ int skl_dai_load(struct snd_soc_component *cmp, int index,
 static int skl_platform_open(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_dai_link *dai_link = rtd->dai_link;
+	struct sdw_stream_runtime *sdw_stream = NULL;
+	struct skl_stream *stream;
+	int str_len, i, ret = 0;
+	char *name;
 
-	dev_dbg(rtd->cpu_dai->dev, "In %s:%s\n", __func__,
+	dev_dbg(rtd->cpu_dai->dev, " In %s:%s\n", __func__,
 					dai_link->cpu_dai_name);
 
 	snd_soc_set_runtime_hwparams(substream, &azx_pcm_hw);
 
+	stream = runtime->private_data;
+
+	if (stream)
+		return 0;
+
+	stream = kzalloc(sizeof(*stream), GFP_KERNEL);
+
+	if (!stream)
+		return -ENOMEM;
+
+	stream->ctx = NULL;
+	stream->sdw_stream_name = NULL;
+
+	if(rtd->cpu_dai->id >= SDW_DAI_ID_RANGE_START &&
+			rtd->cpu_dai->id <= SDW_DAI_ID_RANGE_END) {
+
+		name = kzalloc(32, GFP_KERNEL);
+		if (!name)
+			return -ENOMEM;
+
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			snprintf(name, 32, "%s-Playback", rtd->cpu_dai->name);
+		else
+			snprintf(name, 32, "%s-Capture", rtd->cpu_dai->name);
+
+		stream->sdw_stream_name = name;
+
+		sdw_stream = sdw_alloc_stream(stream->sdw_stream_name);
+		if (!sdw_stream) {
+			dev_err(rtd->cpu_dai->dev,
+				"alloc stream failed for DAI %s: %d",
+				rtd->cpu_dai->name, ret);
+			ret = -ENOMEM;
+			goto error;
+		}
+
+		/* Set stream pointer on CPU DAI */
+		snd_soc_dai_set_sdw_stream(rtd->cpu_dai,
+				sdw_stream, substream->stream);
+
+		/* Set stream pointer on all CODEC DAIs */
+		for (i = 0; i < rtd->num_codecs; i++)
+			snd_soc_dai_set_sdw_stream(rtd->codec_dais[i],
+						sdw_stream, substream->stream);
+		stream->ctx = sdw_stream;
+
+	}
+
+	runtime->private_data = stream;
 	return 0;
+
+error:
+	if(stream->sdw_stream_name)
+		kfree(stream->sdw_stream_name);
+	sdw_release_stream(sdw_stream);
+	return ret;
 }
 
 static int skl_coupled_trigger(struct snd_pcm_substream *substream,
@@ -1165,15 +1238,166 @@ static int skl_coupled_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int skl_sdw_stream_trigger(struct snd_pcm_substream *substream, int cmd)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_soc_dai_link *dai_link = rtd->dai_link;
+	struct skl_stream *stream = runtime->private_data;
+	struct sdw_stream_runtime *sdw_stream = stream->ctx;
+	int ret;
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+	case SNDRV_PCM_TRIGGER_RESUME:
+
+		/*
+		 * Workaround to fix first playback/capture noise issue
+		 * TODO: Remove this when fix is done in firmware.
+		 */
+#if 0
+		if (dma->stream_type == SDW_STREAM_PCM) {
+			for (i = 0; i < dma->nr_ports; i++) {
+				port = dma->port[i];
+				intel_pdi_alh_configure(sdw, port->pdi);
+			}
+		}
+#endif
+		ret = sdw_enable_stream(sdw_stream);
+		if (ret) {
+			dev_err(rtd->cpu_dai->dev, "sdw_enable_stream: %s failed: %d",
+							sdw_stream->name, ret);
+			return ret;
+		}
+		break;
+
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_STOP:
+		ret = sdw_disable_stream(sdw_stream);
+		if (ret) {
+			dev_err(rtd->cpu_dai->dev, "sdw_disable_stream: %s failed: %d",
+							sdw_stream->name, ret);
+			return ret;
+		}
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int skl_platform_shutdown(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct skl_stream *stream = runtime->private_data;
+	struct sdw_stream_runtime *sdw_stream = NULL;
+
+	if (stream)
+		sdw_stream = stream->ctx;
+	else
+		return -EINVAL;
+
+	if (rtd->cpu_dai->id > SDW_DAI_ID_RANGE_START &&
+			rtd->cpu_dai->id < SDW_DAI_ID_RANGE_END) {
+
+		if (!sdw_stream)
+			return -EINVAL;
+
+		if(stream->sdw_stream_name)
+			kfree(stream->sdw_stream_name);
+
+		sdw_release_stream(sdw_stream);
+	}
+
+	if (!stream->hda && !stream->ctx)
+		kfree(stream);
+
+	return 0;
+
+}
+
+static int skl_platform_pcm_hw_free(struct snd_pcm_substream *substream)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct skl_stream *stream = runtime->private_data;
+	struct sdw_stream_runtime *sdw_stream = stream->ctx;
+	struct device *dev;
+	int ret = 0;
+
+	if (rtd->cpu_dai->id >= SDW_DAI_ID_RANGE_START &&
+			rtd->cpu_dai->id <= SDW_DAI_ID_RANGE_END) {
+
+		if (!sdw_stream)
+			return -EINVAL;
+
+		dev = rtd->cpu_dai->dev;
+		ret = sdw_deprepare_stream(sdw_stream);
+		if (ret)
+			dev_err(dev, "sdw_deprepare_stream: %s failed: %d",
+							sdw_stream->name, ret);
+	}
+
+	return ret;
+}
+
+static int skl_platform_pcm_prepare(struct snd_pcm_substream *substream)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct skl_stream *stream = runtime->private_data;
+	struct sdw_stream_runtime *sdw_stream = stream->ctx;
+	struct device *dev;
+	int ret = 0;
+
+	if (rtd->cpu_dai->id >= SDW_DAI_ID_RANGE_START &&
+			rtd->cpu_dai->id <= SDW_DAI_ID_RANGE_END) {
+
+		if (!sdw_stream)
+			return -EINVAL;
+
+		dev = rtd->cpu_dai->dev;
+		ret = sdw_prepare_stream(sdw_stream);
+		if (ret)
+			dev_err(dev, "sdw_prepare_stream: %s failed: %d",
+							sdw_stream->name, ret);
+	}
+
+	return ret;
+}
+
 static int skl_platform_pcm_trigger(struct snd_pcm_substream *substream,
 					int cmd)
 {
 	struct hdac_bus *bus = get_bus_ctx(substream);
+	struct hdac_ext_bus *ebus = get_bus_ctx(substream);
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct skl_stream *stream = runtime->private_data;
+	struct sdw_stream_runtime *sdw_stream = stream->ctx;
+	int ret = 0;
 
 	if (!bus->ppcap)
-		return skl_coupled_trigger(substream, cmd);
+		ret = skl_coupled_trigger(substream, cmd);
 
-	return 0;
+	if (ret < 0)
+		return ret;
+
+	if (rtd->cpu_dai->id >= SDW_DAI_ID_RANGE_START &&
+			rtd->cpu_dai->id <= SDW_DAI_ID_RANGE_END) {
+
+		if (!sdw_stream)
+			return -EINVAL;
+
+		ret = skl_sdw_stream_trigger(substream, cmd);
+	}
+
+	return ret;
 }
 
 static snd_pcm_uframes_t skl_platform_pcm_pointer
@@ -1279,10 +1503,13 @@ static const struct snd_pcm_ops skl_platform_ops = {
 	.open = skl_platform_open,
 	.ioctl = snd_pcm_lib_ioctl,
 	.trigger = skl_platform_pcm_trigger,
+	.hw_free = skl_platform_pcm_hw_free,
+	.prepare = skl_platform_pcm_prepare,
 	.pointer = skl_platform_pcm_pointer,
 	.get_time_info =  skl_get_time_info,
 	.mmap = snd_pcm_lib_default_mmap,
 	.page = snd_pcm_sgbuf_ops_page,
+	.close = skl_platform_shutdown,
 };
 
 static void skl_pcm_free(struct snd_pcm *pcm)
@@ -1447,6 +1674,7 @@ static int skl_platform_soc_probe(struct snd_soc_component *component)
 			return ret;
 		}
 		skl_populate_modules(skl);
+
 		skl->skl_sst->update_d0i3c = skl_update_d0i3c;
 		skl_dsp_enable_notification(skl->skl_sst, false);
 
@@ -1456,8 +1684,8 @@ static int skl_platform_soc_probe(struct snd_soc_component *component)
 					skl->cfg.astate_cfg);
 		}
 	}
-	pm_runtime_mark_last_busy(component->dev);
-	pm_runtime_put_autosuspend(component->dev);
+	//pm_runtime_mark_last_busy(component->dev);
+	//pm_runtime_put_autosuspend(component->dev);
 
 	return 0;
 }
