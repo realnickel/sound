@@ -2,8 +2,10 @@
 # Makefile for soundwire core
 #
 
-soundwire-bus-objs := bus_type.o bus.o slave.o mipi_disco.o sysfs.o stream.o \
-			algo_dynamic_allocation.o debugfs.o
+#Bus Objs
+soundwire-bus-objs := bus_type.o bus.o slave.o mipi_disco.o stream.o \
+			sysfs.o algo_dynamic_allocation.o debugfs.o
+
 obj-$(CONFIG_SOUNDWIRE_BUS) += soundwire-bus.o
 
 #Cadence Objs

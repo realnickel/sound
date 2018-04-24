@@ -52,6 +52,9 @@ int sdw_add_bus_master(struct sdw_bus *bus)
 	sdw_sysfs_bus_init(bus);
 	bus->debugfs = sdw_bus_debugfs_init(bus);
 
+	if (!bus->compute_params)
+		bus->compute_params = &sdw_compute_params;
+
 	/*
 	 * Device numbers in SoundWire are 0 thru 15. Enumeration device
 	 * number (0), Broadcast device number (15), Group numbers (12 and
