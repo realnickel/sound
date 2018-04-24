@@ -1343,6 +1343,9 @@ static int intel_master_add(struct sdw_bus *bus)
 	sdw_intel_ops.read_prop = intel_prop_read;
 	sdw->cdns.bus.ops = &sdw_intel_ops;
 
+	/* use generic bandwidth allocation algorithm */
+	sdw->cdns.bus.compute_params = sdw_compute_params;
+
 	/* set driver data, accessed by snd_soc_dai_set_drvdata() */
 	dev_set_drvdata(&bus->dev, &sdw->cdns);
 
