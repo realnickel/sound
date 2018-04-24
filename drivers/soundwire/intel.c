@@ -1338,6 +1338,9 @@ static int intel_master_add(struct sdw_bus *bus, void *link_ctx)
 	/* set driver data, accessed by snd_soc_dai_set_drvdata() */
 	dev_set_drvdata(bus->dev, &sdw->cdns);
 
+	/* use generic bandwidth allocation algorithm */
+	sdw->cdns.bus.compute_params = sdw_compute_params;
+
 	if (bus->prop.hw_disabled)
 		dev_info(bus->dev,
 			 "SoundWire master %d is disabled, will be ignored\n",
