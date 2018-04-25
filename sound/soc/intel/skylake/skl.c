@@ -105,8 +105,7 @@ static void skl_enable_miscbdcge(struct device *dev, bool enable)
 static void skl_clock_power_gating(struct device *dev, bool enable)
 {
 	struct pci_dev *pci = to_pci_dev(dev);
-	struct hdac_ext_bus *ebus = pci_get_drvdata(pci);
-	struct hdac_bus *bus = ebus_to_hbus(ebus);
+	struct hdac_bus *bus = pci_get_drvdata(pci);
 	u32 val;
 
 	/* Update PDCGE bit of CGCTL register */
@@ -129,7 +128,6 @@ static void skl_clock_power_gating(struct device *dev, bool enable)
  */
 static int skl_init_chip(struct hdac_bus *bus, bool full_reset)
 {
-	struct hdac_ext_bus *ebus = hbus_to_ebus(bus);
 	struct hdac_ext_link *hlink;
 	int ret;
 
@@ -137,7 +135,7 @@ static int skl_init_chip(struct hdac_bus *bus, bool full_reset)
 	ret = snd_hdac_bus_init_chip(bus, full_reset);
 
 	/* Reset stream-to-link mapping */
-	list_for_each_entry(hlink, &ebus->hlink_list, list)
+	list_for_each_entry(hlink, &bus->hlink_list, list)
 		bus->io_ops->reg_writel(0, hlink->ml_addr + AZX_REG_ML_LOSIDV);
 
 	skl_enable_miscbdcge(bus->dev, true);
