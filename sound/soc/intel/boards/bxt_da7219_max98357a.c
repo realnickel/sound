@@ -34,8 +34,8 @@
 #define DUAL_CHANNEL		2
 #define QUAD_CHANNEL		4
 
-//#define SUPPORT_SPEAKER
-#define SUPPORT_CODEC
+#define SUPPORT_SPEAKER
+//#define SUPPORT_CODEC
 //#define SUPPORT_DMIC
 //#define SUPPORT_HDMI
 
