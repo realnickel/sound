@@ -116,6 +116,11 @@ static u8 tdf8532_single_read(struct tdf8532_priv *dev_data,
 
 	*repl_buff = kzalloc(len, GFP_KERNEL);
 
+	if (!*repl_buff) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
 	ret = i2c_master_recv(dev_data->i2c, *repl_buff, len);
 
 	print_hex_dump_debug("tdf8532-codec: Rx:", DUMP_PREFIX_NONE, 32, 1,
@@ -125,15 +130,14 @@ static u8 tdf8532_single_read(struct tdf8532_priv *dev_data,
 		dev_err(dev,
 			"i2c recv packet returned: %d (expected: %d)\n",
 			ret, len);
-		goto out_free;
+		ret = -EIO;
+		goto out;
 	}
 
 	return len;
 
-out_free:
-	kfree(*repl_buff);
-	repl_buff = NULL;
 out:
+	repl_buff = NULL;
 	return ret;
 }
 
@@ -176,8 +180,10 @@ static int tdf8532_wait_state(struct tdf8532_priv *dev_data, u8 req_state,
 	} while (time_before(jiffies, timeout_point) &&
 		 status_repl->state != req_state);
 
-	if (status_repl->state == req_state)
-		return 0;
+	if (status_repl->state == req_state) {
+		ret = 0;
+		goto out;
+	}
 
 	ret = -ETIME;
 
