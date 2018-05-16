@@ -294,6 +294,8 @@ static int _skl_resume(struct hdac_bus *bus)
 {
 	struct skl *skl = bus_to_skl(bus);
 
+	msleep(5000);
+
 	skl_init_pci(skl);
 	skl_init_chip(bus, true);
 
