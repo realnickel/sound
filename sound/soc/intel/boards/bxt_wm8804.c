@@ -183,7 +183,14 @@ static int snd_rpi_hifiberry_digi_hw_params(struct snd_pcm_substream *substream,
 	/* set sampling frequency status bits */
 	snd_soc_update_bits(codec, WM8804_SPDTX4, 0x0f, sampling_freq);
 
-	return snd_soc_dai_set_bclk_ratio(cpu_dai,64);
+	//return snd_soc_dai_set_bclk_ratio(cpu_dai,64);
+
+	ret = snd_soc_dai_set_bclk_ratio(cpu_dai,64);
+	if (ret < 0) {
+		dev_err(codec->dev,
+		"Failed to bclk ratio: %d\n", ret);
+	}
+	return 0;
 }
 
 /* machine stream operations */
