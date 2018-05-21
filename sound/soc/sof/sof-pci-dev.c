@@ -39,6 +39,14 @@ static struct snd_soc_acpi_mach sof_bxt_machines[] = {
 		.sof_tplg_filename = "intel/sof-apl-pcm512x.tplg",
 		.asoc_plat_name = "0000:00:0e.0",
 	},
+	{
+		.id = "1AEC8804",
+		.drv_name = "bxt-wm8804",
+		.sof_fw_filename = "intel/sof-apl.ri",
+		.sof_tplg_filename = "intel/sof-apl-wm8804.tplg",
+		.asoc_plat_name = "0000:00:0e.0",
+	},
+	{},
 };
 
 static struct sof_dev_desc bxt_desc = {
