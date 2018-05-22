@@ -40,6 +40,7 @@ static const char * const pcm512x_supply_names[PCM512x_NUM_SUPPLIES] = {
 struct pcm512x_priv {
 	struct regmap *regmap;
 	struct clk *sclk;
+	int sysclk;
 	struct regulator_bulk_data supplies[PCM512x_NUM_SUPPLIES];
 	struct notifier_block supply_nb[PCM512x_NUM_SUPPLIES];
 	int fmt;
@@ -520,6 +521,25 @@ static int pcm512x_hw_rule_rate(struct snd_pcm_hw_params *params,
 				   ARRAY_SIZE(ranges), ranges, 0);
 }
 
+static int sclk_get_rate(struct pcm512x_priv *pcm512x)
+{
+	if (!IS_ERR(pcm512x->sclk))
+		return clk_get_rate(pcm512x->sclk);
+	else
+		return pcm512x->sysclk;
+}
+
+static int pcm512x_set_sysclk(struct snd_soc_dai *dai,
+			      int clk_id, unsigned int freq, int dir)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
+
+	pcm512x->sysclk = freq;
+
+	return 0;
+}
+
 static int pcm512x_dai_startup_master(struct snd_pcm_substream *substream,
 				      struct snd_soc_dai *dai)
 {
@@ -529,7 +549,7 @@ static int pcm512x_dai_startup_master(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_constraint_ratnums *constraints_no_pll;
 	struct snd_ratnum *rats_no_pll;
 
-	if (IS_ERR(pcm512x->sclk)) {
+	if (IS_ERR(pcm512x->sclk) && !pcm512x->sysclk) {
 		dev_err(dev, "Need SCLK for master mode: %ld\n",
 			PTR_ERR(pcm512x->sclk));
 		return PTR_ERR(pcm512x->sclk);
@@ -552,7 +572,7 @@ static int pcm512x_dai_startup_master(struct snd_pcm_substream *substream,
 	if (!rats_no_pll)
 		return -ENOMEM;
 	constraints_no_pll->rats = rats_no_pll;
-	rats_no_pll->num = clk_get_rate(pcm512x->sclk) / 64;
+	rats_no_pll->num = sclk_get_rate(pcm512x) / 64;
 	rats_no_pll->den_min = 1;
 	rats_no_pll->den_max = 128;
 	rats_no_pll->den_step = 1;
@@ -862,7 +882,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 	}
 
 	if (!pcm512x->pll_out) {
-		sck_rate = clk_get_rate(pcm512x->sclk);
+		sck_rate = sclk_get_rate(pcm512x);
 		bclk_div = params->rate_den * 64 / lrclk_div;
 		bclk_rate = DIV_ROUND_CLOSEST(sck_rate, bclk_div);
 
@@ -879,7 +899,7 @@ static int pcm512x_set_dividers(struct snd_soc_dai *dai,
 		}
 		bclk_rate = ret;
 
-		pllin_rate = clk_get_rate(pcm512x->sclk);
+		pllin_rate = sclk_get_rate(pcm512x);
 
 		sck_rate = pcm512x_find_sck(dai, bclk_rate);
 		if (!sck_rate)
@@ -1349,6 +1369,7 @@ static const struct snd_soc_dai_ops pcm512x_dai_ops = {
 	.hw_params = pcm512x_hw_params,
 	.set_fmt = pcm512x_set_fmt,
 	.set_tdm_slot = pcm512x_set_tdm_slot,
+	.set_sysclk = pcm512x_set_sysclk,
 };
 
 static struct snd_soc_dai_driver pcm512x_dai = {
