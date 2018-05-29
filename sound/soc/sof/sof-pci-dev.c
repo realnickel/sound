@@ -14,6 +14,8 @@
 #include <linux/platform_device.h>
 #include <linux/firmware.h>
 #include <sound/pcm.h>
+#include <sound/soc-acpi.h>
+#include <sound/soc-acpi-intel-match.h>
 #include <sound/sof.h>
 #include <linux/pci.h>
 #include <linux/acpi.h>
@@ -24,32 +26,8 @@
 #include "intel/hda.h"
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_APOLLOLAKE)
-static struct snd_soc_acpi_mach sof_bxt_machines[] = {
-	{
-		.id = "DLGS7219",
-		.drv_name = "bxt_da7219_max98357a_i2s",
-		.sof_fw_filename = "intel/sof-apl.ri",
-		.sof_tplg_filename = "intel/sof-apl.tplg",
-		.asoc_plat_name = "0000:00:0e.0",
-	},
-	{
-		.id = "104C5122",
-		.drv_name = "bxt-pcm512x",
-		.sof_fw_filename = "intel/sof-apl.ri",
-		.sof_tplg_filename = "intel/sof-apl-pcm512x.tplg",
-		.asoc_plat_name = "0000:00:0e.0",
-	},
-	{
-		.id = "INT34C3",
-		.drv_name = "bxt_tdf8532",
-		.sof_fw_filename = "intel/sof-apl.ri",
-		.sof_tplg_filename = "intel/sof-apl-tdf8532.tplg",
-		.asoc_plat_name = "0000:00:0e.0",
-	},
-};
-
 static struct sof_dev_desc bxt_desc = {
-	.machines		= sof_bxt_machines,
+	.machines		= snd_soc_acpi_intel_bxt_machines,
 	.resindex_lpe_base	= 0,
 	.resindex_pcicfg_base	= -1,
 	.resindex_imr_base	= -1,
@@ -61,19 +39,8 @@ static struct sof_dev_desc bxt_desc = {
 #endif
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_GEMINILAKE)
-static struct snd_soc_acpi_mach sof_glk_machines[] = {
-	{
-		.id = "DLGS7219",
-		.drv_name = "bxt_da7219_max98357a_i2s",
-		.sof_fw_filename = "intel/sof-glk.ri",
-		.sof_tplg_filename = "intel/sof-glk.tplg",
-		.asoc_plat_name = "0000:00:0e.0",
-	},
-	{},
-};
-
 static struct sof_dev_desc glk_desc = {
-	.machines		= sof_glk_machines,
+	.machines		= snd_soc_acpi_intel_glk_machines,
 	.resindex_lpe_base	= 0,
 	.resindex_pcicfg_base	= -1,
 	.resindex_imr_base	= -1,
@@ -109,19 +76,8 @@ static const struct sof_dev_desc byt_desc = {
 #endif
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_CANNONLAKE)
-static struct snd_soc_acpi_mach sof_cnl_machines[] = {
-	{
-		.id = "INT34C2",
-		.drv_name = "cnl_alc700_i2s",
-		.sof_fw_filename = "intel/sof-cnl.ri",
-		.sof_tplg_filename = "intel/sof-cnl.tplg",
-		.asoc_plat_name = "0000:00:0e.0",
-	},
-	{}
-};
-
 static const struct sof_dev_desc cnl_desc = {
-	.machines		= sof_cnl_machines,
+	.machines		= snd_soc_acpi_intel_cnl_machines,
 	.resindex_lpe_base	= 0,
 	.resindex_pcicfg_base	= -1,
 	.resindex_imr_base	= -1,
@@ -133,47 +89,8 @@ static const struct sof_dev_desc cnl_desc = {
 #endif
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_SKYLAKE)
-static struct snd_soc_acpi_codecs skl_codecs = {
-	.num_codecs = 1,
-	.codecs = {"10508825"}
-};
-
-static struct snd_soc_acpi_mach sof_skl_machines[] = {
-	{
-		.id = "INT343A",
-		.drv_name = "skl_alc286s_i2s",
-		.fw_filename = "intel/dsp_fw_release.bin",
-		.sof_fw_filename = "intel/sof-skl.ri",
-		.sof_tplg_filename = "intel/sof-skl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "INT343B",
-		.drv_name = "skl_n88l25_s4567",
-		.fw_filename = "intel/dsp_fw_release.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &skl_codecs,
-		//.pdata = &skl_dmic_data
-		.sof_fw_filename = "intel/sof-skl.ri",
-		.sof_tplg_filename = "intel/sof-skl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "MX98357A",
-		.drv_name = "skl_n88l25_m98357a",
-		.fw_filename = "intel/dsp_fw_release.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &skl_codecs,
-		//.pdata = &skl_dmic_data
-		.sof_fw_filename = "intel/sof-skl.ri",
-		.sof_tplg_filename = "intel/sof-skl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{}
-};
-
 static struct sof_dev_desc skl_desc = {
-	.machines		= sof_skl_machines,
+	.machines		= snd_soc_acpi_intel_skl_machines,
 	.resindex_lpe_base	= 0,
 	.resindex_pcicfg_base	= -1,
 	.resindex_imr_base	= -1,
@@ -185,104 +102,8 @@ static struct sof_dev_desc skl_desc = {
 #endif
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_KABYLAKE)
-static struct snd_soc_acpi_codecs kbl_codecs = {
-	.num_codecs = 1,
-	.codecs = {"10508825"}
-};
-
-static struct snd_soc_acpi_codecs kbl_poppy_codecs = {
-	.num_codecs = 1,
-	.codecs = {"10EC5663"}
-};
-
-static struct snd_soc_acpi_codecs kbl_5663_5514_codecs = {
-	.num_codecs = 2,
-	.codecs = {"10EC5663", "10EC5514"}
-};
-
-static struct snd_soc_acpi_codecs kbl_7219_98357_codecs = {
-	.num_codecs = 1,
-	.codecs = {"MX98357A"}
-};
-
-static struct snd_soc_acpi_mach sof_kbl_machines[] = {
-	{
-		.id = "INT343A",
-		.drv_name = "kbl_alc286s_i2s",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "INT343B",
-		.drv_name = "kbl_n88l25_s4567",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &kbl_codecs,
-		//.pdata = &skl_dmic_data,
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "MX98357A",
-		.drv_name = "kbl_n88l25_m98357a",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &kbl_codecs,
-		//.pdata = &skl_dmic_data,
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "MX98927",
-		.drv_name = "kbl_r5514_5663_max",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &kbl_5663_5514_codecs,
-		//.pdata = &skl_dmic_data,
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "MX98927",
-		.drv_name = "kbl_rt5663_m98927",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &kbl_poppy_codecs,
-		//.pdata = &skl_dmic_data,
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "10EC5663",
-		.drv_name = "kbl_rt5663",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-	{
-		.id = "DLGS7219",
-		.drv_name = "kbl_da7219_max98357a",
-		.fw_filename = "intel/dsp_fw_kbl.bin",
-		.machine_quirk = snd_soc_acpi_codec_list,
-		.quirk_data = &kbl_7219_98357_codecs,
-		//.pdata = &skl_dmic_data,
-		.sof_fw_filename = "intel/sof-kbl.ri",
-		.sof_tplg_filename = "intel/sof-kbl.tplg",
-		.asoc_plat_name = "0000:00:1f.03",
-	},
-
-	{}
-};
-
 static struct sof_dev_desc kbl_desc = {
-	.machines		= sof_kbl_machines,
+	.machines		= snd_soc_acpi_intel_kbl_machines,
 	.resindex_lpe_base	= 0,
 	.resindex_pcicfg_base	= -1,
 	.resindex_imr_base	= -1,
