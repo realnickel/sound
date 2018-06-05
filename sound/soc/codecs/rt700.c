@@ -1065,13 +1065,14 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 	stream_config.direction = direction;
 
 	dev_err(dai->dev, "3 %s %s",__func__, dai->name);
-	num_channels = params_channels(params);
-	port_config.ch_mask = (1 << (num_channels)) - 1;
-	port_config.num = port;
+
 	if (stream->num_channels)
 		num_channels = stream->num_channels;
 	else
 		num_channels = params_channels(params);
+
+	port_config.ch_mask = (1 << (num_channels)) - 1;
+	port_config.num = port;
 
 	retval = sdw_stream_add_slave(rt700->slave, &stream_config,
 					&port_config, 1, stream->sdw_stream);
@@ -1080,7 +1081,7 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 		return retval;
 	}
 
-	dev_err(dai->dev, "4 %s %s",__func__, dai->name);
+	dev_err(dai->dev, "4 %s %s %d",__func__, dai->name, num_channels);
 	switch (params_rate(params)) {
 	/* bit 14 0:48K 1:44.1K */
 	/* bit 15 Stream Type 0:PCM 1:Non-PCM, should always be PCM */
