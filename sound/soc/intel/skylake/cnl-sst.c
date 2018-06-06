@@ -209,11 +209,10 @@ static int cnl_load_base_firmware(struct sst_dsp *ctx)
 		goto cnl_load_base_firmware_failed;
 	}
 
-//	ret = wait_event_timeout(cnl->boot_wait, cnl->boot_complete,
-//				 msecs_to_jiffies(SKL_IPC_BOOT_MSECS));
+	ret = wait_event_timeout(cnl->boot_wait, cnl->boot_complete,
+				 msecs_to_jiffies(SKL_IPC_BOOT_MSECS));
 
 	msleep(SKL_IPC_BOOT_MSECS);
-	ret = 1;
 	if (ret == 0) {
 		dev_err(ctx->dev, "FW ready timed-out\n");
 		cnl_dsp_disable_core(ctx, SKL_DSP_CORE0_MASK);

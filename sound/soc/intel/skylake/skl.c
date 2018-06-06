@@ -603,13 +603,11 @@ static void skl_probe_work(struct work_struct *work)
 	struct hdac_ext_link *hlink = NULL;
 	int err;
 
-#if 0
 	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
 		err = skl_i915_init(bus);
 		if (err < 0)
 			return;
 	}
-#endif
 
 	err = skl_init_chip(bus, true);
 	if (err < 0) {
@@ -620,7 +618,7 @@ static void skl_probe_work(struct work_struct *work)
 	/* codec detection */
 	if (!bus->codec_mask)
 		dev_info(bus->dev, "no hda codecs found!\n");
-#if 0
+
 	/* create codec instances */
 	skl_codec_create(ebus);
 
@@ -631,7 +629,6 @@ static void skl_probe_work(struct work_struct *work)
 			return;
 		}
 	}
-#endif
 	/* register platform dai and controls */
 	err = skl_platform_register(bus->dev);
 	if (err < 0)
@@ -643,8 +640,8 @@ static void skl_probe_work(struct work_struct *work)
 		snd_hdac_ext_bus_link_put(ebus, hlink);
 
 	/* configure PM */
-//	pm_runtime_put_noidle(bus->dev);
-//	pm_runtime_allow(bus->dev);
+	pm_runtime_put_noidle(bus->dev);
+	pm_runtime_allow(bus->dev);
 	skl->init_done = 1;
 
 	return;
@@ -712,14 +709,6 @@ static int skl_first_init(struct hdac_ext_bus *ebus)
 
 	skl_init_chip(bus, true);
 
-	/* TODO: Shreyas to check if required */
-	skl_enable_miscbdcge(bus->dev, false);
-	snd_hdac_chip_writew(bus, STATESTS, STATESTS_INT_MASK);
-	/* reset controller */
-	snd_hdac_bus_enter_link_reset(bus);
-	/* Bring controller out of reset */
-	snd_hdac_bus_exit_link_reset(bus);
-	skl_enable_miscbdcge(bus->dev, true);
 	snd_hdac_bus_parse_capabilities(bus);
 
 	if (skl_acquire_irq(ebus, 0) < 0)
