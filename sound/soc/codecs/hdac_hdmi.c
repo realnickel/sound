@@ -945,8 +945,6 @@ static int hdac_hdmi_create_pin_port_muxs(struct hdac_ext_device *edev,
 
 	snprintf(kc_name, NAME_SIZE, "Pin %d port %d Input",
 						pin->nid, port->id);
-
-	//kc->name = devm_kstrdup(&edev->hdac.dev, kc_name, GFP_KERNEL);
 	kc->name = devm_kstrdup(&edev->hdev.dev, kc_name, GFP_KERNEL);
 	if (!kc->name)
 		return -ENOMEM;
@@ -1452,10 +1450,6 @@ static int hdac_hdmi_parse_and_map_nid(struct hdac_ext_device *edev,
 {
 	hda_nid_t nid;
 	int i, num_nodes;
-	struct hdac_device *hdac = &edev->hdac;
-	struct hdac_hdmi_priv *hdmi = edev->private_data;
-	struct hdac_hdmi_cvt *temp_cvt, *cvt_next;
-	struct hdac_hdmi_pin *temp_pin, *pin_next;
 	struct hdac_hdmi_cvt *temp_cvt, *cvt_next;
 	struct hdac_hdmi_pin *temp_pin, *pin_next;
 	struct hdac_hdmi_priv *hdmi = hdev_to_hdmi_priv(&edev->hdev);
