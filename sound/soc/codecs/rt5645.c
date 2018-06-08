@@ -3739,22 +3739,6 @@ static const struct dmi_system_id dmi_platform_data[] = {
 	{ }
 };
 
-static struct rt5645_platform_data kahlee_platform_data = {
-	.dmic1_data_pin = RT5645_DMIC_DATA_GPIO5,
-	.dmic2_data_pin = RT5645_DMIC_DATA_IN2P,
-	.jd_mode = 3,
-};
-
-static struct dmi_system_id dmi_platform_amd_stoney[] = {
-	{
-		.ident = "Chrome Kahlee",
-		.matches = {
-			DMI_MATCH(DMI_PRODUCT_NAME, "Kahlee"),
-		},
-	},
-	{ }
-};
-
 static bool rt5645_check_dp(struct device *dev)
 {
 	if (device_property_present(dev, "realtek,in2-differential") ||
@@ -3789,7 +3773,6 @@ static int rt5645_i2c_probe(struct i2c_client *i2c,
 	int ret, i;
 	unsigned int val;
 	struct regmap *regmap;
-	int timeout = TIME_TO_POWER_MS;
 
 	rt5645 = devm_kzalloc(&i2c->dev, sizeof(struct rt5645_priv),
 				GFP_KERNEL);
@@ -3809,16 +3792,6 @@ static int rt5645_i2c_probe(struct i2c_client *i2c,
 		rt5645->pdata = *pdata;
 	else if (rt5645_check_dp(&i2c->dev))
 		rt5645_parse_dt(rt5645, &i2c->dev);
-	else if (dmi_check_system(dmi_platform_intel_braswell))
-		rt5645->pdata = general_platform_data;
-	else if (dmi_check_system(dmi_platform_gpd_win))
-		rt5645->pdata = gpd_win_platform_data;
-	else if (dmi_check_system(dmi_platform_asus_t100ha))
-		rt5645->pdata = general_platform_data2;
-	else if (dmi_check_system(dmi_platform_minix_z83_4))
-		rt5645->pdata = minix_z83_4_platform_data;
-	else if (dmi_check_system(dmi_platform_amd_stoney))
-		rt5645->pdata = kahlee_platform_data;
 	else
 		rt5645->pdata = jd_mode3_platform_data;
 
@@ -3877,15 +3850,6 @@ static int rt5645_i2c_probe(struct i2c_client *i2c,
 	 */
 	msleep(TIME_TO_POWER_MS);
 	regmap_read(regmap, RT5645_VENDOR_ID2, &val);
-
-	/*
-	 * Read for 400msec, as it is the interval required between
-	 * read and power On.
-	 */
-	while (val != RT5645_DEVICE_ID && val != RT5650_DEVICE_ID && --timeout) {
-		msleep(1);
-		regmap_read(regmap, RT5645_VENDOR_ID2, &val);
-	}
 
 	switch (val) {
 	case RT5645_DEVICE_ID:
