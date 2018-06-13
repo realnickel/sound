@@ -32,9 +32,9 @@
 #define DUAL_CHANNEL		2
 #define QUAD_CHANNEL		4
 
-#define SUPPORT_SPEAKER
+//#define SUPPORT_SPEAKER
 //#define SUPPORT_CODEC
-//#define SUPPORT_DMIC
+#define SUPPORT_DMIC
 //#define SUPPORT_HDMI
 
 #ifdef SUPPORT_CODEC
@@ -72,7 +72,7 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 #ifdef SUPPORT_CODEC
 	struct snd_soc_dapm_context *dapm = w->dapm;
 	struct snd_soc_card *card = dapm->card;
-	struct snd_soc_dai *codec_dai;	
+	struct snd_soc_dai *codec_dai;
 
 	/* FIXME: Codec not supported */
 	codec_dai = snd_soc_card_get_codec_dai(card, BXT_DIALOG_CODEC_DAI);
@@ -106,7 +106,7 @@ static const struct snd_kcontrol_new broxton_controls[] = {
 #ifdef SUPPORT_SPEAKER
 	SOC_DAPM_PIN_SWITCH("Spk"),
 #endif
-	
+
 };
 
 static const struct snd_soc_dapm_widget broxton_widgets[] = {
@@ -114,11 +114,11 @@ static const struct snd_soc_dapm_widget broxton_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 #endif
-	
+
 #ifdef SUPPORT_SPEAKER
 	SND_SOC_DAPM_SPK("Spk", NULL),
 #endif
-	
+
 #ifdef SUPPORT_DMIC
 	SND_SOC_DAPM_MIC("SoC DMIC", NULL),
 #endif
@@ -128,7 +128,7 @@ static const struct snd_soc_dapm_widget broxton_widgets[] = {
 	SND_SOC_DAPM_SPK("HDMI2", NULL),
 	SND_SOC_DAPM_SPK("HDMI3", NULL),
 #endif
-	
+
 	SND_SOC_DAPM_SUPPLY("Platform Clock", SND_SOC_NOPM, 0, 0,
 			platform_clock_control,	SND_SOC_DAPM_POST_PMD|SND_SOC_DAPM_PRE_PMU),
 };
@@ -241,7 +241,7 @@ static int broxton_da7219_codec_init(struct snd_soc_pcm_runtime *rtd)
 #ifdef SUPPORT_DMIC
 	snd_soc_dapm_ignore_suspend(&rtd->card->dapm, "SoC DMIC");
 #endif
-	
+
 	return ret;
 }
 #endif
@@ -274,7 +274,7 @@ static int broxton_da7219_fe_init(struct snd_soc_pcm_runtime *rtd)
 
 	dapm = snd_soc_component_get_dapm(component);
 	snd_soc_dapm_ignore_suspend(dapm, "Reference Capture");
-	
+
 	return 0;
 }
 #endif
@@ -512,7 +512,7 @@ static struct snd_soc_dai_link broxton_dais[] = {
 		.dpcm_playback = 1,
 	},
 #endif
-	
+
 #ifdef SUPPORT_CODEC
 	{
 		/* SSP1 - Codec */
