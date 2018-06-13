@@ -337,6 +337,7 @@ static const struct snd_soc_ops broxton_da7219_fe_ops = {
 	.startup = bxt_fe_startup,
 };
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 #ifdef SUPPORT_DMIC
 static int broxton_dmic_fixup(struct snd_soc_pcm_runtime *rtd,
 			struct snd_pcm_hw_params *params)
@@ -375,6 +376,7 @@ static const struct snd_pcm_hw_constraint_list constraints_16000 = {
 	.count = ARRAY_SIZE(rates_16000),
 	.list  = rates_16000,
 };
+#endif
 #endif
 
 #if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
@@ -539,16 +541,19 @@ static struct snd_soc_dai_link broxton_dais[] = {
 
 #ifdef SUPPORT_DMIC
 	{
-		.name = "dmic01",
-		.id = 2,
-		.cpu_dai_name = "DMIC01 Pin",
-		.codec_name = "dmic-codec",
-		.codec_dai_name = "dmic-hifi",
-		.platform_name = "0000:00:0e.0",
+		.name = "DMIC0",
+		.id = 0,
+		.cpu_dai_name = "sof-audio",
+		.codec_name = "snd-soc-dummy",
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.platform_name = "sof-audio",
 		.ignore_suspend = 1,
-		.be_hw_params_fixup = broxton_dmic_fixup,
+		.be_hw_params_fixup = NULL,
+		.dpcm_playback = 0,
 		.dpcm_capture = 1,
 		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_PDM,
+		.init = NULL,
 	},
 	#endif
 
