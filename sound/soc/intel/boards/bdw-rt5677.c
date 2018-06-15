@@ -81,9 +81,11 @@ static const struct snd_soc_dapm_route bdw_rt5677_map[] = {
 	{"DMIC L2", NULL, "Local DMICs"},
 	{"DMIC R2", NULL, "Local DMICs"},
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	/* CODEC BE connections */
 	{"SSP0 CODEC IN", NULL, "AIF1 Capture"},
 	{"AIF1 Playback", NULL, "SSP0 CODEC OUT"},
+#endif
 };
 
 static const struct snd_kcontrol_new bdw_rt5677_controls[] = {
