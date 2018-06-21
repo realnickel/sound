@@ -61,12 +61,14 @@ static const struct snd_soc_dapm_route cht_audio_map[] = {
 	{"MIC2", NULL, "Int Mic"},
 	{"HSMIC1", NULL, "Headset Mic"},
 	{"HSMIC2", NULL, "Headset Mic"},
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	{"Playback", NULL, "ssp2 Tx"},
 	{"ssp2 Tx", NULL, "codec_out0"},
 	{"ssp2 Tx", NULL, "codec_out1"},
 	{"codec_in0", NULL, "ssp2 Rx" },
 	{"codec_in1", NULL, "ssp2 Rx" },
 	{"ssp2 Rx", NULL, "Capture"},
+#endif
 };
 
 static const struct snd_kcontrol_new cht_mc_controls[] = {
