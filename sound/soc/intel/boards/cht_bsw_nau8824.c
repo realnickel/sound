@@ -107,13 +107,6 @@ static int cht_codec_init(struct snd_soc_pcm_runtime *runtime)
 	struct snd_soc_component *component = codec_dai->component;
 	int ret, jack_type;
 
-	/* TDM 4 slots 24 bit, set Rx & Tx bitmask to 4 active slots */
-	ret = snd_soc_dai_set_tdm_slot(codec_dai, 0xf, 0x1, 4, 24);
-	if (ret < 0) {
-		dev_err(runtime->dev, "can't set codec TDM slot %d\n", ret);
-		return ret;
-	}
-
 	/* NAU88L24 supports 4 butons headset detection
 	 * KEY_MEDIA
 	 * KEY_VOICECOMMAND
@@ -148,6 +141,7 @@ static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		SNDRV_PCM_HW_PARAM_CHANNELS);
 	struct snd_mask *fmt =
 		hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT);
+	int ret;
 
 	/* The DSP will covert the FE rate to 48k, stereo, 24bits */
 	rate->min = rate->max = 48000;
@@ -156,6 +150,25 @@ static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 	/* set SSP2 to 24-bit */
 	snd_mask_none(fmt);
 	params_set_format(params, SNDRV_PCM_FORMAT_S24_LE);
+
+	/*
+	 * Default mode for SSP configuration is TDM 4 slot
+	 */
+	ret = snd_soc_dai_set_fmt(rtd->codec_dai,
+				  SND_SOC_DAIFMT_DSP_B |
+				  SND_SOC_DAIFMT_IB_NF |
+				  SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0) {
+		dev_err(rtd->dev, "can't set format to TDM %d\n", ret);
+		return ret;
+	}
+
+	/* TDM 4 slots 24 bit, set Rx & Tx bitmask to 4 active slots */
+	ret = snd_soc_dai_set_tdm_slot(rtd->codec_dai, 0xf, 0x1, 4, 24);
+	if (ret < 0) {
+		dev_err(rtd->dev, "can't set codec TDM slot %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
@@ -219,8 +232,6 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.no_pcm = 1,
 		.codec_dai_name = NAU8824_CODEC_DAI,
 		.codec_name = "i2c-10508824:00",
-		.dai_fmt = SND_SOC_DAIFMT_DSP_B | SND_SOC_DAIFMT_IB_NF
-			| SND_SOC_DAIFMT_CBS_CFS,
 		.init = cht_codec_init,
 		.be_hw_params_fixup = cht_codec_fixup,
 		.dpcm_playback = 1,
