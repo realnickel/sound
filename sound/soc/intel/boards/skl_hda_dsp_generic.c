@@ -145,8 +145,10 @@ static int skl_hda_audio_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	ret = skl_hda_fill_card_info(pdata);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Unsupported HDAudio/iDisp configuration found\n");
 		return ret;
+	}
 
 	ctx->pcm_count = hda_soc_card.num_links;
 	ctx->platform_name = pdata->platform;

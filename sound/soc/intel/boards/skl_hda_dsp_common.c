@@ -22,13 +22,16 @@ int skl_hda_hdmi_add_pcm(struct snd_soc_card *card, int device)
 	struct skl_hda_private *ctx = snd_soc_card_get_drvdata(card);
 	struct skl_hda_hdmi_pcm *pcm;
 	char dai_name[NAME_SIZE];
-	static int i = 1;	/* hdmi codec dai name starts from index 1 */
+	int i;
 
 	pcm = devm_kzalloc(card->dev, sizeof(*pcm), GFP_KERNEL);
 	if (!pcm)
 		return -ENOMEM;
 
-	snprintf(dai_name, sizeof(dai_name), "intel-hdmi-hifi%d", i++);
+	/* hdmi codec dai name starts from index 1 */
+	i = device - card->num_links + 1;
+
+	snprintf(dai_name, sizeof(dai_name), "intel-hdmi-hifi%d", i);
 	pcm->codec_dai = snd_soc_card_get_codec_dai(card, dai_name);
 	if (!pcm->codec_dai)
 		return -EINVAL;
