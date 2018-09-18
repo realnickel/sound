@@ -430,7 +430,9 @@ static int tm2_probe(struct platform_device *pdev)
 	struct snd_soc_card *card = &tm2_card;
 	struct tm2_machine_priv *priv;
 	struct device_node *cpu_dai_node, *codec_dai_node;
-	int ret, i;
+	struct of_phandle_args args;
+	struct snd_soc_dai_link *dai_link;
+	int num_codecs, ret, i;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -478,12 +480,37 @@ static int tm2_probe(struct platform_device *pdev)
 		goto cpu_dai_node_put;
 	}
 
-	for (i = 0; i < card->num_links; i++) {
-		card->dai_link[i].cpu_name = NULL;
-		card->dai_link[i].platform_name = NULL;
-		card->dai_link[i].codec_of_node = codec_dai_node;
-		card->dai_link[i].cpu_of_node = cpu_dai_node;
-		card->dai_link[i].platform_of_node = cpu_dai_node;
+	/* Initialize WM5110 - I2S and HDMI - I2S1 DAI links */
+	for_each_card_prelinks(card, i, dai_link) {
+		unsigned int dai_index = 0; /* WM5110 */
+
+		dai_link->cpu_name = NULL;
+		dai_link->platform_name = NULL;
+
+		if (num_codecs > 1 && i == card->num_links - 1)
+			dai_index = 1; /* HDMI */
+
+		dai_link->codec_of_node = codec_dai_node[dai_index];
+		dai_link->cpu_of_node = cpu_dai_node[dai_index];
+		dai_link->platform_of_node = cpu_dai_node[dai_index];
+	}
+
+	if (num_codecs > 1) {
+		/* HDMI DAI link (I2S1) */
+		i = card->num_links - 1;
+
+		ret = of_parse_phandle_with_fixed_args(dev->of_node,
+						"audio-codec", 0, 1, &args);
+		if (ret) {
+			dev_err(dev, "audio-codec property parse error\n");
+			goto dai_node_put;
+		}
+
+		ret = snd_soc_get_dai_name(&args, &card->dai_link[i].codec_dai_name);
+		if (ret) {
+			dev_err(dev, "Unable to get codec_dai_name\n");
+			goto dai_node_put;
+		}
 	}
 
 	ret = devm_snd_soc_register_component(dev, &tm2_component,
