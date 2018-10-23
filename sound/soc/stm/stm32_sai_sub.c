@@ -193,6 +193,219 @@ static const struct regmap_config stm32_sai_sub_regmap_config_h7 = {
 	.fast_io = true,
 };
 
+static int snd_pcm_iec958_info(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_IEC958;
+	uinfo->count = 1;
+
+	return 0;
+}
+
+static int snd_pcm_iec958_get(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *uctl)
+{
+	struct stm32_sai_sub_data *sai = snd_kcontrol_chip(kcontrol);
+
+	mutex_lock(&sai->ctrl_lock);
+	memcpy(uctl->value.iec958.status, sai->iec958.status, 4);
+	mutex_unlock(&sai->ctrl_lock);
+
+	return 0;
+}
+
+static int snd_pcm_iec958_put(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *uctl)
+{
+	struct stm32_sai_sub_data *sai = snd_kcontrol_chip(kcontrol);
+
+	mutex_lock(&sai->ctrl_lock);
+	memcpy(sai->iec958.status, uctl->value.iec958.status, 4);
+	mutex_unlock(&sai->ctrl_lock);
+
+	return 0;
+}
+
+static const struct snd_kcontrol_new iec958_ctls = {
+	.access = (SNDRV_CTL_ELEM_ACCESS_READWRITE |
+			SNDRV_CTL_ELEM_ACCESS_VOLATILE),
+	.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+	.name = SNDRV_CTL_NAME_IEC958("", PLAYBACK, DEFAULT),
+	.info = snd_pcm_iec958_info,
+	.get = snd_pcm_iec958_get,
+	.put = snd_pcm_iec958_put,
+};
+
+struct stm32_sai_mclk_data {
+	struct clk_hw hw;
+	unsigned long freq;
+	struct stm32_sai_sub_data *sai_data;
+};
+
+#define to_mclk_data(_hw) container_of(_hw, struct stm32_sai_mclk_data, hw)
+#define STM32_SAI_MAX_CLKS 1
+
+static int stm32_sai_get_clk_div(struct stm32_sai_sub_data *sai,
+				 unsigned long input_rate,
+				 unsigned long output_rate)
+{
+	int version = sai->pdata->conf->version;
+	int div;
+
+	div = DIV_ROUND_CLOSEST(input_rate, output_rate);
+	if (div > SAI_XCR1_MCKDIV_MAX(version)) {
+		dev_err(&sai->pdev->dev, "Divider %d out of range\n", div);
+		return -EINVAL;
+	}
+	dev_dbg(&sai->pdev->dev, "SAI divider %d\n", div);
+
+	if (input_rate % div)
+		dev_dbg(&sai->pdev->dev,
+			"Rate not accurate. requested (%ld), actual (%ld)\n",
+			output_rate, input_rate / div);
+
+	return div;
+}
+
+static int stm32_sai_set_clk_div(struct stm32_sai_sub_data *sai,
+				 unsigned int div)
+{
+	int version = sai->pdata->conf->version;
+	int ret, cr1, mask;
+
+	if (div > SAI_XCR1_MCKDIV_MAX(version)) {
+		dev_err(&sai->pdev->dev, "Divider %d out of range\n", div);
+		return -EINVAL;
+	}
+
+	mask = SAI_XCR1_MCKDIV_MASK(SAI_XCR1_MCKDIV_WIDTH(version));
+	cr1 = SAI_XCR1_MCKDIV_SET(div);
+	ret = regmap_update_bits(sai->regmap, STM_SAI_CR1_REGX, mask, cr1);
+	if (ret < 0)
+		dev_err(&sai->pdev->dev, "Failed to update CR1 register\n");
+
+	return ret;
+}
+
+static long stm32_sai_mclk_round_rate(struct clk_hw *hw, unsigned long rate,
+				      unsigned long *prate)
+{
+	struct stm32_sai_mclk_data *mclk = to_mclk_data(hw);
+	struct stm32_sai_sub_data *sai = mclk->sai_data;
+	int div;
+
+	div = stm32_sai_get_clk_div(sai, *prate, rate);
+	if (div < 0)
+		return div;
+
+	mclk->freq = *prate / div;
+
+	return mclk->freq;
+}
+
+static unsigned long stm32_sai_mclk_recalc_rate(struct clk_hw *hw,
+						unsigned long parent_rate)
+{
+	struct stm32_sai_mclk_data *mclk = to_mclk_data(hw);
+
+	return mclk->freq;
+}
+
+static int stm32_sai_mclk_set_rate(struct clk_hw *hw, unsigned long rate,
+				   unsigned long parent_rate)
+{
+	struct stm32_sai_mclk_data *mclk = to_mclk_data(hw);
+	struct stm32_sai_sub_data *sai = mclk->sai_data;
+	unsigned int div;
+	int ret;
+
+	div = stm32_sai_get_clk_div(sai, parent_rate, rate);
+	if (div < 0)
+		return div;
+
+	ret = stm32_sai_set_clk_div(sai, div);
+	if (ret)
+		return ret;
+
+	mclk->freq = rate;
+
+	return 0;
+}
+
+static int stm32_sai_mclk_enable(struct clk_hw *hw)
+{
+	struct stm32_sai_mclk_data *mclk = to_mclk_data(hw);
+	struct stm32_sai_sub_data *sai = mclk->sai_data;
+
+	dev_dbg(&sai->pdev->dev, "Enable master clock\n");
+
+	return regmap_update_bits(sai->regmap, STM_SAI_CR1_REGX,
+				  SAI_XCR1_MCKEN, SAI_XCR1_MCKEN);
+}
+
+static void stm32_sai_mclk_disable(struct clk_hw *hw)
+{
+	struct stm32_sai_mclk_data *mclk = to_mclk_data(hw);
+	struct stm32_sai_sub_data *sai = mclk->sai_data;
+
+	dev_dbg(&sai->pdev->dev, "Disable master clock\n");
+
+	regmap_update_bits(sai->regmap, STM_SAI_CR1_REGX, SAI_XCR1_MCKEN, 0);
+}
+
+static const struct clk_ops mclk_ops = {
+	.enable = stm32_sai_mclk_enable,
+	.disable = stm32_sai_mclk_disable,
+	.recalc_rate = stm32_sai_mclk_recalc_rate,
+	.round_rate = stm32_sai_mclk_round_rate,
+	.set_rate = stm32_sai_mclk_set_rate,
+};
+
+static int stm32_sai_add_mclk_provider(struct stm32_sai_sub_data *sai)
+{
+	struct clk_hw *hw;
+	struct stm32_sai_mclk_data *mclk;
+	struct device *dev = &sai->pdev->dev;
+	const char *pname = __clk_get_name(sai->sai_ck);
+	char *mclk_name, *p, *s = (char *)pname;
+	int ret, i = 0;
+
+	mclk = devm_kzalloc(dev, sizeof(*mclk), GFP_KERNEL);
+	if (!mclk)
+		return -ENOMEM;
+
+	mclk_name = devm_kcalloc(dev, sizeof(char),
+				 SAI_MCLK_NAME_LEN, GFP_KERNEL);
+	if (!mclk_name)
+		return -ENOMEM;
+
+	/*
+	 * Forge mclk clock name from parent clock name and suffix.
+	 * String after "_" char is stripped in parent name.
+	 */
+	p = mclk_name;
+	while (*s && *s != '_' && (i < (SAI_MCLK_NAME_LEN - 7))) {
+		*p++ = *s++;
+		i++;
+	}
+	STM_SAI_IS_SUB_A(sai) ? strcat(p, "a_mclk") : strcat(p, "b_mclk");
+
+	mclk->hw.init = CLK_HW_INIT(mclk_name, pname, &mclk_ops, 0);
+	mclk->sai_data = sai;
+	hw = &mclk->hw;
+
+	dev_dbg(dev, "Register master clock %s\n", mclk_name);
+	ret = devm_clk_hw_register(&sai->pdev->dev, hw);
+	if (ret) {
+		dev_err(dev, "mclk register returned %d\n", ret);
+		return ret;
+	}
+	sai->sai_mclk = hw->clk;
+
+	/* register mclk provider */
+	return devm_of_clk_add_hw_provider(dev, of_clk_hw_simple_get, hw);
+}
+
 static irqreturn_t stm32_sai_isr(int irq, void *devid)
 {
 	struct stm32_sai_sub_data *sai = (struct stm32_sai_sub_data *)devid;
