@@ -226,6 +226,52 @@ config SND_HDA_POWER_SAVE_DEFAULT
 	  The default time-out value in seconds for HD-audio automatic
 	  power-save mode.  0 means to disable the power-save mode.
 
+if SND_HDA_INTEL
+
+config SND_HDA_INTEL_DISABLE_SKL
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  Skylake machines
+
+config SND_HDA_INTEL_DISABLE_APL
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  Broxton/ApolloLake machines
+
+config SND_HDA_INTEL_DISABLE_KBL
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  KabyLake machines
+
+config SND_HDA_INTEL_DISABLE_GLK
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  GeminiLake machines
+
+config SND_HDA_INTEL_DISABLE_CNL
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  CannonLake machines
+
+config SND_HDA_INTEL_DISABLE_CFL
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  CoffeeLake machines
+
+config SND_HDA_INTEL_DISABLE_ICL
+	bool
+	help
+	  This option disables HD-audio legacy for
+	  IceLake machines
+
+endif ## SND_HDA_INTEL
+
 endif
 
 endmenu

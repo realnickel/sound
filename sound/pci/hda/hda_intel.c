@@ -2404,36 +2404,50 @@ static const struct pci_device_id azx_ids[] = {
 	/* Sunrise Point */
 	{ PCI_DEVICE(0x8086, 0xa170),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE },
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_SKL)
 	/* Sunrise Point-LP */
 	{ PCI_DEVICE(0x8086, 0x9d70),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE },
+#endif
 	/* Kabylake */
 	{ PCI_DEVICE(0x8086, 0xa171),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE },
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_KBL)
 	/* Kabylake-LP */
 	{ PCI_DEVICE(0x8086, 0x9d71),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE },
+#endif
 	/* Kabylake-H */
 	{ PCI_DEVICE(0x8086, 0xa2f0),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE },
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_CFL)
 	/* Coffelake */
 	{ PCI_DEVICE(0x8086, 0xa348),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE},
+#endif
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_CNL)
 	/* Cannonlake */
 	{ PCI_DEVICE(0x8086, 0x9dc8),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE},
+#endif
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_ICL)
 	/* Icelake */
 	{ PCI_DEVICE(0x8086, 0x34c8),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE},
+#endif
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_APL)
 	/* Broxton-P(Apollolake) */
 	{ PCI_DEVICE(0x8086, 0x5a98),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_BROXTON },
+#endif
 	/* Broxton-T */
 	{ PCI_DEVICE(0x8086, 0x1a98),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_BROXTON },
+#if !IS_ENABLED(CONFIG_SND_HDA_INTEL_DISABLE_GLK)
 	/* Gemini-Lake */
 	{ PCI_DEVICE(0x8086, 0x3198),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_BROXTON },
+#endif
 	/* Haswell */
 	{ PCI_DEVICE(0x8086, 0x0a0c),
 	  .driver_data = AZX_DRIVER_HDMI | AZX_DCAPS_INTEL_HASWELL },
