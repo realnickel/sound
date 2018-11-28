@@ -415,6 +415,7 @@ static const struct snd_soc_ops kabylake_rt5663_fe_ops = {
 static int kabylake_ssp_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_pcm_hw_params *params)
 {
+#if 0
 	struct snd_interval *rate = hw_param_interval(params,
 			SNDRV_PCM_HW_PARAM_RATE);
 	struct snd_interval *channels = hw_param_interval(params,
@@ -444,6 +445,19 @@ static int kabylake_ssp_fixup(struct snd_soc_pcm_runtime *rtd,
 		snd_mask_set_format(fmt, SNDRV_PCM_FORMAT_S16_LE);
 
 	return 0;
+#else
+        struct snd_interval *rate = hw_param_interval(params,
+                       SNDRV_PCM_HW_PARAM_RATE);
+       struct snd_interval *channels = hw_param_interval(params,
+                       SNDRV_PCM_HW_PARAM_CHANNELS);
+        struct snd_mask *fmt = hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT);
+
+       rate->min = rate->max = 48000;
+       channels->min = channels->max = 2;
+       snd_mask_none(fmt);
+       snd_mask_set_format(fmt, SNDRV_PCM_FORMAT_S16_LE);
+       return 0; 
+#endif
 }
 
 static int kabylake_rt5663_hw_params(struct snd_pcm_substream *substream,
