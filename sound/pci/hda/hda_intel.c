@@ -2497,11 +2497,13 @@ static const struct pci_device_id azx_ids[] = {
 	/* ICH10 */
 	{ PCI_DEVICE(0x8086, 0x3a6e),
 	  .driver_data = AZX_DRIVER_ICH | AZX_DCAPS_INTEL_ICH },
+#if 0
 	/* Generic Intel */
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_ANY_ID),
 	  .class = PCI_CLASS_MULTIMEDIA_HD_AUDIO << 8,
 	  .class_mask = 0xffffff,
 	  .driver_data = AZX_DRIVER_ICH | AZX_DCAPS_NO_ALIGN_BUFSIZE },
+#endif
 	/* ATI SB 450/600/700/800/900 */
 	{ PCI_DEVICE(0x1002, 0x437b),
 	  .driver_data = AZX_DRIVER_ATI | AZX_DCAPS_PRESET_ATI_SB },

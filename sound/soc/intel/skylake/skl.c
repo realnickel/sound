@@ -141,6 +141,8 @@ static int skl_init_chip(struct hdac_bus *bus, bool full_reset)
 
 	skl_enable_miscbdcge(bus->dev, true);
 
+	dev_info(bus->dev, "completed skl_init_chip, err %d\n", ret);
+
 	return ret;
 }
 
@@ -800,10 +802,13 @@ static void skl_probe_work(struct work_struct *work)
 	struct hdac_ext_link *hlink = NULL;
 	int err;
 
+	dev_err(bus->dev, "skl_probe_work\n");
 	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
 		err = skl_i915_init(bus);
-		if (err < 0)
+		if (err < 0) {
+			dev_err(bus->dev, "i915_init_failed with err: %d\n", err);
 			return;
+		}
 	}
 
 	err = skl_init_chip(bus, true);
@@ -852,9 +857,11 @@ static void skl_probe_work(struct work_struct *work)
 	pm_runtime_allow(bus->dev);
 	skl->init_done = 1;
 
+	dev_err(bus->dev, "skl_probe_work complete\n");
 	return;
 
 out_err:
+	dev_err(bus->dev, "skl_probe_work error\n");
 	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI))
 		err = snd_hdac_display_power(bus, false);
 }
@@ -951,7 +958,9 @@ static int skl_first_init(struct hdac_bus *bus)
 	if (!pb_streams && !cp_streams) {
 		dev_err(bus->dev, "no streams found in GCAP definitions?\n");
 		return -EIO;
-	}
+	} else
+		dev_info(bus->dev, "GCAP: found % playback streams and %d capture streams\n",
+			 pb_streams, cp_streams);
 
 	bus->num_streams = cp_streams + pb_streams;
 
@@ -977,6 +986,8 @@ static int skl_first_init(struct hdac_bus *bus)
 	/* initialize chip */
 	skl_init_pci(skl);
 
+	dev_info(bus->dev, "before init_chip\n");
+		 
 	return skl_init_chip(bus, true);
 }
 
@@ -995,9 +1006,11 @@ static int skl_probe(struct pci_dev *pci,
 	bus = skl_to_bus(skl);
 
 	err = skl_first_init(bus);
-	if (err < 0)
+	if (err < 0) {
+		dev_err(bus->dev, "skl_first_init failed with err: %d\n", err);
 		goto out_free;
-
+	}
+	
 	skl->pci_id = pci->device;
 
 	device_disable_async_suspend(bus->dev);
@@ -1005,27 +1018,43 @@ static int skl_probe(struct pci_dev *pci,
 	skl->nhlt = skl_nhlt_init(bus->dev);
 
 	if (skl->nhlt == NULL) {
+#if !IS_ENABLED(CONFIG_SND_SOC_INTEL_SKYLAKE_HDAUDIO_CODEC)
+		dev_err(bus->dev, "no nhlt info found\n");
 		err = -ENODEV;
 		goto out_free;
+#else
+		dev_warn(bus->dev, "no nhlt info found, continuing to try to enable HDaudio codec\n");
+#endif
+	} else {
+
+		err = skl_nhlt_create_sysfs(skl);
+		if (err < 0) {
+			dev_err(bus->dev, "skl_nhlt_create_sysfs failed with err: %d\n", err);
+			goto out_nhlt_free;
+		}
+
+		skl_nhlt_update_topology_bin(skl);
+
+		dev_err(bus->dev, "before skl_clock_device_register\n");
+		/* create device for dsp clk */
+		err = skl_clock_device_register(skl);
+		if (err < 0) {
+			dev_err(bus->dev, "skl_clock_device_register failed with err: %d\n", err);
+			goto out_clk_free;
+		}
 	}
-
-	err = skl_nhlt_create_sysfs(skl);
-	if (err < 0)
-		goto out_nhlt_free;
-
-	skl_nhlt_update_topology_bin(skl);
-
+	
 	pci_set_drvdata(skl->pci, bus);
 
-	/* create device for dsp clk */
-	err = skl_clock_device_register(skl);
-	if (err < 0)
-		goto out_clk_free;
 
+	dev_err(bus->dev, "before skl_find_machine \n");
 	err = skl_find_machine(skl, (void *)pci_id->driver_data);
-	if (err < 0)
+	if (err < 0) {
+		dev_err(bus->dev, "skl_find_machine failed with err: %d\n", err);
 		goto out_nhlt_free;
+	}
 
+	dev_err(bus->dev, "before skl_init_dsp\n");
 	err = skl_init_dsp(skl);
 	if (err < 0) {
 		dev_dbg(bus->dev, "error failed to register dsp\n");
@@ -1037,13 +1066,18 @@ static int skl_probe(struct pci_dev *pci,
 	if (bus->mlcap)
 		snd_hdac_ext_bus_get_ml_capabilities(bus);
 
+	dev_err(bus->dev, "before snd_hdac_bus_stop_chip\n");
 	snd_hdac_bus_stop_chip(bus);
 
 	/* create device for soc dmic */
+	dev_err(bus->dev, "before skl_dmic_device_register\n");
 	err = skl_dmic_device_register(skl);
-	if (err < 0)
+	if (err < 0) {
+		dev_err(bus->dev, "skl_dmic_device_register failed with err: %d\n", err);
 		goto out_dsp_free;
+	}
 
+	dev_err(bus->dev, "before schedule_work\n");
 	schedule_work(&skl->probe_work);
 
 	return 0;
