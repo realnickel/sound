@@ -255,6 +255,8 @@ int skl_dsp_disable_core(struct sst_dsp *ctx, unsigned int core_mask)
 {
 	int ret;
 
+	dev_err(ctx->dev, "skl_dsp_disabled_core:reset\n");
+	
 	ret = skl_dsp_reset_core(ctx, core_mask);
 	if (ret < 0) {
 		dev_err(ctx->dev, "dsp core reset failed: core_mask %x\n",
@@ -262,6 +264,7 @@ int skl_dsp_disable_core(struct sst_dsp *ctx, unsigned int core_mask)
 		return ret;
 	}
 
+	dev_err(ctx->dev, "skl_dsp_disabled_core:power_down\n");
 	/* power down core*/
 	ret = skl_dsp_core_power_down(ctx, core_mask);
 	if (ret < 0) {
@@ -283,7 +286,10 @@ int skl_dsp_boot(struct sst_dsp *ctx)
 {
 	int ret;
 
+	dev_err(ctx->dev, "skl_dsp_boot\n");
 	if (is_skl_dsp_core_enable(ctx, SKL_DSP_CORE0_MASK)) {
+
+	  	dev_err(ctx->dev, "skl_dsp_boot: core enabled\n");
 		ret = skl_dsp_reset_core(ctx, SKL_DSP_CORE0_MASK);
 		if (ret < 0) {
 			dev_err(ctx->dev, "dsp core0 reset fail: %d\n", ret);
@@ -296,6 +302,8 @@ int skl_dsp_boot(struct sst_dsp *ctx)
 			return ret;
 		}
 	} else {
+	  	dev_err(ctx->dev, "skl_dsp_boot: core not enabled\n");
+	  
 		ret = skl_dsp_disable_core(ctx, SKL_DSP_CORE0_MASK);
 		if (ret < 0) {
 			dev_err(ctx->dev, "dsp core0 disable fail: %d\n", ret);

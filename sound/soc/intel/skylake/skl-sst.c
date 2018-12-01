@@ -105,7 +105,8 @@ static int skl_load_base_firmware(struct sst_dsp *ctx)
 	stripped_fw.size = ctx->fw->size;
 
 	skl_dsp_strip_extended_manifest(&stripped_fw);
-
+	
+	dev_err(ctx->dev, "plb: trying to boot\n");
 	ret = skl_dsp_boot(ctx);
 	if (ret < 0) {
 		dev_err(ctx->dev, "Boot dsp core failed ret: %d\n", ret);

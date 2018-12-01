@@ -920,7 +920,8 @@ static int skl_first_init(struct hdac_bus *bus)
 	int err;
 	unsigned short gcap;
 	int cp_streams, pb_streams, start_idx;
-
+	u32 fncfg;
+	
 	err = pci_request_regions(pci, "Skylake HD audio");
 	if (err < 0)
 		return err;
@@ -937,6 +938,14 @@ static int skl_first_init(struct hdac_bus *bus)
 	snd_hdac_bus_parse_capabilities(bus);
 
 	/* check if dsp is there */
+	pci_read_config_dword(pci, 0x0, &fncfg);
+	dev_err(bus->dev, "plb: fncfg 0x%x\n", fncfg);
+//	if (fncfg & BIT(2)) {
+//		dev_err(bus->dev, "fncfg: DSP not enabled\n");
+//		return -ENODEV;
+//	}
+
+	
 	if (!bus->ppcap) {
 		dev_err(bus->dev, "bus ppcap not set, DSP not present?\n");
 		return -ENODEV;
@@ -959,7 +968,7 @@ static int skl_first_init(struct hdac_bus *bus)
 		dev_err(bus->dev, "no streams found in GCAP definitions?\n");
 		return -EIO;
 	} else
-		dev_info(bus->dev, "GCAP: found % playback streams and %d capture streams\n",
+		dev_info(bus->dev, "GCAP: found %d playback streams and %d capture streams\n",
 			 pb_streams, cp_streams);
 
 	bus->num_streams = cp_streams + pb_streams;
