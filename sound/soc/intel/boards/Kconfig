@@ -259,6 +259,7 @@ config SND_SOC_INTEL_BXT_PCM512x_MACH
 	tristate "Broxton with TI PCM512x codec"
 	depends on MFD_INTEL_LPSS && I2C && ACPI
 	select SND_SOC_PCM512x_I2C
+	select SND_SOC_PCM512X_SCLK_ENABLE
 	help
 	  This adds support for ASoC machine driver for Broxton platforms
 	  with TI PCM512x I2S audio codec.
@@ -378,3 +379,11 @@ config SND_SOC_INTEL_SKL_HDA_DSP_GENERIC_MACH
 endif ## SND_SOC_INTEL_SKYLAKE_HDAUDIO_CODEC || SND_SOC_SOF_HDA_AUDIO_CODEC
 
 endif ## SND_SOC_INTEL_MACH
+
+config SND_SOC_PCM512X_SCLK_ENABLE
+	tristate "PCM512x SCLK Platform Driver Enable"
+	depends on COMMON_CLK
+	help
+	  This enables a platform driver which exposes an SCLK needed
+	  for e.g. Hifiberry DAC+ PRO devices. This option is not
+	  needed for DT platforms.
