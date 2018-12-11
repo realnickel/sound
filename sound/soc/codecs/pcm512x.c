@@ -38,6 +38,7 @@ static const char * const pcm512x_supply_names[PCM512x_NUM_SUPPLIES] = {
 };
 
 struct pcm512x_priv {
+	struct platform_device *pdev_clk;
 	struct regmap *regmap;
 	struct clk *sclk;
 	struct regulator_bulk_data supplies[PCM512x_NUM_SUPPLIES];
@@ -1391,6 +1392,15 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	dev_set_drvdata(dev, pcm512x);
 	pcm512x->regmap = regmap;
 
+#if IS_ENABLED(CONFIG_SND_SOC_PCM512X_SCLK_ENABLE)
+	pcm512x->pdev_clk =
+		platform_device_register_data(dev, "clk-pcm512x-sclk",
+					      -1,
+					      regmap, sizeof(struct regmap *));
+	if (IS_ERR_OR_NULL(pcm512x->pdev_clk))
+		dev_err(dev, "Failed to register PCM512x CLK driver, trying to continue\n");
+#endif
+
 	for (i = 0; i < ARRAY_SIZE(pcm512x->supplies); i++)
 		pcm512x->supplies[i].supply = pcm512x_supply_names[i];
 
@@ -1436,7 +1446,11 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 		goto err;
 	}
 
+#if IS_ENABLED(CONFIG_SND_SOC_PCM512X_SCLK_ENABLE)
 	pcm512x->sclk = devm_clk_get(dev, NULL);
+#else
+	pcm512x->sclk = devm_clk_get(dev, "clk-pcm512-sclk");
+#endif
 	if (PTR_ERR(pcm512x->sclk) == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
 	if (!IS_ERR(pcm512x->sclk)) {
@@ -1525,6 +1539,8 @@ void pcm512x_remove(struct device *dev)
 	pm_runtime_disable(dev);
 	if (!IS_ERR(pcm512x->sclk))
 		clk_disable_unprepare(pcm512x->sclk);
+	if (!IS_ERR_OR_NULL(pcm512x->pdev_clk))
+		platform_device_unregister(pcm512x->pdev_clk);
 	regulator_bulk_disable(ARRAY_SIZE(pcm512x->supplies),
 			       pcm512x->supplies);
 }
