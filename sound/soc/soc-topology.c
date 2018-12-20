@@ -49,6 +49,9 @@
 #define SOC_TPLG_PASS_START	SOC_TPLG_PASS_MANIFEST
 #define SOC_TPLG_PASS_END	SOC_TPLG_PASS_LINK
 
+/* FIXME: what is the relevant pass for hwdep ? */
+#define SOC_TPLG_PASS_HWDEP  SOC_TPLG_PASS_MIXER
+
 /* topology context */
 struct soc_tplg {
 	const struct firmware *fw;
@@ -2379,6 +2382,70 @@ static int soc_valid_header(struct soc_tplg *tplg,
 	return 1;
 }
 
+/* create a HWDep interface from the HWDep object */
+static int soc_tplg_hwdep_create(struct soc_tplg *tplg,
+	struct snd_soc_tplg_hwdep *hwdep)
+{
+	dev_dbg(tplg->dev, "ASoC: creating hwdep\n");
+
+	dev_dbg(tplg->dev, "ASoC: hwdep name %s id %d iface %d bytes_max %d\n",
+		hwdep->name, hwdep->id, hwdep->iface, hwdep->bytes_max);
+
+	/* Do something useful */
+
+	return 0;
+}
+
+static int soc_tplg_hwdep_load(struct soc_tplg *tplg,
+	struct snd_soc_tplg_hdr *hdr)
+{
+	struct snd_soc_tplg_hwdep *hwdep;
+	int count = hdr->count;
+	int i;
+
+	if (tplg->pass != SOC_TPLG_PASS_HWDEP)
+		return 0;
+
+	dev_err(tplg->dev, "ASoC: count %d for HWDep elems\n",
+		count);
+
+	/* FIXME: is a hwdep a dynamic object ? */
+
+	/* check the element size and count */
+	hwdep = (struct snd_soc_tplg_hwdep *)tplg->pos;
+	if (hwdep->size > sizeof(struct snd_soc_tplg_hwdep)) {
+		dev_err(tplg->dev, "ASoC: invalid size %d for HWDep elems\n",
+			hwdep->size);
+		return -EINVAL;
+	}
+
+	if (soc_tplg_check_elem_count(tplg,
+		hwdep->size, count,
+		hdr->payload_size, "HWDep")) {
+		dev_err(tplg->dev, "ASoC: invalid count %d for HWDep elems\n",
+			count);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < count; i++) {
+		hwdep = (struct snd_soc_tplg_hwdep *)tplg->pos;
+
+		/* create the hwdep interface */
+		soc_tplg_hwdep_create(tplg, hwdep);
+
+		/* offset by version-specific struct size and
+		 * real priv data size
+		 * FIXME: There is no priv for now
+		 */
+		tplg->pos += hwdep->size;
+	}
+
+	dev_dbg(tplg->dev, "ASoC: adding %d HWDep(s)\n", count);
+
+	return 0;
+}
+
+
 /* check header type and call appropriate handler */
 static int soc_tplg_load_header(struct soc_tplg *tplg,
 	struct snd_soc_tplg_hdr *hdr)
@@ -2411,6 +2478,8 @@ static int soc_tplg_load_header(struct soc_tplg *tplg,
 		return soc_tplg_link_elems_load(tplg, hdr);
 	case SND_SOC_TPLG_TYPE_MANIFEST:
 		return soc_tplg_manifest_load(tplg, hdr);
+	case SND_SOC_TPLG_TYPE_HWDEP:
+		return soc_tplg_hwdep_load(tplg, hdr);
 	default:
 		/* bespoke vendor data object */
 		return soc_tplg_vendor_load(tplg, hdr);
