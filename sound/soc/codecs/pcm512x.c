@@ -10,6 +10,8 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/clk.h>
+#include <linux/gpio/driver.h>
+#include <linux/gpio/machine.h>
 #include <linux/kernel.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
@@ -32,6 +34,7 @@ static const char * const pcm512x_supply_names[PCM512x_NUM_SUPPLIES] = {
 struct pcm512x_priv {
 	struct regmap *regmap;
 	struct clk *sclk;
+	struct gpio_chip chip;
 	struct regulator_bulk_data supplies[PCM512x_NUM_SUPPLIES];
 	struct notifier_block supply_nb[PCM512x_NUM_SUPPLIES];
 	int fmt;
@@ -1503,6 +1506,121 @@ const struct regmap_config pcm512x_regmap = {
 };
 EXPORT_SYMBOL_GPL(pcm512x_regmap);
 
+static int pcm512x_gpio_get_direction(struct gpio_chip *chip,
+				      unsigned int offset)
+{
+	struct pcm512x_priv *pcm512x = gpiochip_get_data(chip);
+	unsigned int val;
+	int ret;
+
+	ret = regmap_read(pcm512x->regmap, PCM512x_GPIO_EN, &val);
+	if (ret < 0)
+		return ret;
+
+	val = (val >> offset) & 1;
+
+	/* val is 0 for input, 1 for output, return inverted */
+	return !val;
+}
+
+static int pcm512x_gpio_direction_input(struct gpio_chip *chip,
+					unsigned int offset)
+{
+	struct pcm512x_priv *pcm512x = gpiochip_get_data(chip);
+	unsigned int mask;
+
+	mask = 1 << offset;
+
+	regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_EN,
+			   mask, 0);
+	return 0;
+}
+
+static int pcm512x_gpio_direction_output(struct gpio_chip *chip,
+					 unsigned int offset,
+					 int value)
+{
+	struct pcm512x_priv *pcm512x = gpiochip_get_data(chip);
+	unsigned int mask;
+	unsigned int bits;
+	unsigned int reg;
+
+	mask = 1 << offset;
+	bits = value << offset;
+
+	/* select Register GPIOx output for OUTPUT_x (1..6) */
+	reg = PCM512x_GPIO_OUTPUT_1 + offset;
+	regmap_update_bits(pcm512x->regmap, reg, 0x0f, 0x02);
+
+	/* enable output x */
+	regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_EN,
+			   mask, mask);
+
+	/* set value */
+	regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_CONTROL_1,
+			   mask, bits);
+
+	return 0;
+}
+
+static int pcm512x_gpio_get(struct gpio_chip *chip, unsigned int offset)
+{
+	struct pcm512x_priv *pcm512x = gpiochip_get_data(chip);
+	unsigned int val;
+	int ret;
+
+	ret = regmap_read(pcm512x->regmap, PCM512x_GPIO_CONTROL_1, &val);
+	if (ret < 0)
+		return ret;
+
+	val = (val >> offset) & 1;
+
+	return val;
+}
+
+static void pcm512x_gpio_set(struct gpio_chip *chip, unsigned int offset,
+			     int value)
+{
+	struct pcm512x_priv *pcm512x = gpiochip_get_data(chip);
+	unsigned int bits;
+	unsigned int mask;
+
+	bits = value << (offset);
+	mask = 1 << offset;
+
+	regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_CONTROL_1, mask, bits);
+}
+
+/* list human-readable names, makes GPIOLIB usage straightforward */
+static const char * const pcm512x_gpio_names[] = {
+	"PCM512x-GPIO1", "PCM512x-GPIO2", "PCM512x-GPIO3",
+	"PCM512x-GPIO4", "PCM512x-GPIO5", "PCM512x-GPIO6"
+};
+
+static const struct gpio_chip template_chip = {
+	.label			= "pcm512x-gpio",
+	.names			= pcm512x_gpio_names,
+	.owner			= THIS_MODULE,
+	.get_direction		= pcm512x_gpio_get_direction,
+	.direction_input	= pcm512x_gpio_direction_input,
+	.direction_output	= pcm512x_gpio_direction_output,
+	.get			= pcm512x_gpio_get,
+	.set			= pcm512x_gpio_set,
+};
+
+static struct gpiod_lookup_table pcm512x_gpios_table = {
+	/* .dev_id not set */
+	.table = {
+		GPIO_LOOKUP("pcm512x-gpio", 0, "PCM512x-GPIO1", GPIO_ACTIVE_HIGH),
+		GPIO_LOOKUP("pcm512x-gpio", 1, "PCM512x-GPIO2", GPIO_ACTIVE_HIGH),
+		GPIO_LOOKUP("pcm512x-gpio", 2, "PCM512x-GPIO3", GPIO_ACTIVE_HIGH),
+		GPIO_LOOKUP("pcm512x-gpio", 3, "PCM512x-GPIO4", GPIO_ACTIVE_HIGH),
+		GPIO_LOOKUP("pcm512x-gpio", 4, "PCM512x-GPIO5", GPIO_ACTIVE_HIGH),
+		GPIO_LOOKUP("pcm512x-gpio", 5, "PCM512x-GPIO6", GPIO_ACTIVE_HIGH),
+		{ },
+	},
+};
+
 int pcm512x_probe(struct device *dev, struct regmap *regmap)
 {
 	struct pcm512x_priv *pcm512x;
@@ -1562,6 +1680,20 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 		dev_err(dev, "Failed to reset device: %d\n", ret);
 		goto err;
 	}
+
+	/* expose 6 GPIO pins, numbered from 1 to 6 */
+	pcm512x->chip = template_chip;
+	pcm512x->chip.parent = dev;
+	pcm512x->chip.base = -1; /* let gpiolib select the base */
+	pcm512x->chip.ngpio = 6;
+
+	ret = devm_gpiochip_add_data(dev, &pcm512x->chip, pcm512x);
+	if (ret != 0) {
+		dev_err(dev, "Failed to register gpio chip: %d\n", ret);
+		goto err;
+	}
+
+	gpiod_add_lookup_table(&pcm512x_gpios_table);
 
 	pcm512x->sclk = devm_clk_get(dev, NULL);
 	if (PTR_ERR(pcm512x->sclk) == -EPROBE_DEFER) {
