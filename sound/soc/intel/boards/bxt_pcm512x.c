@@ -12,6 +12,7 @@
 
 #include <linux/module.h>
 #include <linux/acpi.h>
+#include <linux/gpio/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <asm/platform_sst_audio.h>
@@ -26,6 +27,7 @@
 
 struct bxt_card_private {
 	struct list_head hdmi_pcm_list;
+	struct gpio_desc *gpio_4;
 };
 
 #if IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)
@@ -130,10 +132,11 @@ static int codec_fixup(struct snd_soc_pcm_runtime *rtd,
 static int aif1_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_component *codec = rtd->codec_dai->component;
+	struct bxt_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
 
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_CONTROL_1,
-				      0x08, 0x08);
+	/* Turn LED on */
+	if (!IS_ERR_OR_NULL(ctx->gpio_4))
+		gpiod_set_value(ctx->gpio_4, 1);
 
 	return snd_pcm_hw_constraint_single(substream->runtime,
 			SNDRV_PCM_HW_PARAM_RATE, 48000);
@@ -142,21 +145,15 @@ static int aif1_startup(struct snd_pcm_substream *substream)
 static void aif1_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_component *codec = rtd->codec_dai->component;
+	struct bxt_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
 
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_CONTROL_1,
-				      0x08, 0x00);
+	/* Turn LED off */
+	if (!IS_ERR_OR_NULL(ctx->gpio_4))
+		gpiod_set_value(ctx->gpio_4, 0);
 }
 
 static int init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_component *codec = rtd->codec_dai->component;
-
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_EN, 0x08, 0x08);
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_OUTPUT_4, 0x0f, 0x02);
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_CONTROL_1,
-				      0x08, 0x08);
-
 	return 0;
 }
 
@@ -283,7 +280,32 @@ static int bxt_pcm512x_probe(struct platform_device *pdev)
 		return ret_val;
 	}
 	platform_set_drvdata(pdev, card);
+
+	/*
+	 * Enable GPIO4 for LED
+	 * we cannot use devm_gpiod_get since the device is NULL
+	 */
+	ctx->gpio_4 = gpiod_get(NULL, "PCM512x-GPIO4",
+				GPIOD_OUT_LOW);
+
+	/* don't stop on errors, just log messages */
+	if (IS_ERR_OR_NULL(ctx->gpio_4))
+		dev_err(&pdev->dev, "gpio4 not found\n");
+	else if (gpiod_direction_output(ctx->gpio_4, 0))
+		dev_err(&pdev->dev, "could not set gpio4 direction\n");
+
 	return ret_val;
+}
+
+static int bxt_pcm512x_remove(struct platform_device *pdev)
+{
+	struct bxt_card_private *ctx = platform_get_drvdata(pdev);
+
+	/* only deal with gpios */
+	if (!IS_ERR_OR_NULL(ctx->gpio_4))
+		gpiod_put(ctx->gpio_4);
+
+	return 0;
 }
 
 static struct platform_driver bxt_pcm521x_driver = {
@@ -291,6 +313,7 @@ static struct platform_driver bxt_pcm521x_driver = {
 		.name = "bxt-pcm512x",
 	},
 	.probe = bxt_pcm512x_probe,
+	.remove = bxt_pcm512x_remove,
 };
 module_platform_driver(bxt_pcm521x_driver);
 
