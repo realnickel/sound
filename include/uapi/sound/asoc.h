@@ -115,7 +115,8 @@
 #define SND_SOC_TPLG_TYPE_BACKEND_LINK	10
 #define SND_SOC_TPLG_TYPE_PDATA		11
 #define SND_SOC_TPLG_TYPE_DAI		12
-#define SND_SOC_TPLG_TYPE_MAX		SND_SOC_TPLG_TYPE_DAI
+#define SND_SOC_TPLG_TYPE_HWDEP		13
+#define SND_SOC_TPLG_TYPE_MAX		SND_SOC_TPLG_TYPE_HWDEP
 
 /* vendor block IDs - please add new vendor types to end */
 #define SND_SOC_TPLG_TYPE_VENDOR_FW	1000
@@ -373,7 +374,8 @@ struct snd_soc_tplg_manifest {
 	__le32 pcm_elems;	/* number of PCM elements */
 	__le32 dai_link_elems;	/* number of DAI link elements */
 	__le32 dai_elems;	/* number of physical DAI elements */
-	__le32 reserved[20];	/* reserved for new ABI element types */
+	__le32 hwdep_elems;	/* number of HWdep elements */
+	__le32 reserved[16];	/* reserved for new ABI element types */
 	struct snd_soc_tplg_private priv;
 } __attribute__((packed));
 
@@ -440,6 +442,19 @@ struct snd_soc_tplg_bytes_control {
 	__le32 base;
 	__le32 num_regs;
 	struct snd_soc_tplg_io_ops ext_ops;
+	struct snd_soc_tplg_private priv;
+} __attribute__((packed));
+
+/*
+ * HWdep
+ *
+ */
+struct snd_soc_tplg_hwdep {
+	__le32 size;		/* in bytes of this structure */
+	char name[SNDRV_CTL_ELEM_ID_NAME_MAXLEN];
+	__le32 id;
+	__le32 iface;
+	__le32 bytes_max; /* max blob size for IFACE_BINARY_BLOB */
 	struct snd_soc_tplg_private priv;
 } __attribute__((packed));
 
