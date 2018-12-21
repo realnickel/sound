@@ -275,6 +275,16 @@ config SND_SOC_INTEL_BXT_WM8804_MACH
 	  Say Y or m if you have such a device. This is a recommended option.
 	  If unsure select "N".
 
+config SND_SOC_INTEL_BXT_SGTL5000_MACH
+	tristate "Broxton with SGTL5000 for Pe-fi HAT"
+	depends on MFD_INTEL_LPSS && I2C && ACPI
+	select SND_SOC_SGTL5000
+	help
+	  This adds support for ASoC machine driver for Broxton platforms
+	  with Fe-pu HAT and SGTL5000 I2S audio codec.
+	  Say Y or m if you have such a device. This is a recommended option.
+	  If unsure select "N".
+
 endif ## SND_SOC_SOF_APOLLOLAKE
 
 if SND_SOC_INTEL_KBL
