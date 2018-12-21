@@ -4,6 +4,7 @@
 //
 // Copyright 2010-2011 Freescale Semiconductor, Inc. All Rights Reserved.
 
+#include <linux/acpi.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -1580,16 +1581,27 @@ static const struct i2c_device_id sgtl5000_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, sgtl5000_id);
 
+#if defined(CONFIG_OF)
 static const struct of_device_id sgtl5000_dt_ids[] = {
 	{ .compatible = "fsl,sgtl5000", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, sgtl5000_dt_ids);
+#endif
+
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sgtl5000_acpi_match[] = {
+	{ "SGTL5000", 0 }, /* legacy, not based on current ACPI vendor IDs */
+	{ },
+};
+MODULE_DEVICE_TABLE(acpi, sgtl5000_acpi_match);
+#endif
 
 static struct i2c_driver sgtl5000_i2c_driver = {
 	.driver = {
 		   .name = "sgtl5000",
-		   .of_match_table = sgtl5000_dt_ids,
+		   .of_match_table = of_match_ptr(sgtl5000_dt_ids),
+		   .acpi_match_table = ACPI_PTR(sgtl5000_acpi_match),
 		   },
 	.probe = sgtl5000_i2c_probe,
 	.remove = sgtl5000_i2c_remove,
