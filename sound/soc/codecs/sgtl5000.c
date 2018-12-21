@@ -1419,20 +1419,23 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
 	if (IS_ERR(sgtl5000->mclk)) {
 		ret = PTR_ERR(sgtl5000->mclk);
-		/* Defer the probe to see if the clk will be provided later */
-		if (ret == -ENOENT)
-			ret = -EPROBE_DEFER;
 
-		if (ret != -EPROBE_DEFER)
-			dev_err(&client->dev, "Failed to get mclock: %d\n",
-				ret);
-		goto disable_regs;
-	}
+		if (ret == -ENOENT) {
+			dev_err(&client->dev, "No clock, continuing anyways\n");
+		} else {
 
-	ret = clk_prepare_enable(sgtl5000->mclk);
-	if (ret) {
-		dev_err(&client->dev, "Error enabling clock %d\n", ret);
-		goto disable_regs;
+			if (ret != -EPROBE_DEFER)
+				dev_err(&client->dev, "Failed to get mclock: %d\n",
+					ret);
+			dev_err(&client->dev, "plb: no clock\n");
+			goto disable_regs;
+		}
+	} else {
+		ret = clk_prepare_enable(sgtl5000->mclk);
+		if (ret) {
+			dev_err(&client->dev, "Error enabling clock %d\n", ret);
+			goto disable_regs;
+		}
 	}
 
 	/* Need 8 clocks before I2C accesses */
@@ -1554,7 +1557,8 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	return 0;
 
 disable_clk:
-	clk_disable_unprepare(sgtl5000->mclk);
+	if (!IS_ERR(sgtl5000->mclk))
+		clk_disable_unprepare(sgtl5000->mclk);
 
 disable_regs:
 	regulator_bulk_disable(sgtl5000->num_supplies, sgtl5000->supplies);
@@ -1567,7 +1571,8 @@ static int sgtl5000_i2c_remove(struct i2c_client *client)
 {
 	struct sgtl5000_priv *sgtl5000 = i2c_get_clientdata(client);
 
-	clk_disable_unprepare(sgtl5000->mclk);
+	if (!IS_ERR(sgtl5000->mclk))
+		clk_disable_unprepare(sgtl5000->mclk);
 	regulator_bulk_disable(sgtl5000->num_supplies, sgtl5000->supplies);
 	regulator_bulk_free(sgtl5000->num_supplies, sgtl5000->supplies);
 
