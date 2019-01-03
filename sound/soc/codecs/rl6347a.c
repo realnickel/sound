@@ -65,7 +65,8 @@ int rl6347a_hw_read(void *context, unsigned int reg, unsigned int *value)
 	struct i2c_msg xfer[2];
 	int ret;
 	__be32 be_reg;
-	unsigned int index, vid, buf = 0x0;
+	unsigned int index, vid;
+	__be32 buf = 0x0;
 
 	/* handle index registers */
 	if (reg <= 0xff) {
