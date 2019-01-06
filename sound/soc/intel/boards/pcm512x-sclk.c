@@ -106,6 +106,7 @@ static int clk_pcm512x_sclk_set(struct gpio_desc *gpiod,
 	/* wait 2-3 ms for clock transitions */
 	usleep_range(2000, 3000);
 
+#ifdef USE_REGMAP
 	/* check if sclk status is correct */
 	ret = regmap_read(regmap,  PCM512x_RATE_DET_4, &val);
 	if (ret < 0)
@@ -117,6 +118,7 @@ static int clk_pcm512x_sclk_set(struct gpio_desc *gpiod,
 		       value, val, sck);
 		return -EIO; /* FIXME: is this the right value */
 	}
+#endif
 
 	return 0;
 }
@@ -225,7 +227,7 @@ static int clk_pcm512x_sclk_probe(struct platform_device *pdev)
 	pcm512x_sclk->prepared = false;
 	pcm512x_sclk->hw.init = &init;
 
-#ifdef DEBUG
+#ifdef USE_REGMAP
 	{
 		unsigned int val;
 
