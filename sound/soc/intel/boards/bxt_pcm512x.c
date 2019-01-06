@@ -183,6 +183,7 @@ static struct snd_soc_dai_link dailink[] = {
 		.nonatomic = true,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
+		.ops = &aif1_ops,
 	},
 #if IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)
 	{
