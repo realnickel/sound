@@ -912,8 +912,6 @@ static int skl_first_init(struct hdac_bus *bus)
 			return err;
 	}
 
-	snd_hdac_bus_reset_link(bus, true);
-
 	snd_hdac_bus_parse_capabilities(bus);
 
 	/* check if PPCAP exists */
