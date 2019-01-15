@@ -793,12 +793,6 @@ static void skl_probe_work(struct work_struct *work)
 	struct hdac_ext_link *hlink = NULL;
 	int err;
 
-	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
-		err = skl_i915_init(bus);
-		if (err < 0)
-			return;
-	}
-
 	err = skl_init_chip(bus, true);
 	if (err < 0) {
 		dev_err(bus->dev, "Init chip failed with err: %d\n", err);
@@ -910,6 +904,12 @@ static int skl_first_init(struct hdac_bus *bus)
 	if (bus->remap_addr == NULL) {
 		dev_err(bus->dev, "ioremap error\n");
 		return -ENXIO;
+	}
+
+	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
+		err = skl_i915_init(bus);
+		if (err < 0)
+			return err;
 	}
 
 	snd_hdac_bus_reset_link(bus, true);
