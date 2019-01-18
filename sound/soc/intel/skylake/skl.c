@@ -767,35 +767,12 @@ static const struct hdac_bus_ops bus_core_ops = {
 	.get_response = snd_hdac_bus_get_response,
 };
 
-static int skl_i915_init(struct hdac_bus *bus)
-{
-	int err;
-
-	/*
-	 * The HDMI codec is in GPU so we need to ensure that it is powered
-	 * up and ready for probe
-	 */
-	err = snd_hdac_i915_init(bus);
-	if (err < 0)
-		return err;
-
-	snd_hdac_display_power(bus, HDA_CODEC_IDX_CONTROLLER, true);
-
-	return 0;
-}
-
 static void skl_probe_work(struct work_struct *work)
 {
 	struct skl *skl = container_of(work, struct skl, probe_work);
 	struct hdac_bus *bus = skl_to_bus(skl);
 	struct hdac_ext_link *hlink = NULL;
 	int err;
-
-	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI)) {
-		err = skl_i915_init(bus);
-		if (err < 0)
-			return;
-	}
 
 	err = skl_init_chip(bus, true);
 	if (err < 0) {
@@ -899,6 +876,11 @@ static int skl_first_init(struct hdac_bus *bus)
 	unsigned short gcap;
 	int cp_streams, pb_streams, start_idx;
 
+	err = snd_hdac_i915_init(bus);
+	if (err < 0)
+		return err;
+
+
 	err = pci_request_regions(pci, "Skylake HD audio");
 	if (err < 0)
 		return err;
@@ -910,7 +892,10 @@ static int skl_first_init(struct hdac_bus *bus)
 		return -ENXIO;
 	}
 
-	snd_hdac_bus_reset_link(bus, true);
+	/* this bus_reset_link is unnecessary, and without the display
+	 *  power turned on prevents HDMI from being detected
+	 */
+	//snd_hdac_bus_reset_link(bus, true);
 
 	snd_hdac_bus_parse_capabilities(bus);
 
@@ -962,7 +947,14 @@ static int skl_first_init(struct hdac_bus *bus)
 	/* initialize chip */
 	skl_init_pci(skl);
 
-	return skl_init_chip(bus, true);
+	/* turning the display power here works */
+	snd_hdac_display_power(bus, HDA_CODEC_IDX_CONTROLLER, true);
+
+	err =  skl_init_chip(bus, true);
+
+	/* turning the display power here does not work, HDMI not detected */
+
+	return err;
 }
 
 static int skl_probe(struct pci_dev *pci,
