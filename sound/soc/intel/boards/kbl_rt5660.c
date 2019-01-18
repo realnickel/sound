@@ -317,6 +317,41 @@ static const struct snd_soc_ops kabylake_rt5660_fe_ops = {
 	.startup = kbl_fe_startup,
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
+static struct snd_soc_dai_link_component rt5660_component[] = {
+	{
+		.name = "i2c-10EC3277:00",
+		.dai_name = KBL_RT5660_CODEC_DAI,
+	}
+};
+
+static struct snd_soc_dai_link_component idisp1_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi1",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp2_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi2",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp3_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi3",
+	}
+};
+
 /* kabylake digital audio interface glue - connects rt5660 codec <--> CPU */
 static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 	/* Front End DAI links */
@@ -326,8 +361,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -340,8 +375,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -352,8 +387,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.name = "Kbl HDMI Port1",
 		.stream_name = "Hdmi1",
 		.cpu_dai_name = "HDMI1 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -366,8 +401,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.name = "Kbl HDMI Port2",
 		.stream_name = "Hdmi2",
 		.cpu_dai_name = "HDMI2 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -380,8 +415,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.name = "Kbl HDMI Port3",
 		.stream_name = "Hdmi3",
 		.cpu_dai_name = "HDMI3 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -399,8 +434,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.cpu_dai_name = "SSP0 Pin",
 		.platform_name = "0000:00:1f.3",
 		.no_pcm = 1,
-		.codec_name = "i2c-10EC3277:00",
-		.codec_dai_name = KBL_RT5660_CODEC_DAI,
+		.codecs = rt5660_component,
+		.num_codecs = ARRAY_SIZE(rt5660_component),
 		.init = kabylake_rt5660_codec_init,
 		.dai_fmt = SND_SOC_DAIFMT_I2S |
 		SND_SOC_DAIFMT_NB_NF |
@@ -415,8 +450,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.name = "iDisp1",
 		.id = 1,
 		.cpu_dai_name = "iDisp1 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi1",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = kabylake_hdmi1_init,
@@ -426,8 +461,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.name = "iDisp2",
 		.id = 2,
 		.cpu_dai_name = "iDisp2 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi2",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:1f.3",
 		.init = kabylake_hdmi2_init,
 		.dpcm_playback = 1,
@@ -437,8 +472,8 @@ static struct snd_soc_dai_link kabylake_rt5660_dais[] = {
 		.name = "iDisp3",
 		.id = 3,
 		.cpu_dai_name = "iDisp3 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi3",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:1f.3",
 		.init = kabylake_hdmi3_init,
 		.dpcm_playback = 1,
