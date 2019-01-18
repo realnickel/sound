@@ -9,6 +9,7 @@
 #include <linux/stddef.h>
 #include <linux/acpi.h>
 #include <linux/mod_devicetable.h>
+#include <sound/soc.h>
 
 struct snd_soc_acpi_package_context {
 	char *name;           /* package name */
@@ -22,9 +23,24 @@ struct snd_soc_acpi_package_context {
 #define SND_ACPI_I2C_ID_LEN (4 + ACPI_ID_LEN + 3 + 1)
 
 #if IS_ENABLED(CONFIG_ACPI)
+int snd_soc_acpi_fixup_codec_name(struct device *dev,
+				  struct snd_soc_dai_link *dailink,
+				  int num_dailink,
+				  char *codec_name,
+				  const u8 *hid);
+
 bool snd_soc_acpi_find_package_from_hid(const u8 hid[ACPI_ID_LEN],
 				    struct snd_soc_acpi_package_context *ctx);
 #else
+static inline int snd_soc_acpi_fixup_codec_name(struct device *dev,
+						struct snd_soc_dai_link *dailink,
+						int num_dailink,
+						char *codec_name,
+						const u8 *hid)
+{
+	return -ENOTSUPP;
+}
+
 static inline bool
 snd_soc_acpi_find_package_from_hid(const u8 hid[ACPI_ID_LEN],
 				   struct snd_soc_acpi_package_context *ctx)
