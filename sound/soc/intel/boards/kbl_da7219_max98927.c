@@ -458,6 +458,13 @@ static struct snd_soc_codec_conf max98927_codec_conf[] = {
 	},
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
 static struct snd_soc_dai_link_component ssp0_codec_components[] = {
 	{ /* Left */
 		.name = MAXIM_DEV0_NAME,
@@ -471,6 +478,41 @@ static struct snd_soc_dai_link_component ssp0_codec_components[] = {
 
 };
 
+static struct snd_soc_dai_link_component da7219_component[] = {
+	{
+		.name = "i2c-DLGS7219:00",
+		.dai_name = KBL_DIALOG_CODEC_DAI
+	}
+};
+
+static struct snd_soc_dai_link_component dmic_component[] = {
+	{
+		.name = "dmic-codec",
+		.dai_name = "dmic-hifi"
+	}
+};
+
+static struct snd_soc_dai_link_component idisp1_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi1",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp2_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi2",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp3_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi3",
+	}
+};
+
 /* kabylake digital audio interface glue - connects codec <--> CPU */
 static struct snd_soc_dai_link kabylake_dais[] = {
 	/* Front End DAI links */
@@ -480,8 +522,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.init = kabylake_da7219_fe_init,
 		.trigger = {
@@ -495,8 +537,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -507,8 +549,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl Audio Echo Reference cap",
 		.stream_name = "Echoreference Capture",
 		.cpu_dai_name = "Echoref Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.capture_only = 1,
@@ -518,8 +560,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl Audio Reference cap",
 		.stream_name = "Wake on Voice",
 		.cpu_dai_name = "Reference Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -531,8 +573,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl Audio DMIC cap",
 		.stream_name = "dmiccap",
 		.cpu_dai_name = "DMIC Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -544,8 +586,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl HDMI Port1",
 		.stream_name = "Hdmi1",
 		.cpu_dai_name = "HDMI1 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -558,8 +600,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl HDMI Port2",
 		.stream_name = "Hdmi2",
 		.cpu_dai_name = "HDMI2 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -572,8 +614,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl HDMI Port3",
 		.stream_name = "Hdmi3",
 		.cpu_dai_name = "HDMI3 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -586,8 +628,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "Kbl Audio Headset Playback",
 		.stream_name = "Headset Audio",
 		.cpu_dai_name = "System Pin2",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.nonatomic = 1,
@@ -625,8 +667,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.cpu_dai_name = "SSP1 Pin",
 		.platform_name = "0000:00:1f.3",
 		.no_pcm = 1,
-		.codec_name = "i2c-DLGS7219:00",
-		.codec_dai_name = KBL_DIALOG_CODEC_DAI,
+		.codecs = da7219_component,
+		.num_codecs = ARRAY_SIZE(da7219_component),
 		.init = kabylake_da7219_codec_init,
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBS_CFS,
@@ -639,8 +681,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "dmic01",
 		.id = 2,
 		.cpu_dai_name = "DMIC01 Pin",
-		.codec_name = "dmic-codec",
-		.codec_dai_name = "dmic-hifi",
+		.codecs = dmic_component,
+		.num_codecs = ARRAY_SIZE(dmic_component),
 		.platform_name = "0000:00:1f.3",
 		.be_hw_params_fixup = kabylake_dmic_fixup,
 		.ignore_suspend = 1,
@@ -651,8 +693,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "iDisp1",
 		.id = 3,
 		.cpu_dai_name = "iDisp1 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi1",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = kabylake_hdmi1_init,
@@ -662,8 +704,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "iDisp2",
 		.id = 4,
 		.cpu_dai_name = "iDisp2 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi2",
+		.codecs = idisp2_component,
+		.num_codecs = ARRAY_SIZE(idisp2_component),
 		.platform_name = "0000:00:1f.3",
 		.init = kabylake_hdmi2_init,
 		.dpcm_playback = 1,
@@ -673,8 +715,8 @@ static struct snd_soc_dai_link kabylake_dais[] = {
 		.name = "iDisp3",
 		.id = 5,
 		.cpu_dai_name = "iDisp3 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi3",
+		.codecs = idisp3_component,
+		.num_codecs = ARRAY_SIZE(idisp3_component),
 		.platform_name = "0000:00:1f.3",
 		.init = kabylake_hdmi3_init,
 		.dpcm_playback = 1,
@@ -691,8 +733,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.init = kabylake_da7219_fe_init,
 		.trigger = {
@@ -706,8 +748,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -718,8 +760,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "Kbl Audio Echo Reference cap",
 		.stream_name = "Echoreference Capture",
 		.cpu_dai_name = "Echoref Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.capture_only = 1,
@@ -729,8 +771,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "Kbl Audio Reference cap",
 		.stream_name = "Wake on Voice",
 		.cpu_dai_name = "Reference Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -742,8 +784,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "Kbl Audio DMIC cap",
 		.stream_name = "dmiccap",
 		.cpu_dai_name = "DMIC Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -755,8 +797,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "Kbl HDMI Port1",
 		.stream_name = "Hdmi1",
 		.cpu_dai_name = "HDMI1 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -769,8 +811,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "Kbl HDMI Port2",
 		.stream_name = "Hdmi2",
 		.cpu_dai_name = "HDMI2 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -783,8 +825,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "Kbl HDMI Port3",
 		.stream_name = "Hdmi3",
 		.cpu_dai_name = "HDMI3 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -817,8 +859,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "dmic01",
 		.id = 1,
 		.cpu_dai_name = "DMIC01 Pin",
-		.codec_name = "dmic-codec",
-		.codec_dai_name = "dmic-hifi",
+		.codecs = dmic_component,
+		.num_codecs = ARRAY_SIZE(dmic_component),
 		.platform_name = "0000:00:1f.3",
 		.be_hw_params_fixup = kabylake_dmic_fixup,
 		.ignore_suspend = 1,
@@ -829,8 +871,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "iDisp1",
 		.id = 2,
 		.cpu_dai_name = "iDisp1 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi1",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = kabylake_hdmi1_init,
@@ -840,8 +882,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "iDisp2",
 		.id = 3,
 		.cpu_dai_name = "iDisp2 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi2",
+		.codecs = idisp2_component,
+		.num_codecs = ARRAY_SIZE(idisp2_component),
 		.platform_name = "0000:00:1f.3",
 		.init = kabylake_hdmi2_init,
 		.dpcm_playback = 1,
@@ -851,8 +893,8 @@ static struct snd_soc_dai_link kabylake_max98927_dais[] = {
 		.name = "iDisp3",
 		.id = 4,
 		.cpu_dai_name = "iDisp3 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi3",
+		.codecs = idisp3_component,
+		.num_codecs = ARRAY_SIZE(idisp3_component),
 		.platform_name = "0000:00:1f.3",
 		.init = kabylake_hdmi3_init,
 		.dpcm_playback = 1,
