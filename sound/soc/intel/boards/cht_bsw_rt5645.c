@@ -48,7 +48,7 @@ struct cht_acpi_card {
 struct cht_mc_private {
 	struct snd_soc_jack jack;
 	struct cht_acpi_card *acpi_card;
-	char codec_name[SND_ACPI_I2C_ID_LEN];
+	char codec_i2c_name[SND_ACPI_I2C_ID_LEN];
 	struct clk *mclk;
 };
 
@@ -425,13 +425,27 @@ static const struct snd_soc_ops cht_be_ssp2_ops = {
 	.hw_params = cht_aif1_hw_params,
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
+static struct snd_soc_dai_link_component rt5645_component[] = {
+	{
+		.name = "i2c-10EC5645:00",
+		.dai_name = "rt5645-aif1",
+	}
+};
+
 static struct snd_soc_dai_link cht_dailink[] = {
 	[MERR_DPCM_AUDIO] = {
 		.name = "Audio Port",
 		.stream_name = "Audio",
 		.cpu_dai_name = "media-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
@@ -443,8 +457,8 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.name = "Deep-Buffer Audio Port",
 		.stream_name = "Deep-Buffer Audio",
 		.cpu_dai_name = "deepbuffer-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
@@ -459,8 +473,8 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.cpu_dai_name = "ssp2-port",
 		.platform_name = "sst-mfld-platform",
 		.no_pcm = 1,
-		.codec_dai_name = "rt5645-aif1",
-		.codec_name = "i2c-10EC5645:00",
+		.codecs = rt5645_component,
+		.num_codecs = ARRAY_SIZE(rt5645_component),
 		.init = cht_codec_init,
 		.be_hw_params_fixup = cht_codec_fixup,
 		.nonatomic = true,
@@ -505,7 +519,7 @@ static struct cht_acpi_card snd_soc_cards[] = {
 	{"10EC5650", CODEC_TYPE_RT5650, &snd_soc_card_chtrt5650},
 };
 
-static char cht_rt5645_codec_name[SND_ACPI_I2C_ID_LEN];
+static char cht_rt5645_codec_i2c_name[SND_ACPI_I2C_ID_LEN];
 static char cht_rt5645_codec_aif_name[12]; /*  = "rt5645-aif[1|2]" */
 static char cht_rt5645_cpu_dai_name[10]; /*  = "ssp[0|2]-port" */
 
@@ -562,21 +576,21 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 	}
 
 	card->dev = &pdev->dev;
-	sprintf(drv->codec_name, "i2c-%s:00", drv->acpi_card->codec_id);
+	sprintf(drv->codec_i2c_name, "i2c-%s:00", drv->acpi_card->codec_id);
 
 	/* set correct codec name */
 	for (i = 0; i < ARRAY_SIZE(cht_dailink); i++)
-		if (!strcmp(card->dai_link[i].codec_name, "i2c-10EC5645:00")) {
-			card->dai_link[i].codec_name = drv->codec_name;
+		if (!strcmp(card->dai_link[i].codecs[0].name, "i2c-10EC5645:00")) {
+			card->dai_link[i].codecs[0].name = drv->codec_i2c_name;
 			dai_index = i;
 		}
 
 	/* fixup codec name based on HID */
 	i2c_name = acpi_dev_get_first_match_name(mach->id, NULL, -1);
 	if (i2c_name) {
-		snprintf(cht_rt5645_codec_name, sizeof(cht_rt5645_codec_name),
-			"%s%s", "i2c-", i2c_name);
-		cht_dailink[dai_index].codec_name = cht_rt5645_codec_name;
+		snprintf(cht_rt5645_codec_i2c_name, sizeof(cht_rt5645_codec_i2c_name),
+			 "%s%s", "i2c-", i2c_name);
+		cht_dailink[dai_index].codecs[0].name = cht_rt5645_codec_i2c_name;
 	}
 
 	/*
@@ -647,7 +661,7 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 			sizeof(cht_rt5645_codec_aif_name),
 			"%s", "rt5645-aif2");
 
-		cht_dailink[dai_index].codec_dai_name =
+		cht_dailink[dai_index].codecs[0].dai_name =
 			cht_rt5645_codec_aif_name;
 	}
 
