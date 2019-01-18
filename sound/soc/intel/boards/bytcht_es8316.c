@@ -302,13 +302,27 @@ static const struct snd_soc_ops byt_cht_es8316_aif1_ops = {
 	.startup = byt_cht_es8316_aif1_startup,
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
+static struct snd_soc_dai_link_component es8316_component[] = {
+	{
+		.name = "i2c-ESSX8316:00",
+		.dai_name = "ES8316 HiFi"
+	}
+};
+
 static struct snd_soc_dai_link byt_cht_es8316_dais[] = {
 	[MERR_DPCM_AUDIO] = {
 		.name = "Audio Port",
 		.stream_name = "Audio",
 		.cpu_dai_name = "media-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
@@ -321,8 +335,8 @@ static struct snd_soc_dai_link byt_cht_es8316_dais[] = {
 		.name = "Deep-Buffer Audio Port",
 		.stream_name = "Deep-Buffer Audio",
 		.cpu_dai_name = "deepbuffer-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
@@ -332,16 +346,13 @@ static struct snd_soc_dai_link byt_cht_es8316_dais[] = {
 
 		/* back ends */
 	{
-		/* Only SSP2 has been tested here, so BYT-CR platforms that
-		 * require SSP0 will not work.
-		 */
 		.name = "SSP2-Codec",
 		.id = 0,
 		.cpu_dai_name = "ssp2-port",
 		.platform_name = "sst-mfld-platform",
 		.no_pcm = 1,
-		.codec_dai_name = "ES8316 HiFi",
-		.codec_name = "i2c-ESSX8316:00",
+		.codecs = es8316_component,
+		.num_codecs = ARRAY_SIZE(es8316_component),
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
 						| SND_SOC_DAIFMT_CBS_CFS,
 		.be_hw_params_fixup = byt_cht_es8316_codec_fixup,
@@ -441,33 +452,33 @@ static int snd_byt_cht_es8316_mc_probe(struct platform_device *pdev)
 	struct byt_cht_es8316_private *priv;
 	struct device *dev = &pdev->dev;
 	struct snd_soc_acpi_mach *mach;
-	const char *i2c_name = NULL;
 	struct device *codec_dev;
 	int dai_index = 0;
-	int i;
-	int ret = 0;
+	int ret;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
 	mach = dev->platform_data;
-	/* fix index of codec dai */
-	for (i = 0; i < ARRAY_SIZE(byt_cht_es8316_dais); i++) {
-		if (!strcmp(byt_cht_es8316_dais[i].codec_name,
-			    "i2c-ESSX8316:00")) {
-			dai_index = i;
-			break;
-		}
+
+	ret = snd_soc_acpi_fixup_codec_name(&pdev->dev,
+					    byt_cht_es8316_dais,
+					    ARRAY_SIZE(byt_cht_es8316_dais),
+					    "i2c-ESSX8316:00",
+					    mach->id);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"dailink codec name fixup failed: %d\n", ret);
+		return ret;
 	}
 
-	/* fixup codec name based on HID */
-	i2c_name = acpi_dev_get_first_match_name(mach->id, NULL, -1);
-	if (i2c_name) {
-		snprintf(codec_name, sizeof(codec_name),
-			"%s%s", "i2c-", i2c_name);
-		byt_cht_es8316_dais[dai_index].codec_name = codec_name;
-	}
+	dai_index = ret; /* save for cpu_name change later */
+
+	/* copy codec_name, used later as well */
+	strncpy(codec_name,
+		byt_cht_es8316_dais[dai_index].codecs[0].name,
+		SND_ACPI_I2C_ID_LEN);
 
 	/* Check for BYTCR or other platform and setup quirks */
 	if (x86_match_cpu(baytrail_cpu_ids) &&
