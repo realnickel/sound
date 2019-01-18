@@ -327,14 +327,27 @@ static struct snd_soc_aux_dev cht_max98090_headset_dev = {
 	.codec_name = "i2c-104C227E:00",
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
+static struct snd_soc_dai_link_component max98090_component[] = {
+	{
+		.name =  "i2c-193C9890:00",
+		.dai_name = "HiFi"
+	}
+};
+
 static struct snd_soc_dai_link cht_dailink[] = {
 	[MERR_DPCM_AUDIO] = {
 		.name = "Audio Port",
 		.stream_name = "Audio",
 		.cpu_dai_name = "media-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
-		.platform_name = "sst-mfld-platform",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = true,
 		.dynamic = 1,
 		.dpcm_playback = 1,
@@ -345,8 +358,8 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.name = "Deep-Buffer Audio Port",
 		.stream_name = "Deep-Buffer Audio",
 		.cpu_dai_name = "deepbuffer-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
@@ -360,8 +373,8 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.cpu_dai_name = "ssp2-port",
 		.platform_name = "sst-mfld-platform",
 		.no_pcm = 1,
-		.codec_dai_name = "HiFi",
-		.codec_name = "i2c-193C9890:00",
+		.codecs = max98090_component,
+		.num_codecs = ARRAY_SIZE(max98090_component),
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
 					| SND_SOC_DAIFMT_CBS_CFS,
 		.init = cht_codec_init,
