@@ -330,6 +330,48 @@ static const struct snd_soc_ops broxton_rt286_fe_ops = {
 	.startup = bxt_fe_startup,
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
+static struct snd_soc_dai_link_component rt298_component[] = {
+	{
+		.name =  "i2c-INT343A:00",
+		.dai_name = "rt298-aif1"
+	}
+};
+
+static struct snd_soc_dai_link_component dmic_component[] = {
+	{
+		.name = "dmic-codec",
+		.dai_name = "dmic-hifi"
+	}
+};
+
+static struct snd_soc_dai_link_component idisp1_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi1",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp2_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi2",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp3_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi3",
+	}
+};
+
 /* broxton digital audio interface glue - connects codec <--> CPU */
 static struct snd_soc_dai_link broxton_rt298_dais[] = {
 	/* Front End DAI links */
@@ -341,8 +383,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.platform_name = "0000:00:0e.0",
 		.nonatomic = 1,
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.init = broxton_rt298_fe_init,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
 		.dpcm_playback = 1,
@@ -356,8 +398,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.platform_name = "0000:00:0e.0",
 		.nonatomic = 1,
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
 		.dpcm_capture = 1,
 		.ops = &broxton_rt286_fe_ops,
@@ -367,8 +409,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "Bxt Audio Reference cap",
 		.stream_name = "refcap",
 		.cpu_dai_name = "Reference Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:0e.0",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -380,8 +422,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "Bxt Audio DMIC cap",
 		.stream_name = "dmiccap",
 		.cpu_dai_name = "DMIC Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:0e.0",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -394,8 +436,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "Bxt HDMI Port1",
 		.stream_name = "Hdmi1",
 		.cpu_dai_name = "HDMI1 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:0e.0",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -407,8 +449,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "Bxt HDMI Port2",
 		.stream_name = "Hdmi2",
 		.cpu_dai_name = "HDMI2 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:0e.0",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -420,8 +462,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "Bxt HDMI Port3",
 		.stream_name = "Hdmi3",
 		.cpu_dai_name = "HDMI3 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:0e.0",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -436,8 +478,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.cpu_dai_name = "SSP5 Pin",
 		.platform_name = "0000:00:0e.0",
 		.no_pcm = 1,
-		.codec_name = "i2c-INT343A:00",
-		.codec_dai_name = "rt298-aif1",
+		.codecs = rt298_component,
+		.num_codecs = ARRAY_SIZE(rt298_component),
 		.init = broxton_rt298_codec_init,
 		.dai_fmt = SND_SOC_DAIFMT_DSP_A | SND_SOC_DAIFMT_NB_NF |
 						SND_SOC_DAIFMT_CBS_CFS,
@@ -450,10 +492,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 	{
 		.name = "dmic01",
 		.id = 1,
-		.cpu_dai_name = "DMIC01 Pin",
-		.codec_name = "dmic-codec",
-		.codec_dai_name = "dmic-hifi",
-		.platform_name = "0000:00:0e.0",
+		.codecs = dmic_component,
+		.num_codecs = ARRAY_SIZE(dmic_component),
 		.be_hw_params_fixup = broxton_dmic_fixup,
 		.ignore_suspend = 1,
 		.dpcm_capture = 1,
@@ -463,8 +503,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "dmic16k",
 		.id = 2,
 		.cpu_dai_name = "DMIC16k Pin",
-		.codec_name = "dmic-codec",
-		.codec_dai_name = "dmic-hifi",
+		.codecs = dmic_component,
+		.num_codecs = ARRAY_SIZE(dmic_component),
 		.platform_name = "0000:00:0e.0",
 		.be_hw_params_fixup = broxton_dmic_fixup,
 		.ignore_suspend = 1,
@@ -475,8 +515,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "iDisp1",
 		.id = 3,
 		.cpu_dai_name = "iDisp1 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi1",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:0e.0",
 		.init = broxton_hdmi_init,
 		.dpcm_playback = 1,
@@ -486,8 +526,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "iDisp2",
 		.id = 4,
 		.cpu_dai_name = "iDisp2 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi2",
+		.codecs = idisp2_component,
+		.num_codecs = ARRAY_SIZE(idisp2_component),
 		.platform_name = "0000:00:0e.0",
 		.init = broxton_hdmi_init,
 		.dpcm_playback = 1,
@@ -497,8 +537,8 @@ static struct snd_soc_dai_link broxton_rt298_dais[] = {
 		.name = "iDisp3",
 		.id = 5,
 		.cpu_dai_name = "iDisp3 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi3",
+		.codecs = idisp3_component,
+		.num_codecs = ARRAY_SIZE(idisp3_component),
 		.platform_name = "0000:00:0e.0",
 		.init = broxton_hdmi_init,
 		.dpcm_playback = 1,
@@ -579,8 +619,8 @@ static int broxton_audio_probe(struct platform_device *pdev)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(broxton_rt298_dais); i++) {
-		if (!strncmp(card->dai_link[i].codec_name, "i2c-INT343A:00",
-						I2C_NAME_SIZE)) {
+		if (!strncmp(card->dai_link[i].codecs[0].name, "i2c-INT343A:00",
+			     I2C_NAME_SIZE)) {
 			if (!strncmp(card->name, "broxton-rt298",
 						PLATFORM_NAME_SIZE)) {
 				card->dai_link[i].name = "SSP5-Codec";
