@@ -40,6 +40,9 @@
 #include <sound/soc-topology.h>
 #include <sound/initval.h>
 
+#define PLB_FIX1
+#define PLB_FIX2
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/asoc.h>
 
@@ -1042,7 +1045,11 @@ static int snd_soc_init_platform(struct snd_soc_card *card,
 			return -ENOMEM;
 
 		dai_link->platform	  = platform;
+#ifndef PLB_FIX2
 		dai_link->legacy_platform = 1;
+#else
+		dai_link->legacy_platform = 0;
+#endif
 		platform->name		  = dai_link->platform_name;
 		platform->of_node	  = dai_link->platform_of_node;
 		platform->dai_name	  = NULL;
@@ -1136,8 +1143,10 @@ static int soc_init_dai_link(struct snd_soc_card *card,
 	 * component list.
 	 */
 	if ((link->platform->of_node || link->platform->name) &&
-	    !soc_find_component(link->platform->of_node, link->platform->name))
+	    !soc_find_component(link->platform->of_node, link->platform->name)) {
+		pr_err("plb: err1 link->name %s link->platform->name %s\n", link->name, link->platform->name);
 		return -EPROBE_DEFER;
+	}
 
 	/*
 	 * CPU device may be specified by either name or OF node, but
@@ -1944,6 +1953,8 @@ match:
 				continue;
 			}
 			dai_link->platform->name = component->name;
+			pr_err("dailink name %s platform->name %s component->name %s\n",
+			       dai_link->name, dai_link->platform->name, component->name);
 
 			/* convert non BE into BE */
 			dai_link->no_pcm = 1;
@@ -1989,7 +2000,10 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	mutex_lock_nested(&card->mutex, SND_SOC_CARD_CLASS_INIT);
 
 	/* check whether any platform is ignore machine FE and using topology */
+#ifndef PLB_FIX1
+	pr_err("in %s, calling soc_check_tplg_fes\n", __func__);
 	soc_check_tplg_fes(card);
+#endif
 
 	/* bind DAIs */
 	for_each_card_prelinks(card, i, dai_link) {
@@ -2075,7 +2089,7 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	for_each_card_links(card, dai_link) {
 		if (soc_is_dai_link_bound(card, dai_link))
 			continue;
-
+		pr_err("calling soc_init_dai_link from %s\n", __func__);
 		ret = soc_init_dai_link(card, dai_link);
 		if (ret)
 			goto probe_dai_err;
@@ -2762,8 +2776,15 @@ int snd_soc_register_card(struct snd_soc_card *card)
 		return -EINVAL;
 
 	mutex_lock(&client_mutex);
+		/* check whether any platform is ignore machine FE and using topology */
+#ifdef PLB_FIX1
+	pr_err("in %s, calling soc_check_tplg_fes\n", __func__);
+	soc_check_tplg_fes(card);
+#endif
+
 	for_each_card_prelinks(card, i, link) {
 
+		pr_err("calling soc_init_dai_link from %s\n", __func__);
 		ret = soc_init_dai_link(card, link);
 		if (ret) {
 			dev_err(card->dev, "ASoC: failed to init link %s\n",
