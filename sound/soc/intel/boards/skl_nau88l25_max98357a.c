@@ -404,6 +404,55 @@ static const struct snd_soc_ops skylake_refcap_ops = {
 	.startup = skylake_refcap_startup,
 };
 
+static struct snd_soc_dai_link_component dummy_codec_component[] = {
+	{
+		.name = "snd-soc-dummy",
+		.dai_name = "snd-soc-dummy-dai"
+	},
+};
+
+static struct snd_soc_dai_link_component max98357_component[] = {
+	{
+		.name = "MX98357A:00",
+		.dai_name = SKL_MAXIM_CODEC_DAI,
+	}
+};
+
+static struct snd_soc_dai_link_component nau88l25_component[] = {
+	{
+		.name = "i2c-10508825:00",
+		.dai_name = SKL_NUVOTON_CODEC_DAI
+	}
+};
+
+static struct snd_soc_dai_link_component dmic_component[] = {
+	{
+		.name = "dmic-codec",
+		.dai_name = "dmic-hifi"
+	}
+};
+
+static struct snd_soc_dai_link_component idisp1_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi1",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp2_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi2",
+	}
+};
+
+static struct snd_soc_dai_link_component idisp3_component[] = {
+	{
+		.name = "ehdaudio0D2",
+		.dai_name = "intel-hdmi-hifi3",
+	}
+};
+
 /* skylake digital audio interface glue - connects codec <--> CPU */
 static struct snd_soc_dai_link skylake_dais[] = {
 	/* Front End DAI links */
@@ -413,8 +462,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.init = skylake_nau8825_fe_init,
 		.trigger = {
@@ -428,8 +477,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.cpu_dai_name = "System Pin",
 		.platform_name = "0000:00:1f.3",
 		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.nonatomic = 1,
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -440,8 +489,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "Skl Audio Reference cap",
 		.stream_name = "Wake on Voice",
 		.cpu_dai_name = "Reference Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -453,8 +502,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "Skl Audio DMIC cap",
 		.stream_name = "dmiccap",
 		.cpu_dai_name = "DMIC Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.init = NULL,
 		.dpcm_capture = 1,
@@ -466,8 +515,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "Skl HDMI Port1",
 		.stream_name = "Hdmi1",
 		.cpu_dai_name = "HDMI1 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -480,8 +529,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "Skl HDMI Port2",
 		.stream_name = "Hdmi2",
 		.cpu_dai_name = "HDMI2 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = NULL,
@@ -494,8 +543,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "Skl HDMI Port3",
 		.stream_name = "Hdmi3",
 		.cpu_dai_name = "HDMI3 Pin",
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
+		.codecs = dummy_codec_component,
+		.num_codecs = ARRAY_SIZE(dummy_codec_component),
 		.platform_name = "0000:00:1f.3",
 		.trigger = {
 			SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
@@ -513,8 +562,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.cpu_dai_name = "SSP0 Pin",
 		.platform_name = "0000:00:1f.3",
 		.no_pcm = 1,
-		.codec_name = "MX98357A:00",
-		.codec_dai_name = SKL_MAXIM_CODEC_DAI,
+		.codecs = max98357_component,
+		.num_codecs = ARRAY_SIZE(max98357_component),
 		.dai_fmt = SND_SOC_DAIFMT_I2S |
 			SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBS_CFS,
@@ -529,8 +578,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.cpu_dai_name = "SSP1 Pin",
 		.platform_name = "0000:00:1f.3",
 		.no_pcm = 1,
-		.codec_name = "i2c-10508825:00",
-		.codec_dai_name = SKL_NUVOTON_CODEC_DAI,
+		.codecs = nau88l25_component,
+		.num_codecs = ARRAY_SIZE(nau88l25_component),
 		.init = skylake_nau8825_codec_init,
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBS_CFS,
@@ -544,8 +593,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "dmic01",
 		.id = 2,
 		.cpu_dai_name = "DMIC01 Pin",
-		.codec_name = "dmic-codec",
-		.codec_dai_name = "dmic-hifi",
+		.codecs = dmic_component,
+		.num_codecs = ARRAY_SIZE(dmic_component),
 		.platform_name = "0000:00:1f.3",
 		.be_hw_params_fixup = skylake_dmic_fixup,
 		.ignore_suspend = 1,
@@ -556,8 +605,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "iDisp1",
 		.id = 3,
 		.cpu_dai_name = "iDisp1 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi1",
+		.codecs = idisp1_component,
+		.num_codecs = ARRAY_SIZE(idisp1_component),
 		.platform_name = "0000:00:1f.3",
 		.dpcm_playback = 1,
 		.init = skylake_hdmi1_init,
@@ -567,8 +616,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "iDisp2",
 		.id = 4,
 		.cpu_dai_name = "iDisp2 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi2",
+		.codecs = idisp2_component,
+		.num_codecs = ARRAY_SIZE(idisp2_component),
 		.platform_name = "0000:00:1f.3",
 		.init = skylake_hdmi2_init,
 		.dpcm_playback = 1,
@@ -578,8 +627,8 @@ static struct snd_soc_dai_link skylake_dais[] = {
 		.name = "iDisp3",
 		.id = 5,
 		.cpu_dai_name = "iDisp3 Pin",
-		.codec_name = "ehdaudio0D2",
-		.codec_dai_name = "intel-hdmi-hifi3",
+		.codecs = idisp3_component,
+		.num_codecs = ARRAY_SIZE(idisp3_component),
 		.platform_name = "0000:00:1f.3",
 		.init = skylake_hdmi3_init,
 		.dpcm_playback = 1,
