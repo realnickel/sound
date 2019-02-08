@@ -3423,8 +3423,9 @@ static int wm8962_probe(struct snd_soc_codec *codec)
 
 	/* This should really be moved into the regulator core */
 	for (i = 0; i < ARRAY_SIZE(wm8962->supplies); i++) {
-		ret = regulator_register_notifier(wm8962->supplies[i].consumer,
-						  &wm8962->disable_nb[i]);
+		ret = devm_regulator_register_notifier(
+						wm8962->supplies[i].consumer,
+						&wm8962->disable_nb[i]);
 		if (ret != 0) {
 			dev_err(codec->dev,
 				"Failed to register regulator notifier: %d\n",
@@ -3465,18 +3466,12 @@ static int wm8962_probe(struct snd_soc_codec *codec)
 
 static int wm8962_remove(struct snd_soc_codec *codec)
 {
-	struct wm8962_priv *wm8962 = snd_soc_codec_get_drvdata(codec);
-	int i;
+	struct wm8962_priv *wm8962 = snd_soc_component_get_drvdata(component);
 
 	cancel_delayed_work_sync(&wm8962->mic_work);
 
-	wm8962_free_gpio(codec);
-	wm8962_free_beep(codec);
-	for (i = 0; i < ARRAY_SIZE(wm8962->supplies); i++)
-		regulator_unregister_notifier(wm8962->supplies[i].consumer,
-					      &wm8962->disable_nb[i]);
-
-	return 0;
+	wm8962_free_gpio(component);
+	wm8962_free_beep(component);
 }
 
 static const struct snd_soc_codec_driver soc_codec_dev_wm8962 = {

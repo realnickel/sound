@@ -1605,13 +1605,14 @@ static int aic3x_probe(struct snd_soc_codec *codec)
 	for (i = 0; i < ARRAY_SIZE(aic3x->supplies); i++) {
 		aic3x->disable_nb[i].nb.notifier_call = aic3x_regulator_event;
 		aic3x->disable_nb[i].aic3x = aic3x;
-		ret = regulator_register_notifier(aic3x->supplies[i].consumer,
-						  &aic3x->disable_nb[i].nb);
+		ret = devm_regulator_register_notifier(
+						aic3x->supplies[i].consumer,
+						&aic3x->disable_nb[i].nb);
 		if (ret) {
 			dev_err(codec->dev,
 				"Failed to request regulator notifier: %d\n",
 				 ret);
-			goto err_notif;
+			return ret;
 		}
 	}
 
@@ -1669,40 +1670,20 @@ static int aic3x_probe(struct snd_soc_codec *codec)
 	aic3x_add_widgets(codec);
 
 	return 0;
-
-err_notif:
-	while (i--)
-		regulator_unregister_notifier(aic3x->supplies[i].consumer,
-					      &aic3x->disable_nb[i].nb);
-	return ret;
 }
 
-static int aic3x_remove(struct snd_soc_codec *codec)
-{
-	struct aic3x_priv *aic3x = snd_soc_codec_get_drvdata(codec);
-	int i;
-
-	list_del(&aic3x->list);
-	for (i = 0; i < ARRAY_SIZE(aic3x->supplies); i++)
-		regulator_unregister_notifier(aic3x->supplies[i].consumer,
-					      &aic3x->disable_nb[i].nb);
-
-	return 0;
-}
-
-static const struct snd_soc_codec_driver soc_codec_dev_aic3x = {
-	.set_bias_level = aic3x_set_bias_level,
-	.idle_bias_off = true,
-	.probe = aic3x_probe,
-	.remove = aic3x_remove,
-	.component_driver = {
-		.controls		= aic3x_snd_controls,
-		.num_controls		= ARRAY_SIZE(aic3x_snd_controls),
-		.dapm_widgets		= aic3x_dapm_widgets,
-		.num_dapm_widgets	= ARRAY_SIZE(aic3x_dapm_widgets),
-		.dapm_routes		= intercon,
-		.num_dapm_routes	= ARRAY_SIZE(intercon),
-	},
+static const struct snd_soc_component_driver soc_component_dev_aic3x = {
+	.set_bias_level		= aic3x_set_bias_level,
+	.probe			= aic3x_probe,
+	.controls		= aic3x_snd_controls,
+	.num_controls		= ARRAY_SIZE(aic3x_snd_controls),
+	.dapm_widgets		= aic3x_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(aic3x_dapm_widgets),
+	.dapm_routes		= intercon,
+	.num_dapm_routes	= ARRAY_SIZE(intercon),
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
 };
 
 static void aic3x_configure_ocmv(struct i2c_client *client)

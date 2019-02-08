@@ -1994,22 +1994,7 @@ static int wm8995_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static int wm8995_remove(struct snd_soc_codec *codec)
-{
-	struct wm8995_priv *wm8995;
-	int i;
-
-	wm8995 = snd_soc_codec_get_drvdata(codec);
-
-	for (i = 0; i < ARRAY_SIZE(wm8995->supplies); ++i)
-		regulator_unregister_notifier(wm8995->supplies[i].consumer,
-					      &wm8995->disable_nb[i]);
-
-	regulator_bulk_free(ARRAY_SIZE(wm8995->supplies), wm8995->supplies);
-	return 0;
-}
-
-static int wm8995_probe(struct snd_soc_codec *codec)
+static int wm8995_probe(struct snd_soc_component *component)
 {
 	struct wm8995_priv *wm8995;
 	int i;
@@ -2021,8 +2006,9 @@ static int wm8995_probe(struct snd_soc_codec *codec)
 	for (i = 0; i < ARRAY_SIZE(wm8995->supplies); i++)
 		wm8995->supplies[i].supply = wm8995_supply_names[i];
 
-	ret = regulator_bulk_get(codec->dev, ARRAY_SIZE(wm8995->supplies),
-				 wm8995->supplies);
+	ret = devm_regulator_bulk_get(component->dev,
+				      ARRAY_SIZE(wm8995->supplies),
+				      wm8995->supplies);
 	if (ret) {
 		dev_err(codec->dev, "Failed to request supplies: %d\n", ret);
 		return ret;
@@ -2039,8 +2025,9 @@ static int wm8995_probe(struct snd_soc_codec *codec)
 
 	/* This should really be moved into the regulator core */
 	for (i = 0; i < ARRAY_SIZE(wm8995->supplies); i++) {
-		ret = regulator_register_notifier(wm8995->supplies[i].consumer,
-						  &wm8995->disable_nb[i]);
+		ret = devm_regulator_register_notifier(
+						wm8995->supplies[i].consumer,
+						&wm8995->disable_nb[i]);
 		if (ret) {
 			dev_err(codec->dev,
 				"Failed to register regulator notifier: %d\n",
@@ -2051,8 +2038,8 @@ static int wm8995_probe(struct snd_soc_codec *codec)
 	ret = regulator_bulk_enable(ARRAY_SIZE(wm8995->supplies),
 				    wm8995->supplies);
 	if (ret) {
-		dev_err(codec->dev, "Failed to enable supplies: %d\n", ret);
-		goto err_reg_get;
+		dev_err(component->dev, "Failed to enable supplies: %d\n", ret);
+		return ret;
 	}
 
 	ret = snd_soc_read(codec, WM8995_SOFTWARE_RESET);
@@ -2099,8 +2086,6 @@ static int wm8995_probe(struct snd_soc_codec *codec)
 
 err_reg_enable:
 	regulator_bulk_disable(ARRAY_SIZE(wm8995->supplies), wm8995->supplies);
-err_reg_get:
-	regulator_bulk_free(ARRAY_SIZE(wm8995->supplies), wm8995->supplies);
 	return ret;
 }
 
@@ -2186,20 +2171,18 @@ static struct snd_soc_dai_driver wm8995_dai[] = {
 	}
 };
 
-static const struct snd_soc_codec_driver soc_codec_dev_wm8995 = {
-	.probe = wm8995_probe,
-	.remove = wm8995_remove,
-	.set_bias_level = wm8995_set_bias_level,
-	.idle_bias_off = true,
-
-	.component_driver = {
-		.controls		= wm8995_snd_controls,
-		.num_controls		= ARRAY_SIZE(wm8995_snd_controls),
-		.dapm_widgets		= wm8995_dapm_widgets,
-		.num_dapm_widgets	= ARRAY_SIZE(wm8995_dapm_widgets),
-		.dapm_routes		= wm8995_intercon,
-		.num_dapm_routes	= ARRAY_SIZE(wm8995_intercon),
-	},
+static const struct snd_soc_component_driver soc_component_dev_wm8995 = {
+	.probe			= wm8995_probe,
+	.set_bias_level		= wm8995_set_bias_level,
+	.controls		= wm8995_snd_controls,
+	.num_controls		= ARRAY_SIZE(wm8995_snd_controls),
+	.dapm_widgets		= wm8995_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(wm8995_dapm_widgets),
+	.dapm_routes		= wm8995_intercon,
+	.num_dapm_routes	= ARRAY_SIZE(wm8995_intercon),
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
 };
 
 static const struct regmap_config wm8995_regmap = {
