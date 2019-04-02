@@ -1871,12 +1871,12 @@ static u8 skl_tplg_be_link_type(int dev_type)
  * The port can have multiple settings so pick based on the PCM
  * parameters
  */
-static int skl_tplg_be_fill_pipe_params(struct device *dev,
+static int skl_tplg_be_fill_pipe_params(struct snd_soc_dai *dai,
 				struct skl_module_cfg *mconfig,
 				struct skl_pipe_params *params)
 {
 	struct nhlt_specific_cfg *cfg;
-	struct skl *skl = get_skl_ctx(dev);
+	struct skl *skl = get_skl_ctx(dai->dev);
 	int link_type = skl_tplg_be_link_type(mconfig->dev_type);
 	u8 dev_type = skl_tplg_be_dev_type(mconfig->dev_type);
 
@@ -1918,17 +1918,18 @@ static int skl_tplg_be_fill_pipe_params(struct device *dev,
 		mconfig->formats_config.caps_size = cfg->size;
 		mconfig->formats_config.caps = (u32 *) &cfg->caps;
 	} else {
-		dev_err(dev, "Blob NULL for id %x type %d dirn %d\n",
+		dev_err(dai->dev, "Blob NULL for id %x type %d dirn %d\n",
 					mconfig->vbus_id, link_type,
 					params->stream);
-		dev_err(dev, "PCM: ch %d, freq %d, fmt %d\n",
+		dev_err(dai->dev, "PCM: ch %d, freq %d, fmt %d\n",
 				 params->ch, params->s_freq, params->s_fmt);
 		return -EINVAL;
 	}
+
 	return 0;
 }
 
-static int skl_tplg_be_set_src_pipe_params(struct device *dev,
+static int skl_tplg_be_set_src_pipe_params(struct snd_soc_dai *dai,
 				struct snd_soc_dapm_widget *w,
 				struct skl_pipe_params *params)
 {
@@ -1939,12 +1940,12 @@ static int skl_tplg_be_set_src_pipe_params(struct device *dev,
 		if (p->connect && is_skl_dsp_widget_type(p->source, dai->dev) &&
 						p->source->priv) {
 
-			ret = skl_tplg_be_fill_pipe_params(dev,
+			ret = skl_tplg_be_fill_pipe_params(dai,
 						p->source->priv, params);
 			if (ret < 0)
 				return ret;
 		} else {
-			ret = skl_tplg_be_set_src_pipe_params(dev,
+			ret = skl_tplg_be_set_src_pipe_params(dai,
 						p->source, params);
 			if (ret < 0)
 				return ret;
@@ -1954,8 +1955,8 @@ static int skl_tplg_be_set_src_pipe_params(struct device *dev,
 	return ret;
 }
 
-static int skl_tplg_be_set_sink_pipe_params(struct device *dev,
-		struct snd_soc_dapm_widget *w, struct skl_pipe_params *params)
+static int skl_tplg_be_set_sink_pipe_params(struct snd_soc_dai *dai,
+	struct snd_soc_dapm_widget *w, struct skl_pipe_params *params)
 {
 	struct snd_soc_dapm_path *p = NULL;
 	int ret = -EIO;
@@ -1964,13 +1965,13 @@ static int skl_tplg_be_set_sink_pipe_params(struct device *dev,
 		if (p->connect && is_skl_dsp_widget_type(p->sink, dai->dev) &&
 						p->sink->priv) {
 
-			ret = skl_tplg_be_fill_pipe_params(dev,
+			ret = skl_tplg_be_fill_pipe_params(dai,
 						p->sink->priv, params);
 			if (ret < 0)
 				return ret;
 		} else {
 			ret = skl_tplg_be_set_sink_pipe_params(
-						dev, p->sink, params);
+						dai, p->sink, params);
 			if (ret < 0)
 				return ret;
 		}
@@ -1984,7 +1985,7 @@ static int skl_tplg_be_set_sink_pipe_params(struct device *dev,
  * (playback). Based on sink and source we need to either find the source
  * list or the sink list and set the pipeline parameters
  */
-int skl_tplg_be_update_params(struct device *dev, struct snd_soc_dai *dai,
+int skl_tplg_be_update_params(struct snd_soc_dai *dai,
 				struct skl_pipe_params *params)
 {
 	struct snd_soc_dapm_widget *w;
@@ -1992,12 +1993,12 @@ int skl_tplg_be_update_params(struct device *dev, struct snd_soc_dai *dai,
 	if (params->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		w = dai->playback_widget;
 
-		return skl_tplg_be_set_src_pipe_params(dev, w, params);
+		return skl_tplg_be_set_src_pipe_params(dai, w, params);
 
 	} else {
 		w = dai->capture_widget;
 
-		return skl_tplg_be_set_sink_pipe_params(dev, w, params);
+		return skl_tplg_be_set_sink_pipe_params(dai, w, params);
 	}
 
 	return 0;
@@ -2021,7 +2022,7 @@ int skl_tplg_be_sdw_update_params(struct device *dev, struct snd_soc_dai *dai,
 
 	m_cfg->sdw_stream_num = pdi;
 
-	skl_tplg_be_update_params(dev, dai, &p_params);
+	skl_tplg_be_update_params(dai, &p_params);
 
 	return 0;
 }

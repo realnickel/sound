@@ -1300,8 +1300,6 @@ int sdw_stream_add_master(struct sdw_bus *bus,
 //		trace_sdw_config_ports(bus, slave,
 //				&ports_config->port_config[i], stream->name);
 
-	goto error;
-
 stream_error:
 	sdw_release_master_stream(m_rt, stream);
 unlock:

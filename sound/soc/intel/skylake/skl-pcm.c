@@ -240,7 +240,6 @@ static int skl_pcm_open(struct snd_pcm_substream *substream,
 
 	stream = snd_hdac_ext_stream_assign(bus, substream,
 					skl_get_host_stream_type(bus));
-
 	if (stream == NULL)
 		return -EBUSY;
 
@@ -363,7 +362,7 @@ static void skl_pcm_close(struct snd_pcm_substream *substream,
 	struct skl *skl = bus_to_skl(bus);
 	struct skl_module_cfg *mconfig;
 
-	dev_err(dai->dev, "%s: %s\n", __func__, dai->name);
+	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
 
 	snd_hdac_ext_stream_release(stream, skl_get_host_stream_type(bus));
 
@@ -401,7 +400,7 @@ static int skl_pcm_hw_free(struct snd_pcm_substream *substream,
 	struct skl_module_cfg *mconfig;
 	int ret;
 
-	dev_err(dai->dev, "%s: %s %p\n", __func__, dai->name, stream);
+	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
 
 	mconfig = skl_tplg_fe_get_cpr_module(dai, substream->stream);
 
@@ -429,7 +428,7 @@ static int skl_be_hw_params(struct snd_pcm_substream *substream,
 	p_params.s_freq = params_rate(params);
 	p_params.stream = substream->stream;
 
-	return skl_tplg_be_update_params(dai->dev, dai, &p_params);
+	return skl_tplg_be_update_params(dai, &p_params);
 }
 
 static int skl_decoupled_trigger(struct snd_pcm_substream *substream,
@@ -606,7 +605,7 @@ static int skl_link_hw_params(struct snd_pcm_substream *substream,
 	else
 		p_params.link_bps = codec_dai->driver->capture.sig_bits;
 
-	return skl_tplg_be_update_params(dai->dev, dai, &p_params);
+	return skl_tplg_be_update_params(dai, &p_params);
 }
 
 static int skl_link_pcm_prepare(struct snd_pcm_substream *substream,
@@ -1099,10 +1098,10 @@ static int skl_platform_open(struct snd_pcm_substream *substream)
 	struct snd_soc_dai_link *dai_link = rtd->dai_link;
 	struct sdw_stream_runtime *sdw_stream = NULL;
 	struct skl_stream *stream;
-	int str_len, i, ret = 0;
+	int i, ret = 0;
 	char *name;
 
-	dev_dbg(rtd->cpu_dai->dev, " In %s:%s\n", __func__,
+	dev_dbg(rtd->cpu_dai->dev, "In %s:%s\n", __func__,
 					dai_link->cpu_dai_name);
 
 	snd_soc_set_runtime_hwparams(substream, &azx_pcm_hw);
@@ -1242,7 +1241,7 @@ static int skl_sdw_stream_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct snd_soc_dai_link *dai_link = rtd->dai_link;
+	//struct snd_soc_dai_link *dai_link = rtd->dai_link;
 	struct skl_stream *stream = runtime->private_data;
 	struct sdw_stream_runtime *sdw_stream = stream->ctx;
 	int ret;
@@ -1375,7 +1374,6 @@ static int skl_platform_pcm_trigger(struct snd_pcm_substream *substream,
 					int cmd)
 {
 	struct hdac_bus *bus = get_bus_ctx(substream);
-	struct hdac_ext_bus *ebus = get_bus_ctx(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct skl_stream *stream = runtime->private_data;
@@ -1674,7 +1672,6 @@ static int skl_platform_soc_probe(struct snd_soc_component *component)
 			return ret;
 		}
 		skl_populate_modules(skl);
-
 		skl->skl_sst->update_d0i3c = skl_update_d0i3c;
 		skl_dsp_enable_notification(skl->skl_sst, false);
 

@@ -477,7 +477,7 @@ static inline struct skl *get_skl_ctx(struct device *dev)
 	return bus_to_skl(bus);
 }
 
-int skl_tplg_be_update_params(struct device *dev, struct snd_soc_dai *dai,
+int skl_tplg_be_update_params(struct snd_soc_dai *dai,
 	struct skl_pipe_params *params);
 int skl_dsp_set_dma_control(struct skl_sst *ctx, u32 *caps,
 			u32 caps_size, u32 node_id);
