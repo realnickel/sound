@@ -22,6 +22,7 @@
 #include <linux/uuid.h>
 #include <sound/soc.h>
 #include <sound/soc-topology.h>
+#include <sound/pcm_params.h>
 #include <uapi/sound/snd_sst_tokens.h>
 #include <uapi/sound/skl-tplg-interface.h>
 #include "skl-sst-dsp.h"
@@ -1850,6 +1851,11 @@ static u8 skl_tplg_be_link_type(int dev_type)
 		ret = NHLT_LINK_HDA;
 		break;
 
+	case SKL_DEVICE_SDW_PCM:
+	case SKL_DEVICE_SDW_PDM:
+		ret = NHLT_LINK_SDW;
+		break;
+
 	default:
 		ret = NHLT_LINK_INVALID;
 		break;
@@ -1878,6 +1884,30 @@ static int skl_tplg_be_fill_pipe_params(struct snd_soc_dai *dai,
 
 	if (link_type == NHLT_LINK_HDA)
 		return 0;
+
+	if (link_type == NHLT_LINK_SDW) {
+		struct skl_sdw_cfg *sdw_cfg;
+		size_t sz;
+
+		sz = sizeof(struct skl_sdw_agg) + 2;
+
+		/* TODO: who frees this mem */
+		sdw_cfg = kzalloc(sz, GFP_KERNEL);
+		if (!sdw_cfg)
+			return -ENOMEM;
+
+		mconfig->formats_config.caps_size = sz;
+		sdw_cfg->count = 1;
+
+		/* TODO: don't see how ch_mask is configured so set to 0 for
+		 * now
+		 */
+		sdw_cfg->data[0].ch_mask = 0;
+		sdw_cfg->data[0].alh_stream = mconfig->sdw_stream_num;
+
+		mconfig->formats_config.caps = (u32 *)sdw_cfg;
+		return 0;
+	}
 
 	/* update the blob based on virtual bus_id*/
 	cfg = skl_get_ep_blob(skl, mconfig->vbus_id, link_type,
@@ -1970,6 +2000,29 @@ int skl_tplg_be_update_params(struct snd_soc_dai *dai,
 
 		return skl_tplg_be_set_sink_pipe_params(dai, w, params);
 	}
+
+	return 0;
+}
+
+int skl_tplg_be_sdw_update_params(struct device *dev, struct snd_soc_dai *dai,
+				struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params, int pdi)
+{
+	struct skl_pipe_params p_params = {0};
+	struct skl_module_cfg *m_cfg;
+
+	p_params.s_fmt = snd_pcm_format_width(params_format(params));
+	p_params.ch = params_channels(params);
+	p_params.s_freq = params_rate(params);
+	p_params.stream = substream->stream;
+
+	m_cfg = skl_tplg_be_get_cpr_module(dai, substream->stream);
+	if (!m_cfg)
+		return -EIO;
+
+	m_cfg->sdw_stream_num = pdi;
+
+	skl_tplg_be_update_params(dai, &p_params);
 
 	return 0;
 }
