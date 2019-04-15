@@ -291,6 +291,7 @@ int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
 	    reply_bytes > SOF_IPC_MSG_MAX_SIZE)
 		return -ENOBUFS;
 
+#if !IS_ENABLED(CONFIG_SOF_BYPASS_HARDWARE)
 	/* Serialise IPC TX */
 	mutex_lock(&ipc->tx_mutex);
 
@@ -298,7 +299,10 @@ int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
 					  reply_data, reply_bytes);
 
 	mutex_unlock(&ipc->tx_mutex);
-
+#else
+	ret = 0;
+#endif
+	
 	return ret;
 }
 EXPORT_SYMBOL(sof_ipc_tx_message);
