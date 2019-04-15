@@ -332,6 +332,7 @@ static int sof_probe_continue(struct snd_sof_dev *sdev)
 		goto ipc_err;
 	}
 
+#if !IS_ENABLED(CONFIG_SOF_BYPASS_HARDWARE)
 	/* load the firmware */
 	ret = snd_sof_load_firmware(sdev);
 	if (ret < 0) {
@@ -355,7 +356,8 @@ static int sof_probe_continue(struct snd_sof_dev *sdev)
 		dev_warn(sdev->dev,
 			 "warning: failed to initialize trace %d\n", ret);
 	}
-
+#endif
+	
 	/* hereafter all FW boot flows are for PM reasons */
 	sdev->first_boot = false;
 
@@ -478,10 +480,12 @@ int snd_sof_device_remove(struct device *dev)
 	if (IS_ENABLED(CONFIG_SND_SOC_SOF_PROBE_WORK_QUEUE))
 		cancel_work_sync(&sdev->probe_work);
 
+#if !IS_ENABLED(CONFIG_SOF_BYPASS_HARDWARE)
 	snd_sof_fw_unload(sdev);
 	snd_sof_ipc_free(sdev);
 	snd_sof_free_debug(sdev);
 	snd_sof_free_trace(sdev);
+#endif
 	snd_sof_remove(sdev);
 
 	/*

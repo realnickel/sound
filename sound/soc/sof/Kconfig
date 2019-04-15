@@ -63,6 +63,12 @@ config SND_SOC_SOF_DEBUG
 
 if SND_SOC_SOF_DEBUG
 
+config SOF_BYPASS_HARDWARE
+       bool "SOF bypass hardware"
+       help
+	  This option can be used bypass hardware setups and try to
+	  load drivers. Don't use unless you know what you are doing
+
 config SND_SOC_SOF_FORCE_NOCODEC_MODE
 	bool "SOF force nocodec Mode"
 	depends on SND_SOC_SOF_NOCODEC

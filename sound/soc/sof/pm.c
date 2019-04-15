@@ -271,6 +271,7 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 		return ret;
 	}
 
+#if !IS_ENABLED(CONFIG_SOF_BYPASS_HARDWARE)
 	/* load the firmware */
 	ret = snd_sof_load_firmware(sdev);
 	if (ret < 0) {
@@ -313,7 +314,7 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 		dev_err(sdev->dev,
 			"error: ctx_restore ipc error during resume %d\n",
 			ret);
-
+#endif
 	return ret;
 }
 
@@ -326,6 +327,7 @@ static int sof_suspend(struct device *dev, bool runtime_suspend)
 	if (!sof_ops(sdev)->suspend)
 		return 0;
 
+#if !IS_ENABLED(CONFIG_SOF_BYPASS_HARDWARE)
 	/* release trace */
 	snd_sof_release_trace(sdev);
 
@@ -356,7 +358,8 @@ static int sof_suspend(struct device *dev, bool runtime_suspend)
 		dev_err(sdev->dev,
 			"error: failed to power down DSP during suspend %d\n",
 			ret);
-
+#endif
+	
 	return ret;
 }
 
