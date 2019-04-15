@@ -314,14 +314,15 @@ static int rt700_interrupt_callback(struct sdw_slave *slave,
 	return 0;
 }
 
+/*
+ * slave_ops: callbacks for get_clock_stop_mode, clock_stop and
+ * port_prep are not defined for now
+ */
 static struct sdw_slave_ops rt700_slave_ops = {
 	.read_prop = rt700_read_prop,
 	.interrupt_callback = rt700_interrupt_callback,
 	.update_status = rt700_update_status,
-	.get_clk_stop_mode = NULL,
-	.clk_stop = NULL,
 	.bus_config = rt700_bus_config,
-	.port_prep = NULL,
 };
 
 static int rt700_sdw_probe(struct sdw_slave *slave,
