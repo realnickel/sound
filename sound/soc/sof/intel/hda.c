@@ -15,7 +15,10 @@
  * Hardware interface for generic Intel audio DSP HDA IP
  */
 
+#include <linux/acpi.h>
 #include <linux/module.h>
+#include <linux/soundwire/sdw_intel.h>
+
 #include <sound/hdaudio_ext.h>
 #include <sound/sof.h>
 #include <sound/sof/xtensa.h>
@@ -179,6 +182,55 @@ void hda_dsp_dump(struct snd_sof_dev *sdev, u32 flags)
 	}
 }
 
+#if IS_ENABLED(CONFIG_SOUNDWIRE_INTEL)
+static int hda_sdw_init(struct snd_sof_dev *sdev)
+{
+	acpi_handle handle;
+	struct sdw_intel_res res;
+
+	pr_err("hda_sdw_init\n");
+
+	handle = ACPI_HANDLE(sdev->dev);
+
+	res.mmio_base = sdev->bar[HDA_DSP_BAR];
+	res.irq = sdev->ipc_irq;
+	res.parent = sdev->dev;
+	//res.ops = &sdw_callback;
+	//res.arg = cnl;
+
+	//cnl_sdw_int_enable(cnl->dsp, 1);
+
+	sdev->sdw = sdw_intel_init(handle, &res);
+	if (!sdev->sdw) {
+		dev_err(sdev->dev, "SDW Init failed\n");
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int hda_sdw_exit(struct snd_sof_dev *sdev)
+{
+	//cnl_sdw_int_enable(cnl->dsp, 0);
+
+	if (sdev->sdw)
+		sdw_intel_exit(sdev->sdw);
+
+	return 0;
+}
+#else
+static int hda_sdw_init(struct snd_sof_dev *sdev)
+{
+	return 0;
+}
+
+static int hda_sdw_exit(struct snd_sof_dev *sdev)
+{
+	return 0;
+}
+#endif
+
+
 static int hda_init(struct snd_sof_dev *sdev)
 {
 	struct hda_bus *hbus;
@@ -216,9 +268,12 @@ static int hda_init(struct snd_sof_dev *sdev)
 
 	/* get controller capabilities */
 	ret = hda_dsp_ctrl_get_caps(sdev);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(sdev->dev, "error: get caps error\n");
+		return ret;
+	}
 
+	
 	return ret;
 }
 
@@ -526,6 +581,10 @@ int hda_dsp_probe(struct snd_sof_dev *sdev)
 		goto free_hda_irq;
 	}
 
+	ret = hda_sdw_init(sdev);
+	if (ret < 0)
+		dev_err(sdev->dev, "error: get caps error\n");
+
 	pci_set_master(pci);
 	synchronize_irq(pci->irq);
 
@@ -628,6 +687,8 @@ int hda_dsp_remove(struct snd_sof_dev *sdev)
 	snd_hdac_ext_bus_device_remove(bus);
 #endif
 
+	hda_sdw_exit(sdev);
+	
 	if (!IS_ERR_OR_NULL(hda->dmic_dev))
 		platform_device_unregister(hda->dmic_dev);
 
