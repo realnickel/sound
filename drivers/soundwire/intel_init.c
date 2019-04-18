@@ -62,6 +62,7 @@ static struct sdw_intel_ctx
 	int ret, i;
 	u8 count;
 	u32 caps;
+	struct fwnode_handle *alink;
 
 	if (acpi_bus_get_device(res->handle, &adev))
 		return NULL;
@@ -80,18 +81,62 @@ static struct sdw_intel_ctx
 
 	/* Check SNDWLCAP.LCOUNT */
 	caps = ioread32(res->mmio_base + SDW_SHIM_BASE + SDW_SHIM_LCAP);
+	pr_err("plb: mmio_base %p SDW_SHIM_BASE %d SDW_SHIM_LCAP %d\n", res->mmio_base,  SDW_SHIM_BASE, SDW_SHIM_LCAP);
+	pr_err("plb: BIOS count %d hw caps %d\n", count, caps);
 
 	/* Check HW supported vs property value and use min of two */
 	count = min_t(u8, caps, count);
+
+	// FIXME: set value to keep going
+	count = 4;
 
 	/* Check count is within bounds */
 	if (count > SDW_MAX_LINKS) {
 		dev_err(&adev->dev, "Link count %d exceeds max %d\n",
 			count, SDW_MAX_LINKS);
 		return NULL;
+	} else if (!count) {
+		dev_err(&adev->dev, "Link count is zero, BIOS or hw_caps are likely incorrect\n");
+		return NULL;
 	}
 
 	dev_dbg(&adev->dev, "Creating %d SDW Link devices\n", count);
+
+	{
+		u32 nval;
+
+		fwnode_property_read_u32(acpi_fwnode_handle(adev),
+					 "mipi-sdw-master-count",
+					 &nval);
+
+		dev_err(&adev->dev, "plb: master1 count %d\n", nval);
+
+	}
+
+	dev_info(&adev->dev, "controller child_node_count %d\n",
+		 device_get_child_node_count(&adev->dev));
+
+	{
+		struct fwnode_handle *child;
+
+		fwnode_for_each_child_node(acpi_fwnode_handle(adev), child) {
+			if (is_acpi_data_node(child))
+				dev_info(&adev->dev, "data node child: %s\n", to_acpi_data_node(child)->name);
+			else
+				dev_info(&adev->dev, "device child\n");
+		}
+	}
+
+	alink = fwnode_get_named_child_node(acpi_fwnode_handle(adev),
+					    "mipi-sdw-link-0-subproperties");
+	if (!alink) {
+		dev_err(&adev->dev, "plb: Master node mipi-sdw-link-0-subproperties not found\n");
+	} else {
+
+		if (fwnode_property_read_bool(alink,
+					      "mipi-sdw-clock-stop-mode0-supported"))
+			pr_err("plb: mipi-sdw-clock-stop-mode0-supported\n");
+	}
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
@@ -118,7 +163,7 @@ static struct sdw_intel_ctx
 
 		memset(&pdevinfo, 0, sizeof(pdevinfo));
 
-		pdevinfo.parent = res->parent;
+		pdevinfo.parent = &adev->dev; //res->parent;
 		pdevinfo.name = "int-sdw";
 		pdevinfo.id = i;
 		pdevinfo.fwnode = acpi_fwnode_handle(adev);

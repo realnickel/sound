@@ -34,15 +34,23 @@ int sdw_master_read_prop(struct sdw_bus *bus)
 	char name[32];
 	int nval, i;
 
-	device_property_read_u32(bus->dev,
+	fwnode_property_read_u32(bus->ctlr_fwnode,
 				 "mipi-sdw-sw-interface-revision",
 				 &prop->revision);
+
+	pr_err("plb: prop->revision %d\n", prop->revision);
+
+	fwnode_property_read_u32(bus->ctlr_fwnode,
+				 "mipi-sdw-master-count",
+				 &nval);
+
+	pr_err("plb: master count %d\n", nval);
 
 	/* Find master handle */
 	snprintf(name, sizeof(name),
 		 "mipi-sdw-link-%d-subproperties", bus->link_id);
 
-	link = device_get_named_child_node(bus->dev, name);
+	link = fwnode_get_named_child_node(bus->ctlr_fwnode, name);
 	if (!link) {
 		dev_err(bus->dev, "Master node %s not found\n", name);
 		return -EIO;

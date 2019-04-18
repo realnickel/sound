@@ -774,6 +774,7 @@ struct sdw_bus {
 	unsigned int clk_stop_timeout;
 	u32 bank_switch_timeout;
 	bool multi_link;
+	struct fwnode_handle *ctlr_fwnode;
 };
 
 int sdw_add_bus_master(struct sdw_bus *bus);
