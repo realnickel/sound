@@ -493,6 +493,7 @@ static int sof_pcm_close(struct snd_pcm_substream *substream)
 }
 
 static struct snd_pcm_ops sof_pcm_ops = {
+#if !IS_ENABLED(CONFIG_SOF_BYPASS_HARDWARE)
 	.open		= sof_pcm_open,
 	.close		= sof_pcm_close,
 	.ioctl		= snd_pcm_lib_ioctl,
@@ -502,6 +503,7 @@ static struct snd_pcm_ops sof_pcm_ops = {
 	.trigger	= sof_pcm_trigger,
 	.pointer	= sof_pcm_pointer,
 	.page		= snd_pcm_sgbuf_ops_page,
+#endif	
 };
 
 /*
