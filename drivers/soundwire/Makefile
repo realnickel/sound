@@ -1,6 +1,7 @@
 #
 # Makefile for soundwire core
 #
+ccflags-y += -DDEBUG
 
 soundwire-bus-objs := bus_type.o bus.o slave.o mipi_disco.o stream.o \
 			sysfs.o debugfs.o
