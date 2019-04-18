@@ -416,7 +416,10 @@ struct snd_sof_dev {
 	u32 dtrace_is_enabled;
 	u32 dtrace_error;
 	u32 msi_enabled;
-
+  
+	/* sdw instance */
+	void *sdw;
+	
 	void *private;			/* core does not touch this */
 };
 
