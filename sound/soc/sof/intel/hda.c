@@ -15,7 +15,10 @@
  * Hardware interface for generic Intel audio DSP HDA IP
  */
 
+#include <linux/acpi.h>
 #include <linux/module.h>
+#include <linux/soundwire/sdw_intel.h>
+
 #include <sound/hdaudio_ext.h>
 #include <sound/sof.h>
 #include <sound/sof/xtensa.h>
@@ -31,6 +34,52 @@
 
 /* platform specific devices */
 #include "shim.h"
+
+#if IS_ENABLED(CONFIG_SOUNDWIRE_INTEL)
+static int hda_sdw_init(struct snd_sof_dev *sdev)
+{
+	acpi_handle handle;
+	struct sdw_intel_res res;
+
+	handle = ACPI_HANDLE(sdev->dev);
+
+	res.mmio_base = sdev->bar[HDA_DSP_BAR];
+	res.irq = sdev->ipc_irq;
+	res.parent = sdev->dev;
+	//res.ops = &sdw_callback;
+	//res.arg = cnl;
+
+	//cnl_sdw_int_enable(cnl->dsp, 1);
+
+	sdev->sdw = sdw_intel_init(handle, &res);
+	if (!sdev->sdw) {
+		dev_err(sdev->dev, "SDW Init failed\n");
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int hda_sdw_exit(struct snd_sof_dev *sdev)
+{
+	//cnl_sdw_int_enable(cnl->dsp, 0);
+
+	if (sdev->sdw)
+		sdw_intel_exit(sdev->sdw);
+
+	return 0;
+}
+#else
+static int hda_sdw_init(struct snd_sof_dev *sdev)
+{
+	return 0;
+}
+
+static int hda_sdw_exit(struct snd_sof_dev *sdev)
+{
+	return 0;
+}
+#endif
 
 /*
  * Debug
@@ -238,8 +287,10 @@ static int hda_init(struct snd_sof_dev *sdev)
 
 	/* get controller capabilities */
 	ret = hda_dsp_ctrl_get_caps(sdev);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(sdev->dev, "error: get caps error\n");
+		return ret;
+	}
 
 	return ret;
 }
@@ -554,6 +605,21 @@ int hda_dsp_probe(struct snd_sof_dev *sdev)
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = HDA_DSP_MBOX_UPLINK_OFFSET;
 
+	/* need to power-up core before setting-up capabilities */
+	ret = hda_dsp_core_power_up(sdev, HDA_DSP_CORE_MASK(0));
+	if (ret < 0) {
+		dev_err(sdev->dev, "error: could not power-up DSP subsystem\n");
+		goto free_ipc_irq;
+	}
+
+	/* initialize SoundWire capabilities */
+	ret = hda_sdw_init(sdev);
+	if (ret < 0) {
+		dev_err(sdev->dev, "error: SoundWire get caps error\n");
+		hda_dsp_core_power_down(sdev, HDA_DSP_CORE_MASK(0));
+		goto free_ipc_irq;
+	}
+
 	return 0;
 
 free_ipc_irq:
@@ -584,6 +650,8 @@ int hda_dsp_remove(struct snd_sof_dev *sdev)
 	/* codec removal, invoke bus_device_remove */
 	snd_hdac_ext_bus_device_remove(bus);
 #endif
+
+	hda_sdw_exit(sdev);
 
 	if (!IS_ERR_OR_NULL(hda->dmic_dev))
 		platform_device_unregister(hda->dmic_dev);
