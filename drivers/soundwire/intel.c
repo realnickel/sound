@@ -950,6 +950,7 @@ static int intel_probe(struct platform_device *pdev)
 	sdw->cdns.msg_count = 0;
 	sdw->cdns.bus.dev = &pdev->dev;
 	sdw->cdns.bus.link_id = pdev->id;
+	sdw->cdns.bus.ctlr_fwnode = pdev->dev.fwnode;
 
 	sdw_cdns_probe(&sdw->cdns);
 
@@ -965,6 +966,7 @@ static int intel_probe(struct platform_device *pdev)
 		goto err_master_reg;
 	}
 
+#if 0
 	/* Initialize shim and controller */
 	intel_link_power_up(sdw);
 	intel_shim_init(sdw);
@@ -1001,6 +1003,7 @@ static int intel_probe(struct platform_device *pdev)
 	}
 
 	intel_debugfs_init(sdw);
+#endif
 
 	return 0;
 
