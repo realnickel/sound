@@ -206,14 +206,15 @@ void sdw_sysfs_bus_exit(struct sdw_bus *bus)
  *		|---- max_async_buffer
  *		|---- block_pack_mode
  *		|---- port_encoding
- *		|---- bus_min_freq
- *		|---- bus_max_freq
- *		|---- bus_freq
- *		|---- max_freq
- *		|---- min_freq
- *		|---- freq
- *		|---- prep_ch_behave
- *		|---- glitchless
+ *		|---- audio_modeM
+ *				|---- bus_min_freq
+ *				|---- bus_max_freq
+ *				|---- bus_freq
+ *				|---- max_freq
+ *				|---- min_freq
+ *				|---- freq
+ *				|---- prep_ch_behave
+ *				|---- glitchless
  *
  */
 
@@ -318,7 +319,7 @@ static ssize_t slave_ch_prep_timeout_show(struct device *dev,
 {
 	struct sdw_dpn_sysfs *sysfs = to_sdw_dpn(dev);
 
-	return sprintf(buf, "%d ", sysfs->dpn->ch_prep_timeout);
+	return sprintf(buf, "%d\n", sysfs->dpn->ch_prep_timeout);
 }
 static DEVICE_ATTR_RO(slave_ch_prep_timeout);
 
