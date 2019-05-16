@@ -84,6 +84,13 @@ static struct sdw_intel_ctx
 	pr_err("plb: mmio_base %p SDW_SHIM_BASE %d SDW_SHIM_LCAP %d\n", res->mmio_base,  SDW_SHIM_BASE, SDW_SHIM_LCAP);
 	pr_err("plb: BIOS count %d hw caps %d\n", count, caps);
 
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = res->mmio_base + SDW_SHIM_BASE;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+	}
+
 	/* Check HW supported vs property value and use min of two */
 	count = min_t(u8, caps, count);
 
@@ -155,6 +162,14 @@ static struct sdw_intel_ctx
 		link->res.registers = res->mmio_base + SDW_LINK_BASE
 					+ (SDW_LINK_SIZE * i);
 		link->res.shim = res->mmio_base + SDW_SHIM_BASE;
+
+		if (1) {
+		  u32 lcap;
+		  void __iomem *shim = link->res.shim;
+		  lcap = readl(shim + 0);
+		  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+		}
+
 		link->res.alh = res->mmio_base + SDW_ALH_BASE;
 
 		link->res.ops = res->ops;
