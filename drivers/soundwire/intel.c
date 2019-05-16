@@ -390,6 +390,15 @@ static void intel_pdi_init(struct sdw_intel *sdw,
 
 	dev_dbg(sdw->cdns.dev, "PDM cap bd:%d in:%d out:%d\n",
 		config->pdm_bd, config->pdm_in, config->pdm_out);
+
+	if (1) {
+	  u32 lcap;
+
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+
+	}
+
 }
 
 static int
@@ -960,7 +969,22 @@ static int intel_probe(struct platform_device *pdev)
 	sdw->cdns.bus.link_id = pdev->id;
 	sdw->cdns.bus.ctlr_fwnode = pdev->dev.fwnode;
 
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = sdw->res->shim;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+
+	}
 	sdw_cdns_probe(&sdw->cdns);
+
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = sdw->res->shim;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+
+	}
 
 	/* Set property read ops */
 	sdw_intel_ops.read_prop = intel_prop_read;
@@ -974,10 +998,26 @@ static int intel_probe(struct platform_device *pdev)
 		goto err_master_reg;
 	}
 
-#if 0
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = sdw->res->shim;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+
+	}
+
+#if 1
 	/* Initialize shim and controller */
 	intel_link_power_up(sdw);
 	intel_shim_init(sdw);
+
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = sdw->res->shim;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+
+	}
 
 	ret = sdw_cdns_init(&sdw->cdns);
 	if (ret)
