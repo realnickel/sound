@@ -199,6 +199,13 @@ static int hda_sdw_init(struct snd_sof_dev *sdev)
 	//res.arg = cnl;
 
 	//cnl_sdw_int_enable(cnl->dsp, 1);
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = res.mmio_base + 0x2C000;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+
+	}
 
 	sdev->sdw = sdw_intel_init(handle, &res);
 	if (!sdev->sdw) {
