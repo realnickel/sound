@@ -194,8 +194,10 @@ err:
 
 void sdw_slave_debugfs_exit(struct sdw_slave_debugfs *d)
 {
-	debugfs_remove_recursive(d->fs);
-	kfree(d);
+	if (d) {
+		debugfs_remove_recursive(d->fs);
+		kfree(d);
+	}
 }
 
 void sdw_debugfs_init(void)
