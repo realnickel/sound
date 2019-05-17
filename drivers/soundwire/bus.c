@@ -113,20 +113,38 @@ EXPORT_SYMBOL(sdw_add_bus_master);
 static int sdw_delete_slave(struct device *dev, void *data)
 {
 	struct sdw_slave *slave = dev_to_sdw_dev(dev);
-	struct sdw_bus *bus = slave->bus;
+	struct sdw_bus *bus;
 
+	pr_err("plb: sdw_delete_slave1\n");
+	if (!slave) {
+	  pr_err("plb: trying to delete NULL slave\n");
+	}
+	bus = slave->bus;
+
+	pr_err("plb: sdw_delete_slave2\n");
 	sdw_sysfs_slave_exit(slave);
+	pr_err("plb: sdw_delete_slave3\n");
 	sdw_slave_debugfs_exit(slave->debugfs);
+	pr_err("plb: sdw_delete_slave4\n");
 
-	mutex_lock(&bus->bus_lock);
+	if (bus) {
+		mutex_lock(&bus->bus_lock);
 
-	if (slave->dev_num) /* clear dev_num if assigned */
-		clear_bit(slave->dev_num, bus->assigned);
+		pr_err("plb: sdw_delete_slave5\n");
+		if (slave->dev_num) /* clear dev_num if assigned */
+			clear_bit(slave->dev_num, bus->assigned);
 
-	list_del_init(&slave->node);
-	mutex_unlock(&bus->bus_lock);
+		pr_err("plb: sdw_delete_slave6\n");
+		list_del_init(&slave->node);
+		
+		pr_err("plb: sdw_delete_slave7\n");
+		mutex_unlock(&bus->bus_lock);
+		pr_err("plb: sdw_delete_slave8\n");
+	}
 
 	device_unregister(dev);
+
+	pr_err("plb: sdw_delete_slave9\n");
 	return 0;
 }
 

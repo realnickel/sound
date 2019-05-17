@@ -519,6 +519,15 @@ int hda_dsp_probe(struct snd_sof_dev *sdev)
 		goto hdac_bus_unmap;
 	}
 
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = sdev->bar[HDA_DSP_BAR] + 0x2C000;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+	  
+	}
+
+
 	sdev->mmio_bar = HDA_DSP_BAR;
 	sdev->mailbox_bar = HDA_DSP_BAR;
 

@@ -194,6 +194,14 @@ static ssize_t intel_reg_read(struct file *file, char __user *user_buf,
 	int i, j;
 	unsigned int links, reg;
 
+	if (1) {
+	  u32 lcap;
+	  void __iomem *shim = s;
+	  lcap = readl(shim + 0);
+	  pr_err("plb: %s shim %p, lcount %d lcap %d\n", __func__, shim, lcap, lcap & 7);
+	  
+	}
+
 	buf = kzalloc(RD_BUF, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
