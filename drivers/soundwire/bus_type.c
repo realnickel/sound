@@ -52,11 +52,14 @@ static int sdw_uevent(struct device *dev, struct kobj_uevent_env *env)
 	struct sdw_slave *slave = dev_to_sdw_dev(dev);
 	char modalias[32];
 
+	pr_err("plb: sdw_uevent1\n");
 	sdw_slave_modalias(slave, modalias, sizeof(modalias));
 
+	pr_err("plb: sdw_uevent2\n");
 	if (add_uevent_var(env, "MODALIAS=%s", modalias))
 		return -ENOMEM;
 
+	pr_err("plb: sdw_uevent3\n");
 	return 0;
 }
 

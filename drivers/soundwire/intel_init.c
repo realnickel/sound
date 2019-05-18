@@ -80,8 +80,9 @@ static struct sdw_intel_ctx
 	}
 
 	/* Check SNDWLCAP.LCOUNT */
+	pr_err("plb: mmio_base %p shim %p SDW_SHIM_BASE %x SDW_SHIM_LCAP %d\n", res->mmio_base,  res->mmio_base + SDW_SHIM_BASE, SDW_SHIM_BASE, SDW_SHIM_LCAP);
 	caps = ioread32(res->mmio_base + SDW_SHIM_BASE + SDW_SHIM_LCAP);
-	pr_err("plb: mmio_base %p SDW_SHIM_BASE %d SDW_SHIM_LCAP %d\n", res->mmio_base,  SDW_SHIM_BASE, SDW_SHIM_LCAP);
+
 	pr_err("plb: BIOS count %d hw caps %d\n", count, caps);
 
 	if (1) {
