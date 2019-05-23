@@ -20,6 +20,8 @@
 #ifndef __SKL_NHLT_H__
 #define __SKL_NHLT_H__
 
+#if IS_ENABLED(CONFIG_ACPI)
+
 #include <linux/acpi.h>
 
 struct wav_fmt {
@@ -124,5 +126,31 @@ enum {
 	NHLT_MIC_ARRAY_4CH_2ND_GEOM = 0xe,
 	NHLT_MIC_ARRAY_VENDOR_DEFINED = 0xf,
 };
+
+struct nhlt_acpi_table *intel_nhlt_init(struct device *dev);
+
+void intel_nhlt_free(struct nhlt_acpi_table *addr);
+
+int intel_nhlt_get_dmic_geo(struct device *dev, struct nhlt_acpi_table *nhlt);
+
+#else
+
+struct nhlt_acpi_table;
+
+static inline nhlt_acpi_table *intel_nhlt_init(struct device *dev)
+{
+	return NULL;
+}
+
+static inline void intel_nhlt_free(struct nhlt_acpi_table *addr)
+{
+}
+
+static inline int intel_nhlt_get_dmic_geo(struct device *dev,
+					  struct nhlt_acpi_table *nhlt)
+{
+	return 0;
+}
+#endif
 
 #endif
