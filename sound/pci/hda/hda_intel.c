@@ -66,6 +66,7 @@
 #include <sound/hda_codec.h>
 #include "hda_controller.h"
 #include "hda_intel.h"
+#include "../../soc/intel/common/intel-nhlt.h"
 
 #define CREATE_TRACE_POINTS
 #include "hda_intel_trace.h"
@@ -2038,6 +2039,25 @@ static const struct hda_controller_ops pci_hda_ops = {
 	.position_check = azx_position_check,
 };
 
+static int azx_check_dmic(struct pci_dev *pci, struct azx *chip)
+{
+	struct nhlt_acpi_table *nhlt;
+	int ret = 0;
+
+	if (chip->driver_type == AZX_DRIVER_SKL &&
+	    pci->class != 0x040300) {
+		nhlt = intel_nhlt_init(&pci->dev);
+		if (nhlt) {
+			if (intel_nhlt_get_dmic_geo(&pci->dev, nhlt)) {
+				ret = -ENODEV;
+				dev_dbg(&pci->dev, "Digital mics found on Skylake+ platform, aborting probe\n");
+			}
+			intel_nhlt_free(nhlt);
+		}
+	}
+	return ret;
+}
+
 static int azx_probe(struct pci_dev *pci,
 		     const struct pci_device_id *pci_id)
 {
@@ -2067,6 +2087,16 @@ static int azx_probe(struct pci_dev *pci,
 		goto out_free;
 	card->private_data = chip;
 	hda = container_of(chip, struct hda_intel, chip);
+
+	/*
+	 * stop probe if digital microphones detected on Skylake+ platform
+	 * with the DSP enabled
+	 */
+	err = azx_check_dmic(pci, chip);
+	if (err < 0) {
+		/* FIXME: need to free everything allocated in azx_create */
+		goto out_free;
+	}
 
 	pci_set_drvdata(pci, card);
 
