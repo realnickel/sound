@@ -29,3 +29,6 @@ config SND_HDA_PREALLOC_SIZE
 
 	  Note that the pre-allocation size can be changed dynamically
 	  via a proc file (/proc/asound/card*/pcm*/sub*/prealloc), too.
+
+config SND_INTEL_NHLT
+	tristate
