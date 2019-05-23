@@ -14,6 +14,7 @@
 #include "skl.h"
 #include "skl-ssp-clk.h"
 #include "skl-topology.h"
+#include "../common/intel-nhlt.h"
 
 #define to_skl_clk(_hw)	container_of(_hw, struct skl_clk, hw)
 
