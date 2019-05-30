@@ -211,6 +211,7 @@
 
 #define HDA_DSP_ADSPIC_IPC			1
 #define HDA_DSP_ADSPIS_IPC			1
+#define HDA_DSP_ADSPIC2_SNDW			BIT(5)
 
 /* Intel HD Audio General DSP Registers */
 #define HDA_DSP_GEN_BASE		0x0
@@ -398,6 +399,11 @@ struct sof_intel_hda_dev {
 
 	/* DMIC device */
 	struct platform_device *dmic_dev;
+
+#if IS_ENABLED(CONFIG_SOUNDWIRE_INTEL)
+	/* sdw context */
+	void *sdw;
+#endif
 };
 
 static inline struct hdac_bus *sof_to_bus(struct snd_sof_dev *s)
