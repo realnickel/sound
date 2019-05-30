@@ -39,6 +39,21 @@
 #define IS_CNL(pci) ((pci)->vendor == 0x8086 && (pci)->device == 0x9dc8)
 
 #if IS_ENABLED(CONFIG_SOUNDWIRE_INTEL)
+
+static void hda_sdw_int_enable(struct snd_sof_dev *sdev, bool enable)
+{
+	if (enable)
+		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
+					HDA_DSP_REG_ADSPIC2,
+					HDA_DSP_ADSPIC2_SNDW,
+					HDA_DSP_ADSPIC2_SNDW);
+	else
+		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
+					HDA_DSP_REG_ADSPIC2,
+					HDA_DSP_ADSPIC2_SNDW,
+					0);
+}
+
 static int hda_sdw_init(struct snd_sof_dev *sdev)
 {
 	acpi_handle handle;
@@ -52,7 +67,8 @@ static int hda_sdw_init(struct snd_sof_dev *sdev)
 	//res.ops = &sdw_callback;
 	//res.arg = cnl;
 
-	//cnl_sdw_int_enable(cnl->dsp, 1);
+	//hda_sdw_int_enable(sdev, true);
+	//hda_sdw_int_enable(sdev, false);
 
 	sdev->sdw = sdw_intel_init(handle, &res);
 	if (!sdev->sdw) {
@@ -65,7 +81,7 @@ static int hda_sdw_init(struct snd_sof_dev *sdev)
 
 static int hda_sdw_exit(struct snd_sof_dev *sdev)
 {
-	//cnl_sdw_int_enable(cnl->dsp, 0);
+	hda_sdw_int_enable(sdev, false);
 
 	if (sdev->sdw)
 		sdw_intel_exit(sdev->sdw);
