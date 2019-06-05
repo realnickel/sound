@@ -58,6 +58,7 @@ int intel_nhlt_get_dmic_geo(struct device *dev, struct nhlt_acpi_table *nhlt)
 {
 	struct nhlt_endpoint *epnt;
 	struct nhlt_dmic_array_config *cfg;
+	struct nhlt_vendor_dmic_array_config *cfg_vendor;
 	unsigned int dmic_geo = 0;
 	u8 j;
 
@@ -82,6 +83,9 @@ int intel_nhlt_get_dmic_geo(struct device *dev, struct nhlt_acpi_table *nhlt)
 				dmic_geo |= MIC_ARRAY_4CH;
 				break;
 			case NHLT_MIC_ARRAY_VENDOR_DEFINED:
+				cfg_vendor = (struct nhlt_vendor_dmic_array_config *)cfg;
+				dev_dbg(dev, "num dmics %d\n", cfg_vendor->nb_mics);
+
 				dev_dbg(dev, "VENDOR_DEFINED DMIC array_type, using 2CH_SMALL\n");
 				dmic_geo |= NHLT_MIC_ARRAY_2CH_SMALL;
 				break;
