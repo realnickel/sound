@@ -173,8 +173,6 @@
 #define CDNS_PDI_CONFIG_PORT			GENMASK(4, 0)
 
 /* Driver defaults */
-
-#define CDNS_DEFAULT_CLK_DIVIDER		0
 #define CDNS_DEFAULT_SSP_INTERVAL		0x18
 #define CDNS_TX_TIMEOUT				2000
 
@@ -973,7 +971,10 @@ static u32 cdns_set_default_frame_shape(int n_rows, int n_cols)
  */
 int sdw_cdns_init(struct sdw_cdns *cdns)
 {
+	struct sdw_bus *bus = &cdns->bus;
+	struct sdw_master_prop *prop = &bus->prop;
 	u32 val;
+	int divider;
 	int ret;
 
 	/* Exit clock stop */
@@ -985,9 +986,17 @@ int sdw_cdns_init(struct sdw_cdns *cdns)
 	}
 
 	/* Set clock divider */
+	divider	= (prop->mclk_freq / prop->max_clk_freq) - 1;
 	val = cdns_readl(cdns, CDNS_MCP_CLK_CTRL0);
-	val |= CDNS_DEFAULT_CLK_DIVIDER;
+	val |= divider;
 	cdns_writel(cdns, CDNS_MCP_CLK_CTRL0, val);
+	cdns_writel(cdns, CDNS_MCP_CLK_CTRL1, val);
+
+	pr_err("plb: mclk %d max_freq %d divider %d register %x\n",
+	       prop->mclk_freq,
+	       prop->max_clk_freq,
+	       divider,
+	       val);
 
 	/* Set the default frame shape */
 	val = cdns_set_default_frame_shape(prop->default_row,
@@ -1035,6 +1044,7 @@ EXPORT_SYMBOL(sdw_cdns_init);
 
 int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 {
+	struct sdw_master_prop *prop = &bus->prop;
 	struct sdw_cdns *cdns = bus_to_cdns(bus);
 	int mcp_clkctrl_off, mcp_clkctrl;
 	int divider;
@@ -1044,7 +1054,9 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 		return -EINVAL;
 	}
 
-	divider	= (params->max_dr_freq / params->curr_dr_freq) - 1;
+	divider	= prop->mclk_freq * SDW_DOUBLE_RATE_FACTOR /
+		params->curr_dr_freq;
+	divider--; /* divider is 1/(N+1) */
 
 	if (params->next_bank)
 		mcp_clkctrl_off = CDNS_MCP_CLK_CTRL1;
@@ -1054,6 +1066,12 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 	mcp_clkctrl = cdns_readl(cdns, mcp_clkctrl_off);
 	mcp_clkctrl |= divider;
 	cdns_writel(cdns, mcp_clkctrl_off, mcp_clkctrl);
+
+	pr_err("plb: mclk * 2 %d curr_dr_freq %d divider %d register %x\n",
+	       prop->mclk_freq * SDW_DOUBLE_RATE_FACTOR,
+	       params->curr_dr_freq,
+	       divider,
+	       mcp_clkctrl);
 
 	return 0;
 }
