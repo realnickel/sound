@@ -1214,6 +1214,10 @@ int sdw_cdns_init(struct sdw_cdns *cdns)
 	val |= CDNS_DEFAULT_CLK_DIVIDER;
 	cdns_writel(cdns, CDNS_MCP_CLK_CTRL0, val);
 
+	val = cdns_readl(cdns, CDNS_MCP_CLK_CTRL1);
+	val |= CDNS_DEFAULT_CLK_DIVIDER;
+	cdns_writel(cdns, CDNS_MCP_CLK_CTRL1, val);
+
 	/* Set the default frame shape */
 	cdns_writel(cdns, CDNS_MCP_FRAME_SHAPE_INIT, CDNS_DEFAULT_FRAME_SHAPE);
 
@@ -1262,12 +1266,24 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 	int mcp_clkctrl_off, mcp_clkctrl;
 	int divider;
 
+	dev_dbg(cdns->dev, "curr_bank %d next_bank %d max_dr_freq %d curr_dr_freq %d bandwidth %d cols %d row %d\n",
+		params->curr_bank,
+		params->next_bank,
+		params->max_dr_freq,
+		params->curr_dr_freq,
+		params->bandwidth,
+		params->col,
+		params->row);
+
 	if (!params->curr_dr_freq) {
 		dev_err(cdns->dev, "NULL curr_dr_freq\n");
 		return -EINVAL;
 	}
 
 	divider	= (params->max_dr_freq / params->curr_dr_freq) - 1;
+	divider += 2;
+
+	dev_dbg(cdns->dev, "divider %d\n", divider);
 
 	if (params->next_bank)
 		mcp_clkctrl_off = CDNS_MCP_CLK_CTRL1;
@@ -1275,7 +1291,8 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 		mcp_clkctrl_off = CDNS_MCP_CLK_CTRL0;
 
 	mcp_clkctrl = cdns_readl(cdns, mcp_clkctrl_off);
-	mcp_clkctrl |= divider;
+	mcp_clkctrl &= ~GENMASK(7, 0);
+	mcp_clkctrl |= (divider & GENMASK(7, 0));
 	cdns_writel(cdns, mcp_clkctrl_off, mcp_clkctrl);
 
 	return 0;
