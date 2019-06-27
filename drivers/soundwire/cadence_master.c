@@ -198,7 +198,7 @@ MODULE_PARM_DESC(cdns_mcp_int_mask, "Cadence MCP IntMask");
 
 /* Driver defaults */
 
-#define CDNS_DEFAULT_CLK_DIVIDER		2
+#define CDNS_DEFAULT_CLK_DIVIDER		1
 //#define CDNS_DEFAULT_FRAME_SHAPE		0x30 /* 125 rows, 2 columns */
 #define CDNS_DEFAULT_FRAME_SHAPE		0x08 /* 50 rows, 2 columns */
 #define CDNS_DEFAULT_SSP_INTERVAL		0x18
@@ -1271,7 +1271,7 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 	divider	= (params->max_dr_freq / params->curr_dr_freq) - 1;
 
 	/* FIXME: this is for ICL only */
-	divider += 2;
+	divider += 1;
 
 	if (params->next_bank)
 		mcp_clkctrl_off = CDNS_MCP_CLK_CTRL1;
