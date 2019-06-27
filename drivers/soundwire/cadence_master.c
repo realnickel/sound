@@ -1270,6 +1270,9 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 
 	divider	= (params->max_dr_freq / params->curr_dr_freq) - 1;
 
+	/* FIXME: this is for ICL only */
+	divider += 2;
+
 	if (params->next_bank)
 		mcp_clkctrl_off = CDNS_MCP_CLK_CTRL1;
 	else
