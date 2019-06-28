@@ -15,7 +15,8 @@
 /* TODO: Remove below Intel related hardcoding */
 //#define SDW_INTEL_DEFAULT_ROW		125
 #define SDW_INTEL_DEFAULT_ROW		50
-#define SDW_INTEL_DEFAULT_COL		2
+//#define SDW_INTEL_DEFAULT_COL		2
+#define SDW_INTEL_DEFAULT_COL		4
 #define SDW_STRM_RATE_GROUPING		1
 
 struct sdw_group_params {
@@ -67,7 +68,8 @@ static void sdw_compute_slave_ports(struct sdw_master_runtime *m_rt,
 			sdw_fill_port_params(&p_rt->port_params,
 					     p_rt->num, bps,
 					     SDW_PORT_FLOW_MODE_ISOCH,
-					     SDW_PORT_DATA_MODE_NORMAL);
+					     //SDW_PORT_DATA_MODE_NORMAL);
+					     SDW_PORT_DATA_MODE_PRBS);
 
 			port_bo += bps * ch;
 		}
@@ -107,7 +109,9 @@ static void sdw_compute_master_ports(struct sdw_master_runtime *m_rt,
 		sdw_fill_port_params(&p_rt->port_params,
 				     p_rt->num, bps,
 				     SDW_PORT_FLOW_MODE_ISOCH,
-				     SDW_PORT_DATA_MODE_NORMAL);
+				     //SDW_PORT_DATA_MODE_NORMAL);
+				     SDW_PORT_DATA_MODE_PRBS);
+				     //SDW_PORT_DATA_MODE_STATIC_1);
 
 		/* Check for first entry */
 		if (!(p_rt == list_first_entry(&m_rt->port_list,
