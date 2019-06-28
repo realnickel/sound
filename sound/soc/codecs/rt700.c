@@ -913,9 +913,9 @@ static const struct snd_soc_dapm_widget rt700_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route rt700_audio_map[] = {
 	{"DAC Front", NULL, "DP1RX"},
-	{"DAC Front", NULL, "Dummy Input"},
+	{"DP1RX", NULL, "Dummy Input"},
 	{"DAC Surround", NULL, "DP3RX"},
-	{"DAC Surround", NULL, "Dummy Input"},
+	{"DP3RX", NULL, "Dummy Input"},
 	{"DP2TX", NULL, "ADC 09"},
 	{"DP4TX", NULL, "ADC 08"},
 	{"ADC 09", NULL, "ADC 22 Mux"},
