@@ -300,19 +300,19 @@ static int sdw_select_row_col(struct sdw_bus *bus, int clk_freq)
 
 	for (c = 0; c < SDW_FRAME_COLS; c++) {
 		for (r = 0; r < SDW_FRAME_ROWS; r++) {
-			if (rows[r] != SDW_INTEL_DEFAULT_ROW ||
-			    cols[c] != SDW_INTEL_DEFAULT_COL)
+			if (sdw_rows[r] != SDW_INTEL_DEFAULT_ROW ||
+			    sdw_cols[c] != SDW_INTEL_DEFAULT_COL)
 				continue;
 
-			frame_int = rows[r] * cols[c];
+			frame_int = sdw_rows[r] * sdw_cols[c];
 			frame_freq = clk_freq / frame_int;
 
 			if ((clk_freq - (frame_freq * SDW_FRAME_CTRL_BITS)) <
 			    bus->params.bandwidth)
 				continue;
 
-			bus->params.row = rows[r];
-			bus->params.col = cols[c];
+			bus->params.row = sdw_rows[r];
+			bus->params.col = sdw_cols[c];
 			return 0;
 		}
 	}
