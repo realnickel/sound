@@ -12,11 +12,6 @@
 #include <linux/soundwire/sdw.h>
 #include "bus.h"
 
-/* TODO: Remove below Intel related hardcoding */
-//#define SDW_INTEL_DEFAULT_ROW		125
-#define SDW_INTEL_DEFAULT_ROW		50
-//#define SDW_INTEL_DEFAULT_COL		2
-#define SDW_INTEL_DEFAULT_COL		4
 #define SDW_STRM_RATE_GROUPING		1
 
 struct sdw_group_params {
@@ -295,13 +290,14 @@ out:
 
 static int sdw_select_row_col(struct sdw_bus *bus, int clk_freq)
 {
+	struct sdw_master_prop *prop = &bus->prop;
 	int frame_int, frame_freq;
 	int r, c;
 
 	for (c = 0; c < SDW_FRAME_COLS; c++) {
 		for (r = 0; r < SDW_FRAME_ROWS; r++) {
-			if (sdw_rows[r] != SDW_INTEL_DEFAULT_ROW ||
-			    sdw_cols[c] != SDW_INTEL_DEFAULT_COL)
+			if (sdw_rows[r] != prop->default_row ||
+			    sdw_cols[c] != prop->default_col)
 				continue;
 
 			frame_int = sdw_rows[r] * sdw_cols[c];
