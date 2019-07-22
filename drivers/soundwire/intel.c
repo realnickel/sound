@@ -1151,6 +1151,8 @@ static int intel_suspend(struct device *dev)
 	struct sdw_intel *sdw;
 	int ret;
 
+	dev_err(dev, "%s\n", __func__);
+
 	sdw = dev_get_drvdata(dev);
 
 	ret = intel_link_power_down(sdw);
@@ -1169,6 +1171,8 @@ static int intel_resume(struct device *dev)
 	struct sdw_intel *sdw;
 	bool resume;
 	int ret;
+
+	dev_err(dev, "%s\n", __func__);
 
 	sdw = dev_get_drvdata(dev);
 
