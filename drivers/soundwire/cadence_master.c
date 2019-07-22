@@ -1269,16 +1269,13 @@ int sdw_cdns_init(struct sdw_cdns *cdns)
 
 	/* Set clock divider */
 	divider	= (prop->mclk_freq / prop->max_clk_freq) - 1;
-	val = cdns_readl(cdns, CDNS_MCP_CLK_CTRL0);
-	val |= divider;
-	cdns_writel(cdns, CDNS_MCP_CLK_CTRL0, val);
-	cdns_writel(cdns, CDNS_MCP_CLK_CTRL1, val);
+	cdns_writel(cdns, CDNS_MCP_CLK_CTRL0, divider);
+	cdns_writel(cdns, CDNS_MCP_CLK_CTRL1, divider);
 
-	pr_err("plb: mclk %d max_freq %d divider %d register %x\n",
+	pr_err("plb: mclk %d max_freq %d divider %d\n",
 	       prop->mclk_freq,
 	       prop->max_clk_freq,
-	       divider,
-	       val);
+	       divider);
 
 	/* Set the default frame shape */
 	val = cdns_set_default_frame_shape(prop->default_row,
@@ -1328,7 +1325,7 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 {
 	struct sdw_master_prop *prop = &bus->prop;
 	struct sdw_cdns *cdns = bus_to_cdns(bus);
-	int mcp_clkctrl_off, mcp_clkctrl;
+	int mcp_clkctrl_off;
 	int divider;
 
 	if (!params->curr_dr_freq) {
@@ -1345,15 +1342,12 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params)
 	else
 		mcp_clkctrl_off = CDNS_MCP_CLK_CTRL0;
 
-	mcp_clkctrl = cdns_readl(cdns, mcp_clkctrl_off);
-	mcp_clkctrl |= divider;
-	cdns_writel(cdns, mcp_clkctrl_off, mcp_clkctrl);
+	cdns_writel(cdns, mcp_clkctrl_off, divider);
 
-	pr_err("plb: mclk * 2 %d curr_dr_freq %d divider %d register %x\n",
+	pr_err("plb: mclk * 2 %d curr_dr_freq %d divider %d\n",
 	       prop->mclk_freq * SDW_DOUBLE_RATE_FACTOR,
 	       params->curr_dr_freq,
-	       divider,
-	       mcp_clkctrl);
+	       divider);
 
 	return 0;
 }
