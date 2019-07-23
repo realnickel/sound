@@ -1110,7 +1110,7 @@ static int intel_probe(struct platform_device *pdev)
 		goto err_init;
 	}
 
-	ret = sdw_cdns_enable_interrupt(&sdw->cdns);
+	ret = sdw_cdns_enable_interrupt(&sdw->cdns, true);
 
 	ret = sdw_cdns_exit_reset(&sdw->cdns);
 
@@ -1169,6 +1169,8 @@ static int intel_suspend(struct device *dev)
 		return 0;
 	}
 
+	sdw_cdns_enable_interrupt(&sdw->cdns, false);
+
 	ret = intel_link_power_down(sdw);
 	if (ret) {
 		dev_err(dev, "Link power down failed: %d", ret);
@@ -1199,7 +1201,7 @@ static int intel_resume(struct device *dev)
 		return ret;
 	}
 
-	sdw_cdns_enable_interrupt(&sdw->cdns);
+	sdw_cdns_enable_interrupt(&sdw->cdns, true);
 
 	ret = sdw_cdns_exit_reset(&sdw->cdns);
 
