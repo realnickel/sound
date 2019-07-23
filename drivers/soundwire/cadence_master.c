@@ -395,6 +395,25 @@ static const struct file_operations cdns_reg_fops = {
 	.llseek = default_llseek,
 };
 
+static int cdns_hw_reset(void *data, u64 value)
+{
+	struct sdw_cdns *cdns = data;
+	int ret;
+
+	if (value != 1)
+		return 0;
+
+	dev_info(cdns->dev, "starting link hw_reset\n");
+
+	ret = sdw_cdns_exit_reset(cdns);
+
+	dev_info(cdns->dev, "link hw_reset done\n");
+
+	return ret;
+}
+
+DEFINE_DEBUGFS_ATTRIBUTE(cdns_hw_reset_fops, NULL, cdns_hw_reset, "%llu\n");
+
 static int cdns_cmdctrl(void *data, u64 value)
 {
 	struct sdw_cdns *cdns = data;
@@ -615,6 +634,8 @@ void sdw_cdns_debugfs_init(struct sdw_cdns *cdns, struct dentry *root)
 	debugfs_create_file_unsafe("cdns-frame-shape", 0200, root, cdns,
 				   &cdns_frame_shape_fops);
 
+	debugfs_create_file_unsafe("cdns-hw-reset", 0200, root, cdns,
+				   &cdns_hw_reset_fops);
 }
 EXPORT_SYMBOL_GPL(sdw_cdns_debugfs_init);
 
