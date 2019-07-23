@@ -1155,6 +1155,12 @@ static int intel_suspend(struct device *dev)
 
 	sdw = dev_get_drvdata(dev);
 
+	if (sdw->cdns.bus.prop.hw_disabled) {
+		dev_dbg(dev, "SoundWire master %d is disabled, ignoring\n",
+			sdw->cdns.bus.link_id);
+		return 0;
+	}
+
 	ret = intel_link_power_down(sdw);
 	if (ret) {
 		dev_err(dev, "Link power down failed: %d", ret);
@@ -1175,6 +1181,12 @@ static int intel_resume(struct device *dev)
 	dev_err(dev, "%s\n", __func__);
 
 	sdw = dev_get_drvdata(dev);
+
+	if (sdw->cdns.bus.prop.hw_disabled) {
+		dev_dbg(dev, "SoundWire master %d is disabled, ignoring\n",
+			sdw->cdns.bus.link_id);
+		return 0;
+	}
 
 	ret = intel_init(sdw);
 	if (ret) {
