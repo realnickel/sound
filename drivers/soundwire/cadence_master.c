@@ -780,7 +780,11 @@ EXPORT_SYMBOL(sdw_cdns_thread);
  * init routines
  */
 
-static int do_reset(struct sdw_cdns *cdns)
+/**
+ * sdw_cdns_exit_reset() - Program reset parameters and start bus operations
+ * @cdns: Cadence instance
+ */
+int sdw_cdns_exit_reset(struct sdw_cdns *cdns)
 {
 	int ret;
 
@@ -804,6 +808,7 @@ static int do_reset(struct sdw_cdns *cdns)
 
 	return ret;
 }
+EXPORT_SYMBOL(sdw_cdns_exit_reset);
 
 /**
  * sdw_cdns_enable_interrupt() - Enable SDW interrupts and update config
@@ -839,7 +844,7 @@ int sdw_cdns_enable_interrupt(struct sdw_cdns *cdns)
 
 	cdns_writel(cdns, CDNS_MCP_INTMASK, mask);
 
-	return do_reset(cdns);
+	return 0;
 }
 EXPORT_SYMBOL(sdw_cdns_enable_interrupt);
 
