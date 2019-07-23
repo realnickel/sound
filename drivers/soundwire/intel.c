@@ -1104,6 +1104,8 @@ static int intel_probe(struct platform_device *pdev)
 
 	ret = sdw_cdns_enable_interrupt(&sdw->cdns);
 
+	ret = sdw_cdns_exit_reset(&sdw->cdns);
+
 	/* Register DAIs */
 	ret = intel_register_dai(sdw);
 	if (ret) {
@@ -1195,6 +1197,8 @@ static int intel_resume(struct device *dev)
 	}
 
 	sdw_cdns_enable_interrupt(&sdw->cdns);
+
+	ret = sdw_cdns_exit_reset(&sdw->cdns);
 
 	return ret;
 }
