@@ -1063,13 +1063,16 @@ EXPORT_SYMBOL(sdw_cdns_thread);
 int sdw_cdns_exit_reset(struct sdw_cdns *cdns)
 {
 	int ret;
-	u32 val;
 
 	/* program maximum length reset to be safe */
-	val = CDNS_MCP_CONTROL_RST_DELAY;
+	cdns_updatel(cdns, CDNS_MCP_CONTROL,
+		     CDNS_MCP_CONTROL_RST_DELAY,
+		     CDNS_MCP_CONTROL_RST_DELAY);
 
 	/* use hardware generated reset */
-	val |= CDNS_MCP_CONTROL_HW_RST;
+	cdns_updatel(cdns, CDNS_MCP_CONTROL,
+		     CDNS_MCP_CONTROL_HW_RST,
+		     CDNS_MCP_CONTROL_HW_RST);
 
 	/* enable bus operations with clock and data */
 	cdns_updatel(cdns, CDNS_MCP_CONFIG,
