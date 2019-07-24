@@ -1223,7 +1223,6 @@ static int intel_suspend(struct device *dev)
 static int intel_resume(struct device *dev)
 {
 	struct sdw_intel *sdw;
-	bool resume;
 	int ret;
 
 	dev_err(dev, "%s\n", __func__);
