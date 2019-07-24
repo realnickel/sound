@@ -717,6 +717,8 @@ static int intel_startup(struct snd_pcm_substream *substream,
 	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
+	dev_dbg("in %s\n", __func__);
+
 	ret = pm_runtime_get_sync(cdns->dev);
 	if (ret < 0) {
 		dev_err_ratelimited(cdns->dev,
@@ -852,6 +854,8 @@ void intel_shutdown(struct snd_pcm_substream *substream,
 	struct sdw_cdns_dma_data *dma;
 	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
 	int ret;
+
+	dev_dbg("in %s\n", __func__);
 
 	dma = snd_soc_dai_get_dma_data(dai, substream);
 	if (!dma)
