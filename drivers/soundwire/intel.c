@@ -1162,6 +1162,10 @@ static int intel_probe(struct platform_device *pdev)
 	/* Enable PM */
 	pm_runtime_set_autosuspend_delay(&pdev->dev, 3000);
 	pm_runtime_use_autosuspend(&pdev->dev);
+	
+	/* mark last_busy for pm_runtime to make sure not suspend immediately */
+	pm_runtime_mark_last_busy(&pdev->dev);
+
 	pm_runtime_enable(&pdev->dev);
 
 	return 0;
