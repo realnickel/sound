@@ -1021,7 +1021,6 @@ static int sdw_master_read_intel_prop(struct sdw_bus *bus)
 	struct sdw_master_prop *prop = &bus->prop;
 	struct fwnode_handle *link;
 	char name[32];
-	int nval, i;
 	u32 quirk_mask;
 
 	/* Find master handle */
