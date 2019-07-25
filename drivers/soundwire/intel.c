@@ -1158,10 +1158,10 @@ static int intel_probe(struct platform_device *pdev)
 	/* Enable PM */
 	pm_runtime_set_autosuspend_delay(&pdev->dev, 3000);
 	pm_runtime_use_autosuspend(&pdev->dev);
-	
-	/* mark last_busy for pm_runtime to make sure not suspend immediately */
-	pm_runtime_mark_last_busy(&pdev->dev);
 
+	pm_runtime_mark_last_busy(&pdev->dev); /* FIXME: needed? */
+
+	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
 	return 0;
@@ -1181,6 +1181,7 @@ static int intel_remove(struct platform_device *pdev)
 	sdw = platform_get_drvdata(pdev);
 
 	if (!sdw->cdns.bus.prop.hw_disabled) {
+		pm_runtime_disable(&pdev->dev);
 		intel_debugfs_exit(sdw);
 		free_irq(sdw->res->irq, sdw);
 		snd_soc_unregister_component(sdw->cdns.dev);
