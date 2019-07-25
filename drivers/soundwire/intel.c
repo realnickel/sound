@@ -717,9 +717,6 @@ static int intel_startup(struct snd_pcm_substream *substream,
 	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
-	dev_dbg(cdns->dev, "in %s\n", __func__);
-
-#if 0
 	ret = pm_runtime_get_sync(cdns->dev);
 	if (ret < 0) {
 		dev_err_ratelimited(cdns->dev,
@@ -729,9 +726,6 @@ static int intel_startup(struct snd_pcm_substream *substream,
 	}
 
 	return ret;
-#else
-	return 0;
-#endif
 }
 
 static int intel_hw_params(struct snd_pcm_substream *substream,
@@ -859,8 +853,6 @@ void intel_shutdown(struct snd_pcm_substream *substream,
 	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
-	dev_dbg(cdns->dev, "in %s\n", __func__);
-
 	dma = snd_soc_dai_get_dma_data(dai, substream);
 	if (!dma)
 		return;
@@ -868,14 +860,12 @@ void intel_shutdown(struct snd_pcm_substream *substream,
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
 	kfree(dma);
 
-#if 0
 	pm_runtime_mark_last_busy(cdns->dev);
 	ret = pm_runtime_put_autosuspend(cdns->dev);
 	if (ret < 0)
 		dev_err_ratelimited(cdns->dev,
 				    "pM_runtime_put_autosuspend failed in %s:, ret %d\n",
 				    __func__, ret);
-#endif
 }
 
 static int intel_pcm_set_sdw_stream(struct snd_soc_dai *dai,
