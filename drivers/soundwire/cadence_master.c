@@ -759,7 +759,8 @@ static int _cdns_enable_interrupt(struct sdw_cdns *cdns)
 
 	cdns_writel(cdns, CDNS_MCP_INTMASK, mask);
 
-	return 0;
+	/* commit changes */
+	return cdns_update_config(cdns);
 }
 
 /**
@@ -948,9 +949,7 @@ int sdw_cdns_init(struct sdw_cdns *cdns)
 	cdns_writel(cdns, CDNS_MCP_CONFIG, val);
 
 	/* commit changes */
-	ret = cdns_update_config(cdns);
-
-	return ret;
+	return cdns_update_config(cdns);
 }
 EXPORT_SYMBOL(sdw_cdns_init);
 
