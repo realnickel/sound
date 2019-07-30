@@ -936,6 +936,46 @@ static int cdns_update_slave_status(struct sdw_cdns *cdns,
 	return 0;
 }
 
+static void fixup_slave_state(struct sdw_cdns *cdns, u32 *slave0, u32 *slave1)
+{
+	u32 slv0;
+	u32 slv1;
+	u32 val;
+	u32 ping_stat;
+	u32 slv_stat;
+	int i;
+
+	val = cdns_readl(cdns, CDNS_MCP_SLAVE_STAT);
+
+	slv0 = *slave0;
+	if (slv0 == 0) {
+		for (i = 0; i < 8; i++) {
+			ping_stat = (val >> (i * 2)) & GENMASK(1, 0);
+
+			slv_stat = BIT(ping_stat) << (i * 4);
+
+			slv0 |= slv_stat;
+		}
+		dev_dbg(cdns->dev, "%s, fixing up INTSTAT0, was %08x now %08x\n",
+			__func__, *slave0, slv0);
+		*slave0 = slv0;
+	}
+
+	slv1 = *slave1;
+	if (slv1 == 0) {
+		for (i = 8; i <= SDW_MAX_DEVICES; i++) {
+			ping_stat = (val >> (i * 2)) & GENMASK(1, 0);
+
+			slv_stat = BIT(ping_stat) << ((i - 8) * 4);
+
+			slv1 |= slv_stat;
+		}
+		dev_dbg(cdns->dev, "%s, fixing up INTSTAT1, was %08x now %08x\n",
+			__func__, *slave1, slv1);
+		*slave1 = slv1;
+	}
+}
+
 /**
  * sdw_cdns_irq() - Cadence interrupt handler
  * @irq: irq number
@@ -987,7 +1027,8 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 		dev_err_ratelimited(cdns->dev, "Bus clash for data word\n");
 	}
 
-	if (int_status & CDNS_MCP_INT_SLAVE_MASK) {
+	if (int_status & CDNS_MCP_INT_SLAVE_MASK ||
+	    cdns->force_state_check) {
 		/* Mask the Slave interrupt and wake thread */
 		cdns_updatel(cdns, CDNS_MCP_INTMASK,
 			     CDNS_MCP_INT_SLAVE_MASK, 0);
@@ -1011,6 +1052,7 @@ irqreturn_t sdw_cdns_thread(int irq, void *dev_id)
 	struct sdw_cdns *cdns = dev_id;
 	u32 slave0, slave1;
 	int retry = 10;
+	int ret;
 
 	dev_dbg_ratelimited(cdns->dev, "%s: Slave status change\n", __func__);
 
@@ -1018,15 +1060,38 @@ irqreturn_t sdw_cdns_thread(int irq, void *dev_id)
 		slave0 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT0);
 		slave1 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT1);
 
+		if (cdns->force_state_check)
+			fixup_slave_state(cdns, &slave0, &slave1);
+
 		if (!slave0 && !slave1) {
 			dev_dbg_ratelimited(cdns->dev, "%s: All Slave status handled\n", __func__);
+			cdns->force_state_check = false;
 			break;
 		}
-		cdns_update_slave_status(cdns, slave0, slave1);
+		ret = cdns_update_slave_status(cdns, slave0, slave1);
+		if (ret < 0) {
+			/*
+			 * Something bad happened. Slaves may remain
+			 * in the same state, typically parked forever
+			 * as Device0, and as a result the INTSTAT
+			 * mechanism will no longer report a change.
+			 *
+			 * At this point, we start making use of the
+			 * alternate state detection mechanism based
+			 * on PING frames, and will force this thread
+			 * to be called again when a new interrupt
+			 * happens (e.g. a CommandRespone interrupt
+			 * not necessarily related to state changes
+			 */
+			cdns->force_state_check = true;
+		}
 
 		/* clear INSTAT0/1 interrupts */
 		cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT0, slave0);
 		cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT1, slave1);
+
+		if (cdns->force_state_check)
+			break;
 	}
 
 	/* clear and unmask global Slave interrupt now */
