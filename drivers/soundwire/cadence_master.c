@@ -1010,17 +1010,26 @@ irqreturn_t sdw_cdns_thread(int irq, void *dev_id)
 {
 	struct sdw_cdns *cdns = dev_id;
 	u32 slave0, slave1;
+	int retry = 10;
 
-	dev_dbg_ratelimited(cdns->dev, "Slave status change\n");
+	dev_dbg_ratelimited(cdns->dev, "%s: Slave status change\n", __func__);
 
-	slave0 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT0);
-	slave1 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT1);
+	while (retry--) {
+		slave0 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT0);
+		slave1 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT1);
 
-	cdns_update_slave_status(cdns, slave0, slave1);
-	cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT0, slave0);
-	cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT1, slave1);
+		if (!slave0 && !slave1) {
+			dev_dbg_ratelimited(cdns->dev, "%s: All Slave status handled\n", __func__);
+			break;
+		}
+		cdns_update_slave_status(cdns, slave0, slave1);
 
-	/* clear and unmask Slave interrupt now */
+		/* clear INSTAT0/1 interrupts */
+		cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT0, slave0);
+		cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT1, slave1);
+	}
+
+	/* clear and unmask global Slave interrupt now */
 	cdns_writel(cdns, CDNS_MCP_INTSTAT, CDNS_MCP_INT_SLAVE_MASK);
 	cdns_updatel(cdns, CDNS_MCP_INTMASK,
 		     CDNS_MCP_INT_SLAVE_MASK, CDNS_MCP_INT_SLAVE_MASK);
