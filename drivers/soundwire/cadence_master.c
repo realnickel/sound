@@ -250,13 +250,15 @@ static int cdns_reg_show(struct seq_file *s, void *data)
 
 	ret = scnprintf(buf, RD_BUF, "Register  Value\n");
 	ret += scnprintf(buf + ret, RD_BUF - ret, "\nMCP Registers\n");
-	for (i = 0; i < 8; i++) /* 8 MCP registers */
-		ret += cdns_sprintf(cdns, buf, ret, i * 4);
+	/* 8 MCP registers */
+	for (i = CDNS_MCP_CONFIG; i <= CDNS_MCP_PHYCTRL; i += sizeof(u32))
+		ret += cdns_sprintf(cdns, buf, ret, i);
 
 	ret += scnprintf(buf + ret, RD_BUF - ret,
 			 "\nStatus & Intr Registers\n");
-	for (i = 0; i < 13; i++) /* 13 Status & Intr registers */
-		ret += cdns_sprintf(cdns, buf, ret, CDNS_MCP_STAT + i * 4);
+	/* 13 Status & Intr registers (offsets 0x70 and 0x74 not defined) */
+	for (i = CDNS_MCP_STAT; i <=  CDNS_MCP_FIFOSTAT; i += sizeof(u32))
+		ret += cdns_sprintf(cdns, buf, ret, i);
 
 	ret += scnprintf(buf + ret, RD_BUF - ret,
 			 "\nSSP & Clk ctrl Registers\n");
@@ -270,9 +272,9 @@ static int cdns_reg_show(struct seq_file *s, void *data)
 	for (i = 0; i < 7; i++) {
 		ret += scnprintf(buf + ret, RD_BUF - ret,
 				 "\nDP-%d\n", i);
-		for (j = 0; j < 6; j++)
-			ret += cdns_sprintf(cdns, buf, ret,
-					CDNS_DPN_B0_CONFIG(i) + j * 4);
+		for (j = CDNS_DPN_B0_CONFIG(i);
+		     j < CDNS_DPN_B0_ASYNC_CTRL(i); j += sizeof(u32))
+			ret += cdns_sprintf(cdns, buf, ret, j);
 	}
 
 	ret += scnprintf(buf + ret, RD_BUF - ret,
@@ -281,9 +283,9 @@ static int cdns_reg_show(struct seq_file *s, void *data)
 		ret += scnprintf(buf + ret, RD_BUF - ret,
 				 "\nDP-%d\n", i);
 
-		for (j = 0; j < 6; j++)
-			ret += cdns_sprintf(cdns, buf, ret,
-					CDNS_DPN_B1_CONFIG(i) + j * 4);
+		for (j = CDNS_DPN_B1_CONFIG(i);
+		     j < CDNS_DPN_B1_ASYNC_CTRL(i); j += sizeof(u32))
+			ret += cdns_sprintf(cdns, buf, ret, j);
 	}
 
 	ret += scnprintf(buf + ret, RD_BUF - ret,
