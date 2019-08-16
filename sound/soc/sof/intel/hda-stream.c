@@ -513,6 +513,9 @@ int hda_dsp_stream_hw_free(struct snd_sof_dev *sdev,
 
 	return 0;
 be:
+	if (rtd->cpu_dai->id < SDW_DAI_ID_RANGE_START ||
+	    rtd->cpu_dai->id > SDW_DAI_ID_RANGE_END)
+		return 0;
 
 	hda_stream = container_of(hstream,
 				  struct sof_intel_hda_stream,
@@ -529,7 +532,7 @@ be:
 	config.hdr.size = size;
 	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
 	config.type = SOF_DAI_INTEL_ALH;
-	config.dai_index = 0; /* FIXME: make this dynamic */
+	config.dai_index = rtd->cpu_dai->id - 100; /* FIXME: remove offset */
 	config.alh.stream_id = 0xFFFFFFFF;
 
 	/* send message to DSP */

@@ -61,13 +61,17 @@ static int sdw_config_stream(void *arg, void *s, void *dai,
 	struct sof_ipc_reply reply;
 	int ret;
 	u32 size = sizeof(config);
+	struct snd_soc_dai *d = dai;
 
 	memset(&config, 0, size);
 	config.hdr.size = size;
 	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
 	config.type = SOF_DAI_INTEL_ALH;
-	config.dai_index = 0; /* FIXME: make this dynamic */
+	config.dai_index = d->id - 100; /* FIXME: remove the offset */
 	config.alh.stream_id = alh_stream_id;
+	pr_err("plb: dai_index %d ALH Stream ID %d\n",
+	       config.dai_index,
+	       alh_stream_id);
 
 	/* send message to DSP */
 	ret = sof_ipc_tx_message(sdev->ipc,
