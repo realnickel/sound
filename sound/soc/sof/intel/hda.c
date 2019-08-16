@@ -54,7 +54,7 @@ void hda_sdw_int_enable(struct snd_sof_dev *sdev, bool enable)
 }
 
 static int sdw_config_stream(void *arg, void *s, void *dai,
-			     void *params, int alh_stream_id)
+			     void *params, int link_number, int alh_stream_id)
 {
 	struct snd_sof_dev *sdev = arg;
 	struct sof_ipc_dai_config config;
@@ -67,7 +67,8 @@ static int sdw_config_stream(void *arg, void *s, void *dai,
 	config.hdr.size = size;
 	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
 	config.type = SOF_DAI_INTEL_ALH;
-	config.dai_index = d->id - 100; /* FIXME: remove the offset */
+	/* FIXME: remove the offset */
+	config.dai_index = (link_number << 8) | (d->id - 100);
 	config.alh.stream_id = alh_stream_id;
 	pr_err("plb: dai_index %d ALH Stream ID %d\n",
 	       config.dai_index,

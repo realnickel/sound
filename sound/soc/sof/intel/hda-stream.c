@@ -532,7 +532,11 @@ be:
 	config.hdr.size = size;
 	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
 	config.type = SOF_DAI_INTEL_ALH;
-	config.dai_index = rtd->cpu_dai->id - 100; /* FIXME: remove offset */
+	/* FIXME: this needs to be done with a callback */
+#define LINK_ID 0
+
+	/* FIXME: remove offset */
+	config.dai_index = (LINK_ID << 8) | (rtd->cpu_dai->id - 100);
 	config.alh.stream_id = 0xFFFFFFFF;
 
 	/* send message to DSP */
