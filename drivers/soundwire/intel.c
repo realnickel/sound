@@ -578,13 +578,16 @@ intel_pdi_alh_configure(struct sdw_intel *sdw, struct sdw_cdns_pdi *pdi)
 static int intel_config_stream(struct sdw_intel *sdw,
 			       struct snd_pcm_substream *substream,
 			       struct snd_soc_dai *dai,
-			       struct snd_pcm_hw_params *hw_params, int link_id)
+			       struct snd_pcm_hw_params *hw_params,
+			       int link_number,
+			       int alh_stream_id)
 {
 	struct sdw_intel_link_res *res = sdw->res;
 
 	if (res->ops && res->ops->config_stream && res->arg)
 		return res->ops->config_stream(res->arg,
-				substream, dai, hw_params, link_id);
+					       substream, dai, hw_params,
+					       link_number, alh_stream_id);
 
 	return -EIO;
 }
@@ -685,7 +688,8 @@ static struct sdw_cdns_port *intel_alloc_port(struct sdw_intel *sdw,
 			goto out;
 
 		intel_pdi_shim_configure(sdw, port->pdi);
-		sdw_cdns_config_stream(cdns, port, ch, dir, port->pdi);
+		sdw_cdns_config_stream(cdns, port, ch, dir, sdw->instance,
+				       port->pdi);
 
 		intel_pdi_alh_configure(sdw, port->pdi);
 

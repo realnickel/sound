@@ -12,7 +12,9 @@
  */
 struct sdw_intel_ops {
 	int (*config_stream)(void *arg, void *substream,
-			     void *dai, void *hw_params, int stream_num);
+			     void *dai, void *hw_params,
+			     int link_number,
+			     int alh_stream_id);
 };
 
 /**
