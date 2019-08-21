@@ -13,19 +13,16 @@
 extern const struct dev_pm_ops rt700_runtime_pm;
 
 struct  rt700_priv {
+	struct snd_soc_component *component;
 	struct regmap *regmap;
-	struct snd_soc_codec *codec;
-	struct gpio_desc *reset_gpio;
-	u32 sclk;
-	u8 hpout_load;
-	u8 hpout_clamp;
 	struct sdw_slave *slave;
-	int dbg_nid;
-	int dbg_vid;
-	int dbg_payload;
 	enum sdw_slave_status status;
 	struct sdw_bus_params params;
 	bool hw_init;
+	struct snd_soc_jack *hs_jack;
+	struct delayed_work jack_detect_work;
+	struct delayed_work jack_btn_check_work;
+	int jack_type;
 };
 
 struct sdw_stream_data {
@@ -172,10 +169,6 @@ int rt700_io_init(struct device *dev, struct sdw_slave *slave);
 int rt700_init(struct device *dev, struct regmap *regmap,
 	       struct sdw_slave *slave);
 
-int rt700_remove(struct device *dev);
-int hda_to_sdw(unsigned int nid, unsigned int verb, unsigned int payload,
-	       unsigned int *sdw_addr_h, unsigned int *sdw_data_h,
-	       unsigned int *sdw_addr_l, unsigned int *sdw_data_l);
 int rt700_jack_detect(struct rt700_priv *rt700, bool *hp, bool *mic);
 int rt700_clock_config(struct device *dev);
 #endif /* __RT700_H__ */

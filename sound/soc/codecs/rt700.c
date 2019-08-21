@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * rt700.c -- rt700 ALSA SoC audio driver
- *
- * Copyright(c) 2019 Realtek Semiconductor Corp.
- *
- * ALC700 ASoC Codec Driver based Intel Dummy SdW codec driver
- *
- */
+//
+// rt700.c -- rt700 ALSA SoC audio driver
+//
+// Copyright(c) 2019 Realtek Semiconductor Corp.
+//
+// ALC700 ASoC Codec Driver based Intel Dummy SdW codec driver
+//
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -38,426 +37,6 @@
 #include <sound/jack.h>
 
 #include "rt700.h"
-
-struct hda_cmd {
-	u16 vid;
-	u8 nid;
-	u16 payload;
-};
-
-static struct hda_cmd hda_dump_list[] = {
-	/* vid, nid, payload */
-	{0xf00, 0x00,  0x00}, /* Vendor ID */
-#if 0
-	{0xf00, 0x00,  0x02}, /* Revision ID */
-	{0xf00, 0x00,  0x04}, /* Subordinate Node Count */
-	{0xf00, 0x01,  0x04}, /* Subordinate Node Count */
-	{0xf00, 0x01,  0x05}, /* Function Group Type */
-	{0xf00, 0x01,  0x08}, /* Audio Function Capabilities */
-	{0xf00, 0x00,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x01,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x02,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x03,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x04,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x05,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x06,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x07,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x08,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x09,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x0a,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x27,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x22,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x23,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x24,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x25,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x14,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x15,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x17,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x18,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x29,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x19,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x1a,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x1b,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x16,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x1d,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x21,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x1e,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x1f,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x12,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x13,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x20,  0x09}, /* Audio Widget Capabilities */
-	{0xf00, 0x01,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x02,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x03,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x04,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x05,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x06,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x07,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x08,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x09,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x0a,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x27,  0x0a}, /* Supported PCM Size, Rates */
-	{0xf00, 0x01,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x02,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x03,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x04,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x05,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x06,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x07,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x08,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x09,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x0a,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x27,  0x0b}, /* Supported Stream Formats */
-	{0xf00, 0x12,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x13,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x14,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x15,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x16,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x17,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x18,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x19,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x1a,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x1b,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x1d,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x1e,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x1f,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x21,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x29,  0x0c}, /* Pin Capabilities */
-	{0xf00, 0x07,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x08,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x09,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x12,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x13,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x18,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x19,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x1a,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x1b,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x22,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x23,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x24,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x25,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x29,  0x0d}, /* Amplifier Capabilities */
-	{0xf00, 0x02,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x03,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x14,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x15,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x16,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x17,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x1a,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x1b,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x21,  0x12}, /* Output Amplifiers */
-	{0xf00, 0x07,  0x0e}, /* Connect List Length */
-	{0xf00, 0x08,  0x0e}, /* Connect List Length */
-	{0xf00, 0x09,  0x0e}, /* Connect List Length */
-	{0xf00, 0x0a,  0x0e}, /* Connect List Length */
-	{0xf00, 0x27,  0x0e}, /* Connect List Length */
-	{0xf00, 0x22,  0x0e}, /* Connect List Length */
-	{0xf00, 0x23,  0x0e}, /* Connect List Length */
-	{0xf00, 0x24,  0x0e}, /* Connect List Length */
-	{0xf00, 0x25,  0x0e}, /* Connect List Length */
-	{0xf00, 0x14,  0x0e}, /* Connect List Length */
-	{0xf00, 0x15,  0x0e}, /* Connect List Length */
-	{0xf00, 0x16,  0x0e}, /* Connect List Length */
-	{0xf00, 0x17,  0x0e}, /* Connect List Length */
-	{0xf00, 0x18,  0x0e}, /* Connect List Length */
-	{0xf00, 0x19,  0x0e}, /* Connect List Length */
-	{0xf00, 0x1a,  0x0e}, /* Connect List Length */
-	{0xf00, 0x1b,  0x0e}, /* Connect List Length */
-	{0xf00, 0x1d,  0x0e}, /* Connect List Length */
-	{0xf00, 0x21,  0x0e}, /* Connect List Length */
-	{0xf00, 0x1e,  0x0e}, /* Connect List Length */
-	{0xf00, 0x1f,  0x0e}, /* Connect List Length */
-	{0xf00, 0x12,  0x0e}, /* Connect List Length */
-	{0xf00, 0x13,  0x0e}, /* Connect List Length */
-	{0xf00, 0x29,  0x0e}, /* Connect List Length */
-	{0xf00, 0x01,  0x0f}, /* Supported Power States */
-	{0xf00, 0x02,  0x0f}, /* Supported Power States */
-	{0xf00, 0x03,  0x0f}, /* Supported Power States */
-	{0xf00, 0x04,  0x0f}, /* Supported Power States */
-	{0xf00, 0x05,  0x0f}, /* Supported Power States */
-	{0xf00, 0x06,  0x0f}, /* Supported Power States */
-	{0xf00, 0x07,  0x0f}, /* Supported Power States */
-	{0xf00, 0x08,  0x0f}, /* Supported Power States */
-	{0xf00, 0x09,  0x0f}, /* Supported Power States */
-	{0xf00, 0x0a,  0x0f}, /* Supported Power States */
-	{0xf00, 0x27,  0x0f}, /* Supported Power States */
-	{0xf00, 0x22,  0x0f}, /* Supported Power States */
-	{0xf00, 0x23,  0x0f}, /* Supported Power States */
-	{0xf00, 0x24,  0x0f}, /* Supported Power States */
-	{0xf00, 0x21,  0x0f}, /* Supported Power States */
-	{0xf00, 0x12,  0x0f}, /* Supported Power States */
-	{0xf00, 0x13,  0x0f}, /* Supported Power States */
-	{0xf00, 0x14,  0x0f}, /* Supported Power States */
-	{0xf00, 0x15,  0x0f}, /* Supported Power States */
-	{0xf00, 0x16,  0x0f}, /* Supported Power States */
-	{0xf00, 0x17,  0x0f}, /* Supported Power States */
-	{0xf00, 0x18,  0x0f}, /* Supported Power States */
-	{0xf00, 0x19,  0x0f}, /* Supported Power States */
-	{0xf00, 0x1a,  0x0f}, /* Supported Power States */
-	{0xf00, 0x1b,  0x0f}, /* Supported Power States */
-	{0xf00, 0x1d,  0x0f}, /* Supported Power States */
-	{0xf00, 0x1e,  0x0f}, /* Supported Power States */
-	{0xf00, 0x1f,  0x0f}, /* Supported Power States */
-	{0xf00, 0x29,  0x0f}, /* Supported Power States */
-	{0xf00, 0x0b,  0x0f}, /* Supported Power States */
-	{0xf00, 0x0c,  0x0f}, /* Supported Power States */
-	{0xf00, 0x0d,  0x0f}, /* Supported Power States */
-	{0xf00, 0x0e,  0x0f}, /* Supported Power States */
-	{0xf00, 0x0f,  0x0f}, /* Supported Power States */
-	{0xf00, 0x10,  0x0f}, /* Supported Power States */
-	{0xf00, 0x11,  0x0f}, /* Supported Power States */
-	{0xf00, 0x1c,  0x0f}, /* Supported Power States */
-	{0xf00, 0x20,  0x0f}, /* Supported Power States */
-	{0xf00, 0x26,  0x0f}, /* Supported Power States */
-	{0xf00, 0x28,  0x0f}, /* Supported Power States */
-	{0xf00, 0x20,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x53,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x54,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x55,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x56,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x57,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x58,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x5b,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x60,  0x10}, /* Processing Capabilities */
-	{0xf00, 0x01,  0x11}, /* GPIO Capabilities */
-	{0xf00, 0x00,  0x16}, /* Statically Switchable BCLK Clock Frequency */
-	{0xf00, 0x00,  0x17}, /* Interface Type Capability */
-#endif
-	{0xf01, 0x14,  0x00}, /* Connection Select Control */
-	{0xf01, 0x15,  0x00}, /* Connection Select Control */
-	{0xf01, 0x16,  0x00}, /* Connection Select Control */
-	{0xf01, 0x1b,  0x00}, /* Connection Select Control */
-	{0xf01, 0x21,  0x00}, /* Connection Select Control */
-	{0xf01, 0x22,  0x00}, /* Connection Select Control */
-	{0xf01, 0x23,  0x00}, /* Connection Select Control */
-	{0xf01, 0x24,  0x00}, /* Connection Select Control */
-	{0xf01, 0x25,  0x00}, /* Connection Select Control */
-	{0xf02, 0x07,  0x00}, /* Connection List Entry */
-	{0xf02, 0x08,  0x00}, /* Connection List Entry */
-	{0xf02, 0x09,  0x00}, /* Connection List Entry */
-	{0xf02, 0x0a,  0x00}, /* Connection List Entry */
-	{0xf02, 0x14,  0x00}, /* Connection List Entry */
-	{0xf02, 0x15,  0x00}, /* Connection List Entry */
-	{0xf02, 0x16,  0x00}, /* Connection List Entry */
-	{0xf02, 0x1b,  0x00}, /* Connection List Entry */
-	{0xf02, 0x21,  0x00}, /* Connection List Entry */
-	{0xf02, 0x1e,  0x00}, /* Connection List Entry */
-	{0xf02, 0x21,  0x00}, /* Connection List Entry */
-	{0xf02, 0x23,  0x00}, /* Connection List Entry */
-	{0xf02, 0x24,  0x00}, /* Connection List Entry */
-	{0xf02, 0x25,  0x00}, /* Connection List Entry */
-	{0xd00, 0x20,  0x00}, /* Coefficient Index */
-	{0xd00, 0x53,  0x00}, /* Coefficient Index */
-	{0xd00, 0x54,  0x00}, /* Coefficient Index */
-	{0xd00, 0x56,  0x00}, /* Coefficient Index */
-	{0xd00, 0x57,  0x00}, /* Coefficient Index */
-	{0xd00, 0x58,  0x00}, /* Coefficient Index */
-	{0xc00, 0x20,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x53,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x54,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x56,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x57,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x58,  0x00}, /* Processing Coefficient */
-	{0xb00, 0x02,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x02,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x03,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x03,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x07,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x07,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x08,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x08,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x09,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x09,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x12,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x12,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x13,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x13,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x19,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x19,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x1a,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x1a,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x14,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x14,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x15,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x15,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x16,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x16,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x17,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x17,  0xa000}, /* Amplifier Gain */
-	{0xb00, 0x21,  0x8000}, /* Amplifier Gain */
-	{0xb00, 0x21,  0xa000}, /* Amplifier Gain */
-	{0xa00, 0x02,  0x0000}, /* Converter Format */
-	{0xa00, 0x03,  0x0000}, /* Converter Format */
-	{0xa00, 0x04,  0x0000}, /* Converter Format */
-	{0xa00, 0x05,  0x0000}, /* Converter Format */
-	{0xa00, 0x06,  0x0000}, /* Converter Format */
-	{0xa00, 0x07,  0x0000}, /* Converter Format */
-	{0xa00, 0x08,  0x0000}, /* Converter Format */
-	{0xa00, 0x09,  0x0000}, /* Converter Format */
-	{0xa00, 0x0a,  0x0000}, /* Converter Format */
-	{0xa00, 0x27,  0x0000}, /* Converter Format */
-	{0xf05, 0x01,  0x00}, /* Power State */
-	{0xf05, 0x02,  0x00}, /* Power State */
-	{0xf05, 0x03,  0x00}, /* Power State */
-	{0xf05, 0x04,  0x00}, /* Power State */
-	{0xf05, 0x05,  0x00}, /* Power State */
-	{0xf05, 0x06,  0x00}, /* Power State */
-	{0xf05, 0x07,  0x00}, /* Power State */
-	{0xf05, 0x08,  0x00}, /* Power State */
-	{0xf05, 0x09,  0x00}, /* Power State */
-	{0xf05, 0x0a,  0x00}, /* Power State */
-	{0xf05, 0x12,  0x00}, /* Power State */
-	{0xf05, 0x13,  0x00}, /* Power State */
-	{0xf05, 0x14,  0x00}, /* Power State */
-	{0xf05, 0x15,  0x00}, /* Power State */
-	{0xf05, 0x16,  0x00}, /* Power State */
-	{0xf05, 0x17,  0x00}, /* Power State */
-	{0xf05, 0x18,  0x00}, /* Power State */
-	{0xf05, 0x19,  0x00}, /* Power State */
-	{0xf05, 0x1a,  0x00}, /* Power State */
-	{0xf05, 0x1b,  0x00}, /* Power State */
-	{0xf05, 0x1d,  0x00}, /* Power State */
-	{0xf05, 0x1e,  0x00}, /* Power State */
-	{0xf05, 0x1f,  0x00}, /* Power State */
-	{0xf05, 0x21,  0x00}, /* Power State */
-	{0xf05, 0x27,  0x00}, /* Power State */
-	{0xf05, 0x29,  0x00}, /* Power State */
-	{0xf06, 0x02,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x03,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x04,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x05,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x06,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x07,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x08,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x09,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x0a,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x27,  0x00}, /* Converter Stream, Channel */
-	{0xf07, 0x12,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x13,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x14,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x15,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x16,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x17,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x18,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x19,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x1a,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x1b,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x1d,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x1e,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x1f,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x21,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x29,  0x00}, /* Pin Widget Control */
-	{0xf0c, 0x14,  0x00}, /* EAPD Enable */
-	{0xf0c, 0x15,  0x00}, /* EAPD Enable */
-	{0xf0c, 0x16,  0x00}, /* EAPD Enable */
-	{0xf0c, 0x17,  0x00}, /* EAPD Enable */
-	{0xf0c, 0x1b,  0x00}, /* EAPD Enable */
-	{0xf0c, 0x21,  0x00}, /* EAPD Enable */
-	{0xf08, 0x01,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x15,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x16,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x17,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x18,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x19,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x1a,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x1b,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x1e,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x21,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x55,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x60,  0x00}, /* Unsolicited Response */
-	{0xf09, 0x60,  0x00}, /* Pin Sense */
-	{0xf09, 0x15,  0x00}, /* Pin Sense */
-	{0xf09, 0x16,  0x00}, /* Pin Sense */
-	{0xf09, 0x17,  0x00}, /* Pin Sense */
-	{0xf09, 0x18,  0x00}, /* Pin Sense */
-	{0xf09, 0x19,  0x00}, /* Pin Sense */
-	{0xf09, 0x1a,  0x00}, /* Pin Sense */
-	{0xf09, 0x1b,  0x00}, /* Pin Sense */
-	{0xf09, 0x1e,  0x00}, /* Pin Sense */
-	{0xf09, 0x1f,  0x00}, /* Pin Sense */
-	{0xf09, 0x29,  0x00}, /* Pin Sense */
-	{0xf0a, 0x01,  0x00}, /* BEEP Generator */
-	{0xf20, 0x01,  0x00}, /* Subsystem ID */
-	{0xf21, 0x01,  0x00}, /* Subsystem ID */
-	{0xf22, 0x01,  0x00}, /* Subsystem ID */
-	{0xf23, 0x01,  0x00}, /* Subsystem ID */
-	{0xf1c, 0x12,  0x00}, /* Configuration Default */
-	{0xf1c, 0x13,  0x00}, /* Configuration Default */
-	{0xf1c, 0x14,  0x00}, /* Configuration Default */
-	{0xf1c, 0x15,  0x00}, /* Configuration Default */
-	{0xf1c, 0x16,  0x00}, /* Configuration Default */
-	{0xf1c, 0x17,  0x00}, /* Configuration Default */
-	{0xf1c, 0x18,  0x00}, /* Configuration Default */
-	{0xf1c, 0x19,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1e,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1f,  0x00}, /* Configuration Default */
-	{0xf1c, 0x21,  0x00}, /* Configuration Default */
-	{0xf1c, 0x29,  0x00}, /* Configuration Default */
-	{0xf1d, 0x12,  0x00}, /* Configuration Default */
-	{0xf1d, 0x13,  0x00}, /* Configuration Default */
-	{0xf1d, 0x14,  0x00}, /* Configuration Default */
-	{0xf1d, 0x15,  0x00}, /* Configuration Default */
-	{0xf1d, 0x16,  0x00}, /* Configuration Default */
-	{0xf1d, 0x17,  0x00}, /* Configuration Default */
-	{0xf1d, 0x18,  0x00}, /* Configuration Default */
-	{0xf1d, 0x19,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1e,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1f,  0x00}, /* Configuration Default */
-	{0xf1d, 0x21,  0x00}, /* Configuration Default */
-	{0xf1d, 0x29,  0x00}, /* Configuration Default */
-	{0xf1e, 0x12,  0x00}, /* Configuration Default */
-	{0xf1e, 0x13,  0x00}, /* Configuration Default */
-	{0xf1e, 0x14,  0x00}, /* Configuration Default */
-	{0xf1e, 0x15,  0x00}, /* Configuration Default */
-	{0xf1e, 0x16,  0x00}, /* Configuration Default */
-	{0xf1e, 0x17,  0x00}, /* Configuration Default */
-	{0xf1e, 0x18,  0x00}, /* Configuration Default */
-	{0xf1e, 0x19,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1e,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1f,  0x00}, /* Configuration Default */
-	{0xf1e, 0x21,  0x00}, /* Configuration Default */
-	{0xf1e, 0x29,  0x00}, /* Configuration Default */
-	{0xf1f, 0x12,  0x00}, /* Configuration Default */
-	{0xf1f, 0x13,  0x00}, /* Configuration Default */
-	{0xf1f, 0x14,  0x00}, /* Configuration Default */
-	{0xf1f, 0x15,  0x00}, /* Configuration Default */
-	{0xf1f, 0x16,  0x00}, /* Configuration Default */
-	{0xf1f, 0x17,  0x00}, /* Configuration Default */
-	{0xf1f, 0x18,  0x00}, /* Configuration Default */
-	{0xf1f, 0x19,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1e,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1f,  0x00}, /* Configuration Default */
-	{0xf1f, 0x21,  0x00}, /* Configuration Default */
-	{0xf1f, 0x29,  0x00}, /* Configuration Default */
-	{0xf0d, 0x06,  0x00}, /* Digital Converter */
-	{0xf0d, 0x0a,  0x00}, /* Digital Converter */
-	{0xf15, 0x01,  0x00}, /* GPIO Data */
-	{0xf16, 0x01,  0x00}, /* GPIO Enable Mask */
-	{0xf16, 0x20,  0x00}, /* GPIO Enable Mask */
-	{0xf17, 0x01,  0x00}, /* GPIO Direction */
-	{0xf17, 0x20,  0x00}, /* GPIO Direction */
-	{0xf19, 0x01,  0x00}, /* GPIO Unsolicited Response Enable Mask */
-	{0xf19, 0x20,  0x00}, /* GPIO Unsolicited Response Enable Mask */
-	{0xf37, 0x01,  0x00}, /* Current BCLK Frequency */
-};
-
-#define RT700_HDA_DUMP_LEN ARRAY_SIZE(hda_dump_list)
 
 static int rt700_index_write(struct regmap *regmap,
 			     unsigned int reg, unsigned int value)
@@ -543,39 +122,6 @@ err:
 	return ret;
 }
 
-static int rt700_hda_read(struct regmap *regmap, unsigned int vid,
-			  unsigned int nid, unsigned int pid,
-			  unsigned int *value)
-{
-	unsigned int sdw_data_3 = 0, sdw_data_2 = 0;
-	unsigned int sdw_data_1 = 0, sdw_data_0 = 0;
-	unsigned int sdw_addr_h = 0, sdw_addr_l = 0;
-
-	sdw_data_3 = 0;
-	sdw_data_2 = 0;
-	sdw_data_1 = 0;
-	sdw_data_0 = 0;
-
-	if (vid & 0x800) { /* get command */
-		hda_to_sdw(nid, vid, pid,
-			   &sdw_addr_h, &sdw_data_1,
-			   &sdw_addr_l, &sdw_data_0);
-
-		regmap_write(regmap, sdw_addr_h, sdw_data_1);
-		if (sdw_addr_l)
-			regmap_write(regmap, sdw_addr_l, sdw_data_0);
-
-		regmap_read(regmap, RT700_READ_HDA_3, &sdw_data_3);
-		regmap_read(regmap, RT700_READ_HDA_2, &sdw_data_2);
-		regmap_read(regmap, RT700_READ_HDA_1, &sdw_data_1);
-		regmap_read(regmap, RT700_READ_HDA_0, &sdw_data_0);
-	}
-	*value = ((sdw_data_3 & 0xff) << 24) | ((sdw_data_2 & 0xff) << 16) |
-		((sdw_data_1 & 0xff) << 8) | (sdw_data_0 & 0xff);
-
-	return 0;
-}
-
 static unsigned int rt700_button_detect(struct rt700_priv *rt700)
 {
 	unsigned int btn_type = 0, val80, val81;
@@ -621,17 +167,59 @@ read_error:
 	return btn_type;
 }
 
-int rt700_jack_detect(struct rt700_priv *rt700, bool *hp, bool *mic)
+int rt700_headset_detect(struct rt700_priv *rt700)
 {
-	unsigned int buf, jack_status, reg, btn_type, loop = 0;
+	unsigned int buf, loop = 0;
 	int ret;
 
-	*hp = false;
-	*mic = false;
+	ret = rt700_index_read(rt700->regmap,
+			       RT700_COMBO_JACK_AUTO_CTL2, &buf);
+	if (ret < 0)
+		goto io_error;
 
-	/* don't do any jack detection for now */
-	pr_err("in %s\n", __func__);
+	while (loop < 500 &&
+		(buf & RT700_COMBOJACK_AUTO_DET_STATUS) == 0) {
+		loop++;
+
+		usleep_range(9000, 10000);
+		ret = rt700_index_read(rt700->regmap,
+					RT700_COMBO_JACK_AUTO_CTL2, &buf);
+		if (ret < 0)
+			goto io_error;
+	}
+
+	if (loop >= 500)
+		goto to_error;
+
+	if (buf & RT700_COMBOJACK_AUTO_DET_TRS)
+		rt700->jack_type = SND_JACK_HEADPHONE;
+	else if ((buf & RT700_COMBOJACK_AUTO_DET_CTIA) ||
+		(buf & RT700_COMBOJACK_AUTO_DET_OMTP))
+		rt700->jack_type = SND_JACK_HEADSET;
+
 	return 0;
+
+to_error:
+	ret = -ETIMEDOUT;
+	pr_err_ratelimited("Time-out error in %s\n", __func__);
+	return ret;
+io_error:
+	pr_err_ratelimited("IO error in %s, ret %d\n", __func__, ret);
+	return ret;
+}
+
+static void rt700_jack_detect_handler(struct work_struct *work)
+{
+	struct rt700_priv *rt700 =
+		container_of(work, struct rt700_priv, jack_detect_work.work);
+	int btn_type = 0, ret;
+	unsigned int jack_status, reg;
+
+	if (!rt700->hs_jack)
+		return;
+
+	if (!rt700->component->card->instantiated)
+		return;
 
 	reg = RT700_VERB_GET_PIN_SENSE | RT700_HP_OUT;
 	ret = regmap_write(rt700->regmap, reg, 0x00);
@@ -643,63 +231,123 @@ int rt700_jack_detect(struct rt700_priv *rt700, bool *hp, bool *mic)
 
 	/* pin attached */
 	if (jack_status & 0x80) {
-		ret = rt700_index_read(rt700->regmap,
-				       RT700_COMBO_JACK_AUTO_CTL2, &buf);
-		if (ret < 0)
-			goto io_error;
-
-		while ((buf & RT700_COMBOJACK_AUTO_DET_STATUS) == 0) {
-			if (loop >= 200) {
-				pr_debug("%s, jack auto detection time-out!\n",
-								__func__);
-				return 0;
-			}
-			loop++;
-
-			usleep_range(9000, 10000);
-			ret = rt700_index_read(rt700->regmap, RT700_COMBO_JACK_AUTO_CTL2, &buf);
+		/* jack in */
+		if (rt700->jack_type == 0) {
+			ret = rt700_headset_detect(rt700);
 			if (ret < 0)
-				goto io_error;
-		}
-
-		if (buf & RT700_COMBOJACK_AUTO_DET_TRS) {
-			*hp = true;
-			*mic = false;
-		} else if ((buf & RT700_COMBOJACK_AUTO_DET_CTIA) ||
-			(buf & RT700_COMBOJACK_AUTO_DET_OMTP)) {
-			*hp = true;
-			*mic = true;
+				return;
+			if (rt700->jack_type == SND_JACK_HEADSET)
+				btn_type = rt700_button_detect(rt700);
+		} else if (rt700->jack_type == SND_JACK_HEADSET) {
+			/* jack is already in, report button event */
 			btn_type = rt700_button_detect(rt700);
-			pr_debug("%s, btn_type=0x%x\n",	__func__, btn_type);
 		}
+	} else {
+		/* jack out */
+		rt700->jack_type = 0;
 	}
 
-	/* Clear IRQ */
-	ret = rt700_index_read(rt700->regmap, 0x10, &buf);
-	if (ret < 0)
-		goto io_error;
+	dev_dbg(&rt700->slave->dev,
+		"in %s, jack_type=0x%x\n", __func__, rt700->jack_type);
+	dev_dbg(&rt700->slave->dev,
+		"in %s, btn_type=0x%x\n", __func__, btn_type);
 
-	buf = buf | 0x1000;
-	ret = rt700_index_write(rt700->regmap, 0x10, buf);
-	if (ret < 0)
-		goto io_error;
+	snd_soc_jack_report(rt700->hs_jack, rt700->jack_type | btn_type,
+			SND_JACK_HEADSET |
+			SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+			SND_JACK_BTN_2 | SND_JACK_BTN_3);
 
-	ret = rt700_index_read(rt700->regmap, 0x19, &buf);
-	if (ret < 0)
-		goto io_error;
+	if (btn_type & (SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+		SND_JACK_BTN_2 | SND_JACK_BTN_3))
+		mod_delayed_work(system_power_efficient_wq,
+			&rt700->jack_btn_check_work, msecs_to_jiffies(250));
 
-	buf = buf | 0x0100;
-	ret = rt700_index_write(rt700->regmap, 0x19, buf);
-	if (ret < 0)
-		goto io_error;
-
-	return 0;
+	return;
 
 io_error:
 	pr_err_ratelimited("IO error in %s, ret %d\n", __func__, ret);
-	return ret;
 }
-EXPORT_SYMBOL(rt700_jack_detect);
+
+static void rt700_btn_check_handler(struct work_struct *work)
+{
+	struct rt700_priv *rt700 = container_of(work, struct rt700_priv,
+		jack_btn_check_work.work);
+	int btn_type = 0, ret;
+	unsigned int jack_status, reg;
+
+	reg = RT700_VERB_GET_PIN_SENSE | RT700_HP_OUT;
+	ret = regmap_write(rt700->regmap, reg, 0x00);
+	if (ret < 0)
+		goto io_error;
+	ret = regmap_read(rt700->regmap, RT700_READ_HDA_3, &jack_status);
+	if (ret < 0)
+		goto io_error;
+
+	/* pin attached */
+	if (jack_status & 0x80) {
+		if (rt700->jack_type == SND_JACK_HEADSET) {
+			/* jack is already in, report button event */
+			btn_type = rt700_button_detect(rt700);
+		}
+	} else {
+		rt700->jack_type = 0;
+	}
+
+	/* cbj comparator */
+	ret = rt700_index_read(rt700->regmap, RT700_COMBO_JACK_AUTO_CTL2, &reg);
+	if (ret < 0)
+		goto io_error;
+
+	if ((reg & 0xf0) == 0xf0)
+		btn_type = 0;
+
+	dev_dbg(&rt700->slave->dev,
+		"%s, btn_type=0x%x\n",	__func__, btn_type);
+	snd_soc_jack_report(rt700->hs_jack, rt700->jack_type | btn_type,
+			SND_JACK_HEADSET |
+			SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+			SND_JACK_BTN_2 | SND_JACK_BTN_3);
+
+	if (btn_type & (SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+		SND_JACK_BTN_2 | SND_JACK_BTN_3))
+		mod_delayed_work(system_power_efficient_wq,
+			&rt700->jack_btn_check_work, msecs_to_jiffies(250));
+
+	return;
+
+io_error:
+	pr_err_ratelimited("IO error in %s, ret %d\n", __func__, ret);
+}
+
+static int rt700_set_jack_detect(struct snd_soc_component *component,
+	struct snd_soc_jack *hs_jack, void *data)
+{
+	struct rt700_priv *rt700 = snd_soc_component_get_drvdata(component);
+
+	while (!rt700->hw_init)
+		return -EAGAIN;
+
+	/* power on */
+	regmap_write(rt700->regmap, RT700_SET_AUDIO_POWER_STATE, AC_PWRST_D0);
+	/* Enable Jack Detection */
+	regmap_write(rt700->regmap,  RT700_SET_MIC2_UNSOLICITED_ENABLE, 0x82);
+	regmap_write(rt700->regmap,  RT700_SET_HP_UNSOLICITED_ENABLE, 0x81);
+	regmap_write(rt700->regmap, RT700_SET_INLINE_UNSOLICITED_ENABLE, 0x83);
+	rt700_index_write(rt700->regmap, 0x10, 0x2420);
+	rt700_index_write(rt700->regmap, 0x19, 0x2e11);
+
+	/* power off */
+	regmap_write(rt700->regmap, RT700_SET_AUDIO_POWER_STATE, AC_PWRST_D3);
+
+	rt700->hs_jack = hs_jack;
+
+	dev_dbg(&rt700->slave->dev, "in %s...\n", __func__);
+
+	mod_delayed_work(system_power_efficient_wq,
+			   &rt700->jack_detect_work, msecs_to_jiffies(250));
+
+	return 0;
+}
 
 static void rt700_get_gain(struct rt700_priv *rt700, unsigned int addr_h,
 			   unsigned int addr_l, unsigned int val_h,
@@ -905,6 +553,7 @@ static int rt700_mux_get(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component =
 		snd_soc_dapm_kcontrol_component(kcontrol);
 	unsigned int reg, val, nid;
+	int ret;
 
 	if (!strcmp("HPO Mux", ucontrol->id.name))
 		nid = RT700_HP_OUT;
@@ -917,9 +566,12 @@ static int rt700_mux_get(struct snd_kcontrol *kcontrol,
 
 	/* vid = 0xf01 */
 	reg = RT700_VERB_GET_CONNECT_SEL | nid;
-	/* FIXME: PLB: check return status on read/write */
-	snd_soc_component_write(component, reg, 0x0);
-	snd_soc_component_read(component, RT700_READ_HDA_0, &val);
+	ret = snd_soc_component_write(component, reg, 0x0);
+	if (ret < 0)
+		return ret;
+	ret = snd_soc_component_read(component, RT700_READ_HDA_0, &val);
+	if (ret < 0)
+		return ret;
 	ucontrol->value.enumerated.item[0] = val;
 
 	return 0;
@@ -935,6 +587,7 @@ static int rt700_mux_put(struct snd_kcontrol *kcontrol,
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int *item = ucontrol->value.enumerated.item;
 	unsigned int val, val2, change, reg, nid;
+	int ret;
 
 	if (item[0] >= e->items)
 		return -EINVAL;
@@ -952,9 +605,13 @@ static int rt700_mux_put(struct snd_kcontrol *kcontrol,
 	val = snd_soc_enum_item_to_val(e, item[0]) << e->shift_l;
 
 	reg = RT700_VERB_GET_CONNECT_SEL | nid;
-	/* FIXME: PLB: check return status on read/write */
-	snd_soc_component_write(component, reg, 0x0);
-	snd_soc_component_read(component, RT700_READ_HDA_0, &val2);
+	ret = snd_soc_component_write(component, reg, 0x0);
+	if (ret < 0)
+		return ret;
+	ret = snd_soc_component_read(component, RT700_READ_HDA_0, &val2);
+	if (ret < 0)
+		return ret;
+
 	if (val == val2)
 		change = 0;
 	else
@@ -1134,6 +791,15 @@ static const struct snd_soc_dapm_route rt700_audio_map[] = {
 	{"SPK", NULL, "SPK PGA"},
 };
 
+static int rt700_probe(struct snd_soc_component *component)
+{
+	struct rt700_priv *rt700 = snd_soc_component_get_drvdata(component);
+
+	rt700->component = component;
+
+	return 0;
+}
+
 static int rt700_set_bias_level(struct snd_soc_component *component,
 				enum snd_soc_bias_level level)
 {
@@ -1162,47 +828,21 @@ static int rt700_set_bias_level(struct snd_soc_component *component,
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int rt700_suspend(struct snd_soc_component *component)
-{
-	struct rt700_priv *rt700 = snd_soc_component_get_drvdata(component);
-
-	dev_err(component->dev, "in %s, disabling inits\n", __func__);
-
-	rt700->hw_init = 0;
-
-	return 0;
-}
-
-static int rt700_resume(struct snd_soc_component *component)
-{
-	//struct rt700_priv *rt700 = snd_soc_component_get_drvdata(component);
-
-	dev_err(component->dev, "in %s, nothing to do\n", __func__);
-
-	return 0;
-}
-#else
-#define rt700_suspend NULL
-#define rt700_resume  NULL
-#endif
-
 static const struct snd_soc_component_driver soc_codec_dev_rt700 = {
+	.probe = rt700_probe,
 	.set_bias_level = rt700_set_bias_level,
-	.suspend	= rt700_suspend,
-	.resume		= rt700_resume,
 	.controls = rt700_snd_controls,
 	.num_controls = ARRAY_SIZE(rt700_snd_controls),
 	.dapm_widgets = rt700_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(rt700_dapm_widgets),
 	.dapm_routes = rt700_audio_map,
 	.num_dapm_routes = ARRAY_SIZE(rt700_audio_map),
+	.set_jack = rt700_set_jack_detect,
 };
 
 static int rt700_set_sdw_stream(struct snd_soc_dai *dai, void *sdw_stream,
 				int direction)
 {
-
 	struct sdw_stream_data *stream;
 
 	stream = kzalloc(sizeof(*stream), GFP_KERNEL);
@@ -1222,7 +862,6 @@ static int rt700_set_sdw_stream(struct snd_soc_dai *dai, void *sdw_stream,
 
 static void rt700_shutdown(struct snd_pcm_substream *substream,
 			   struct snd_soc_dai *dai)
-
 {
 	struct sdw_stream_data *stream;
 
@@ -1244,13 +883,12 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 	int retval, port, num_channels;
 	unsigned int val = 0;
 
-	dev_err(dai->dev, "%s %s", __func__, dai->name);
+	dev_dbg(dai->dev, "%s %s", __func__, dai->name);
 	stream = snd_soc_dai_get_dma_data(dai, substream);
 
 	if (!stream)
 		return -ENOMEM;
 
-	dev_err(dai->dev, "1 %s %s", __func__, dai->name);
 	if (!rt700->slave)
 		return 0;
 
@@ -1274,14 +912,12 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 		dev_err(component->dev, "Invalid DAI id %d\n", dai->id);
 		return -EINVAL;
 	}
-	dev_err(dai->dev, "2 %s %s", __func__, dai->name);
 
-	stream_config.frame_rate =  params_rate(params);
+	stream_config.frame_rate = params_rate(params);
 	stream_config.ch_count = params_channels(params);
 	stream_config.bps = snd_pcm_format_width(params_format(params));
 	stream_config.direction = direction;
 
-	dev_err(dai->dev, "3 %s %s", __func__, dai->name);
 	num_channels = params_channels(params);
 	port_config.ch_mask = (1 << (num_channels)) - 1;
 	port_config.num = port;
@@ -1293,23 +929,9 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 		return retval;
 	}
 
-	dev_err(dai->dev, "4 %s %s", __func__, dai->name);
-	switch (params_rate(params)) {
-	/* bit 14 0:48K 1:44.1K */
-	/* bit 15 Stream Type 0:PCM 1:Non-PCM, should always be PCM */
-	case 44100:
-		snd_soc_component_write(component, RT700_DAC_FORMAT_H, 0x40);
-		snd_soc_component_write(component, RT700_ADC_FORMAT_H, 0x40);
-		break;
-	case 48000:
-		snd_soc_component_write(component, RT700_DAC_FORMAT_H, 0x0);
-		snd_soc_component_write(component, RT700_ADC_FORMAT_H, 0x0);
-		break;
-	default:
-		dev_err(component->dev, "Unsupported sample rate %d\n",
-			params_rate(params));
-		return -EINVAL;
-	}
+	/* 48Khz */
+	snd_soc_component_write(component, RT700_DAC_FORMAT_H, 0x0);
+	snd_soc_component_write(component, RT700_ADC_FORMAT_H, 0x0);
 
 	if (params_channels(params) <= 16) {
 		/* bit 3:0 Number of Channel */
@@ -1343,7 +965,6 @@ static int rt700_pcm_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_component_write(component, RT700_DAC_FORMAT_L, val);
 	snd_soc_component_write(component, RT700_ADC_FORMAT_L, val);
 
-	dev_err(dai->dev, "5 %s %s", __func__, dai->name);
 	return retval;
 }
 
@@ -1414,178 +1035,6 @@ static struct snd_soc_dai_driver rt700_dai[] = {
 	},
 };
 
-static ssize_t rt700_index_cmd_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	struct rt700_priv *rt700 = dev_get_drvdata(dev);
-	unsigned int sdw_data_0;
-	int i, cnt = 0;
-
-	/* index */
-	for (i = 0; i <= 0xa0; i++) {
-		rt700_index_read(rt700->regmap, i, &sdw_data_0);
-		cnt += snprintf(buf + cnt, 12,
-				"%02x = %04x\n", i, sdw_data_0);
-	}
-
-	if (cnt >= PAGE_SIZE)
-		cnt = PAGE_SIZE - 1;
-
-	return cnt;
-}
-
-static ssize_t rt700_index_cmd_store(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf, size_t count)
-{
-	struct rt700_priv *rt700 = dev_get_drvdata(dev);
-	unsigned int index_reg = 0, index_val = 0;
-	int i;
-
-	for (i = 0; i < count; i++) {	/*rt700->dbg_nidess */
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			index_reg = (index_reg << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			index_reg = (index_reg << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			index_reg = (index_reg << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	for (i = i + 1; i < count; i++) {
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			index_val = (index_val << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			index_val = (index_val << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			index_val = (index_val << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	rt700_index_write(rt700->regmap, index_reg, index_val);
-
-	return count;
-}
-static DEVICE_ATTR(index_reg, 0664, rt700_index_cmd_show, rt700_index_cmd_store);
-
-static ssize_t rt700_hda_cmd_show(struct device *dev,
-				  struct device_attribute *attr, char *buf)
-{
-	struct rt700_priv *rt700 = dev_get_drvdata(dev);
-	int i, cnt = 0;
-	unsigned int value;
-
-	for (i = 0; i < RT700_HDA_DUMP_LEN; i++) {
-		if (cnt + 25 >= PAGE_SIZE)
-			break;
-		rt700->dbg_nid = hda_dump_list[i].nid;
-		rt700->dbg_vid = hda_dump_list[i].vid;
-		rt700->dbg_payload = hda_dump_list[i].payload;
-		rt700_hda_read(rt700->regmap, rt700->dbg_vid,
-			       rt700->dbg_nid, rt700->dbg_payload, &value);
-
-		cnt += snprintf(buf + cnt, 25,
-			"%03x %02x %04x=%x\n",
-			rt700->dbg_vid, rt700->dbg_nid,
-			rt700->dbg_payload, value);
-	}
-
-	if (cnt >= PAGE_SIZE)
-		cnt = PAGE_SIZE - 1;
-
-	return cnt;
-}
-
-static ssize_t rt700_hda_cmd_store(struct device *dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
-{
-	struct rt700_priv *rt700 = dev_get_drvdata(dev);
-	unsigned int sdw_addr_h, sdw_addr_l, sdw_data_h, sdw_data_l;
-	unsigned int sdw_data_3, sdw_data_2, sdw_data_1, sdw_data_0;
-	int i;
-
-	rt700->dbg_nid = 0;
-	rt700->dbg_vid = 0;
-	rt700->dbg_payload = 0;
-	for (i = 0; i < count; i++) {	/*rt700->dbg_nidess */
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			rt700->dbg_nid = (rt700->dbg_nid << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			rt700->dbg_nid = (rt700->dbg_nid << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			rt700->dbg_nid = (rt700->dbg_nid << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	for (i = i + 1; i < count; i++) {
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			rt700->dbg_vid = (rt700->dbg_vid << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			rt700->dbg_vid = (rt700->dbg_vid << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			rt700->dbg_vid = (rt700->dbg_vid << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	if (rt700->dbg_vid < 0xf)
-		rt700->dbg_vid = rt700->dbg_vid << 8;
-
-	for (i = i + 1; i < count; i++) {
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			rt700->dbg_payload = (rt700->dbg_payload << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			rt700->dbg_payload = (rt700->dbg_payload << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			rt700->dbg_payload = (rt700->dbg_payload << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	hda_to_sdw(rt700->dbg_nid, rt700->dbg_vid, rt700->dbg_payload,
-		   &sdw_addr_h, &sdw_data_h, &sdw_addr_l, &sdw_data_l);
-
-	regmap_write(rt700->regmap, sdw_addr_h, sdw_data_h);
-	if (!sdw_addr_l)
-		regmap_write(rt700->regmap, sdw_addr_l, sdw_data_l);
-
-	sdw_data_3 = 0;
-	sdw_data_2 = 0;
-	sdw_data_1 = 0;
-	sdw_data_0 = 0;
-	if (rt700->dbg_vid & 0x800) { /* get command */
-		regmap_read(rt700->regmap, RT700_READ_HDA_3, &sdw_data_3);
-		regmap_read(rt700->regmap, RT700_READ_HDA_2, &sdw_data_2);
-		regmap_read(rt700->regmap, RT700_READ_HDA_1, &sdw_data_1);
-		regmap_read(rt700->regmap, RT700_READ_HDA_0, &sdw_data_0);
-		pr_info("read (%02x %03x %04x) = %02x%02x%02x%02x\n",
-			rt700->dbg_nid, rt700->dbg_vid, rt700->dbg_payload,
-			sdw_data_3, sdw_data_2, sdw_data_1, sdw_data_0);
-	}
-
-	return count;
-}
-static DEVICE_ATTR(hda_reg, 0664, rt700_hda_cmd_show, rt700_hda_cmd_store);
-
 /* Bus clock frequency */
 #define RT700_CLK_FREQ_9600000HZ 9600000
 #define RT700_CLK_FREQ_12000000HZ 12000000
@@ -1650,26 +1099,12 @@ int rt700_init(struct device *dev, struct regmap *regmap,
 	 */
 	rt700->hw_init = false;
 
-	ret =  snd_soc_register_component(dev,
+	ret =  devm_snd_soc_register_component(dev,
 					  &soc_codec_dev_rt700,
 					  rt700_dai,
 					  ARRAY_SIZE(rt700_dai));
 
-	dev_info(&slave->dev, "%s\n", __func__);
-
-	ret = device_create_file(&slave->dev, &dev_attr_index_reg);
-	if (ret != 0) {
-		dev_err(&slave->dev,
-			"Failed to create index_reg sysfs files: %d", ret);
-		return ret;
-	}
-
-	ret = device_create_file(&slave->dev, &dev_attr_hda_reg);
-	if (ret != 0) {
-		dev_err(&slave->dev,
-			"Failed to create hda_reg sysfs files: %d", ret);
-		return ret;
-	}
+	dev_dbg(&slave->dev, "%s\n", __func__);
 
 	return ret;
 }
@@ -1730,34 +1165,24 @@ int rt700_io_init(struct device *dev, struct sdw_slave *slave)
 	rt700_index_write(rt700->regmap, 0x6b, 0x5064);
 	rt700_index_write(rt700->regmap, 0x48, 0xd249);
 
-	/* Enable Jack Detection */
-	regmap_write(rt700->regmap,  RT700_SET_MIC2_UNSOLICITED_ENABLE, 0x82);
-	regmap_write(rt700->regmap,  RT700_SET_HP_UNSOLICITED_ENABLE, 0x81);
-	regmap_write(rt700->regmap, RT700_SET_INLINE_UNSOLICITED_ENABLE, 0x83);
-	rt700_index_write(rt700->regmap, 0x10, 0x2420);
-	rt700_index_write(rt700->regmap, 0x19, 0x2e11);
-
 	/* Finish Initial Settings, set power to D3 */
 	regmap_write(rt700->regmap, RT700_SET_AUDIO_POWER_STATE, AC_PWRST_D3);
 
 	pm_runtime_put_sync_autosuspend(&slave->dev);
 
+	INIT_DELAYED_WORK(&rt700->jack_detect_work,
+			rt700_jack_detect_handler);
+	INIT_DELAYED_WORK(&rt700->jack_btn_check_work,
+			rt700_btn_check_handler);
+
 	/* Mark Slave initialization complete */
 	rt700->hw_init = true;
 
-	pr_err("plb %s hw_init complete\n", __func__);
+	dev_dbg(&slave->dev, "%s hw_init complete\n", __func__);
 
 	return ret;
 }
 
-int rt700_remove(struct device *dev)
-{
-	snd_soc_unregister_component(dev);
-	return 0;
-}
-EXPORT_SYMBOL(rt700_remove);
-
-MODULE_DESCRIPTION("ASoC rt700 driver");
-MODULE_DESCRIPTION("ASoC rt700 driver SDW");
-MODULE_AUTHOR("Bard Liao <bardliao@realtek.com>");
+MODULE_DESCRIPTION("ASoC RT700 driver SDW");
+MODULE_AUTHOR("Shuming Fan <shumingf@realtek.com>");
 MODULE_LICENSE("GPL v2");

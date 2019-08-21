@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * rt700-sdw.c -- rt700 ALSA SoC audio driver
- *
- * Copyright(c) 2019 Realtek Semiconductor Corp.
- *
- * ALC700 ASoC Codec Driver based Intel Dummy SdW codec driver
- *
- */
+//
+// rt700-sdw.c -- rt700 ALSA SoC audio driver
+//
+// Copyright(c) 2019 Realtek Semiconductor Corp.
+//
+// ALC700 ASoC Codec Driver based Intel Dummy SdW codec driver
+//
 
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -133,66 +132,20 @@ static bool rt700_volatile_register(struct device *dev, unsigned int reg)
 static const struct regmap_config rt700_sdw_regmap = {
 	.reg_bits = 32, /* Total register space for SDW */
 	.val_bits = 8, /* Total number of bits in register */
-
 	.readable_reg = rt700_readable_register, /* Readable registers */
 	.volatile_reg = rt700_volatile_register, /* volatile register */
-
 	.max_register = 0xffff, /* Maximum number of register */
 	.reg_defaults = rt700_reg_defaults, /* Defaults */
 	.num_reg_defaults = ARRAY_SIZE(rt700_reg_defaults),
 	.cache_type = REGCACHE_RBTREE,
-
 	.use_single_read = true,
 	.use_single_write = true,
 };
-
-int hda_to_sdw(unsigned int nid, unsigned int verb, unsigned int payload,
-	       unsigned int *sdw_addr_h, unsigned int *sdw_data_h,
-	       unsigned int *sdw_addr_l, unsigned int *sdw_data_l)
-{
-	unsigned int offset_h, offset_l, e_verb;
-
-	if (((verb & 0xff) != 0) || verb == 0xf00) { /* 12 bits command */
-		if (verb == 0x7ff) /* special case */
-			offset_h = 0;
-		else
-			offset_h = 0x3000;
-
-		if (verb & 0x800) /* get command */
-			e_verb = (verb - 0xf00) | 0x80;
-		else /* set command */
-			e_verb = (verb - 0x700);
-
-		*sdw_data_h = payload; /* 7 bits payload */
-		*sdw_addr_l = *sdw_data_l = 0;
-	} else { /* 4 bits command */
-		if ((verb & 0x800) == 0x800) { /* read */
-			offset_h = 0x9000;
-			offset_l = 0xa000;
-		} else { /* write */
-			offset_h = 0x7000;
-			offset_l = 0x8000;
-		}
-		e_verb = verb >> 8;
-		*sdw_data_h = (payload >> 8); /* 16 bits payload [15:8] */
-		*sdw_addr_l = (e_verb << 8) | nid | 0x80; /* 0x80: valid bit */
-		*sdw_addr_l += offset_l;
-		*sdw_data_l = payload & 0xff;
-	}
-
-	*sdw_addr_h = (e_verb << 8) | nid;
-	*sdw_addr_h += offset_h;
-
-	return 0;
-}
-EXPORT_SYMBOL(hda_to_sdw);
 
 static int rt700_update_status(struct sdw_slave *slave,
 			       enum sdw_slave_status status)
 {
 	struct rt700_priv *rt700 = dev_get_drvdata(&slave->dev);
-
-	pr_err("plb: in %s\n", __func__);
 
 	/* Update the status */
 	rt700->status = status;
@@ -204,87 +157,8 @@ static int rt700_update_status(struct sdw_slave *slave,
 	if (rt700->hw_init || rt700->status != SDW_SLAVE_ATTACHED)
 		return 0;
 
-	pr_err("plb: in %s, calling rt700_io_init\n", __func__);
-
 	/* perform I/O transfers required for Slave initialization */
 	return rt700_io_init(&slave->dev, slave);
-}
-
-static int rt700_read_prop(struct sdw_slave *slave)
-{
-	struct sdw_slave_prop *prop = &slave->prop;
-	int nval, i, num_of_ports = 1;
-	u32 bit;
-	unsigned long addr;
-	struct sdw_dpn_prop *dpn;
-
-	sdw_slave_read_prop(slave);
-
-	prop->paging_support = false;
-
-	/* first we need to allocate memory for set bits in port lists */
-	prop->source_ports = 0x14;	/* BITMAP: 00010100 */
-	prop->sink_ports = 0xA;	/* BITMAP:  00001010 */
-
-	nval = hweight32(prop->source_ports);
-	num_of_ports += nval;
-	prop->src_dpn_prop = devm_kcalloc(&slave->dev, nval,
-					  sizeof(*prop->src_dpn_prop),
-					  GFP_KERNEL);
-	if (!prop->src_dpn_prop)
-		return -ENOMEM;
-
-	/* call helper to read */
-	sdw_slave_read_dpn(slave, prop->src_dpn_prop, nval,
-			   prop->source_ports, "source");
-	dpn = prop->src_dpn_prop;
-	i = 0;
-	addr = prop->source_ports;
-	for_each_set_bit(bit, &addr, 32) {
-		dpn[i].num = bit;
-		dpn[i].simple_ch_prep_sm = true;
-		dpn[i].ch_prep_timeout = 10;
-		i++;
-	}
-
-	/* do this again for sink now */
-	nval = hweight32(prop->sink_ports);
-	num_of_ports += nval;
-	prop->sink_dpn_prop = devm_kcalloc(&slave->dev, nval,
-					   sizeof(*prop->sink_dpn_prop),
-					   GFP_KERNEL);
-	if (!prop->sink_dpn_prop)
-		return -ENOMEM;
-
-	/* call helper to read */
-	sdw_slave_read_dpn(slave, prop->sink_dpn_prop, nval,
-			   prop->sink_ports, "sink");
-
-	dpn = prop->sink_dpn_prop;
-	i = 0;
-	addr = prop->sink_ports;
-	for_each_set_bit(bit, &addr, 32) {
-		dpn[i].num = bit;
-		dpn[i].simple_ch_prep_sm = true;
-		dpn[i].ch_prep_timeout = 10;
-		i++;
-	}
-
-	/* Allocate port_ready based on num_of_ports */
-	slave->port_ready = devm_kcalloc(&slave->dev, num_of_ports,
-					 sizeof(*slave->port_ready),
-					 GFP_KERNEL);
-	if (!slave->port_ready)
-		return -ENOMEM;
-
-	/* Initialize completion */
-	for (i = 0; i < num_of_ports; i++)
-		init_completion(&slave->port_ready[i]);
-
-	/* set the timeout values */
-	prop->clk_stop_timeout = 20;
-
-	return 0;
 }
 
 static int rt700_bus_config(struct sdw_slave *slave,
@@ -305,15 +179,14 @@ static int rt700_bus_config(struct sdw_slave *slave,
 static int rt700_interrupt_callback(struct sdw_slave *slave,
 				    struct sdw_slave_intr_status *status)
 {
-
 	struct rt700_priv *rt700 = dev_get_drvdata(&slave->dev);
-	bool hp, mic;
 
-	pr_debug("%s control_port_stat=%x", __func__, status->control_port);
+	dev_dbg(&slave->dev,
+		"%s control_port_stat=%x", __func__, status->control_port);
 
 	if (status->control_port & 0x4) {
-		rt700_jack_detect(rt700, &hp, &mic);
-		pr_info("%s hp=%d mic=%d\n", __func__, hp, mic);
+		mod_delayed_work(system_power_efficient_wq,
+			&rt700->jack_detect_work, msecs_to_jiffies(250));
 	}
 
 	return 0;
@@ -324,7 +197,7 @@ static int rt700_interrupt_callback(struct sdw_slave *slave,
  * port_prep are not defined for now
  */
 static struct sdw_slave_ops rt700_slave_ops = {
-	.read_prop = rt700_read_prop,
+	.read_prop = sdw_slave_read_prop,
 	.interrupt_callback = rt700_interrupt_callback,
 	.update_status = rt700_update_status,
 	.bus_config = rt700_bus_config,
@@ -336,8 +209,6 @@ static int rt700_sdw_probe(struct sdw_slave *slave,
 	struct regmap *regmap;
 	int ret = 0;
 
-	pr_debug("%s start\n", __func__);
-
 	/* Assign ops */
 	slave->ops = &rt700_slave_ops;
 
@@ -346,23 +217,18 @@ static int rt700_sdw_probe(struct sdw_slave *slave,
 	if (!regmap)
 		return -EINVAL;
 
-	pr_debug("%s start 2 \n", __func__);
 	rt700_init(&slave->dev, regmap, slave);
 
-	pr_debug("%s start 3 \n", __func__);
 	/* Perform IO operations only if slave is in ATTACHED state */
-	if (slave->status == SDW_SLAVE_ATTACHED) {
-		pr_debug("%s start 4 \n", __func__);
+	if (slave->status == SDW_SLAVE_ATTACHED)
 		rt700_io_init(&slave->dev, slave);
-	}
 
-	pr_debug("%s end \n", __func__);
 	return ret;
 }
 
 static int rt700_sdw_remove(struct sdw_slave *slave)
 {
-	return rt700_remove(&slave->dev);
+	return 0;
 }
 
 static const struct sdw_device_id rt700_id[] = {
@@ -373,28 +239,16 @@ MODULE_DEVICE_TABLE(sdw, rt700_id);
 
 static struct sdw_driver rt700_sdw_driver = {
 	.driver = {
-		   .name = "rt700",
-		   .owner = THIS_MODULE,
-		   },
+		.name = "rt700",
+		.owner = THIS_MODULE,
+	},
 	.probe = rt700_sdw_probe,
 	.remove = rt700_sdw_remove,
 	.ops = &rt700_slave_ops,
 	.id_table = rt700_id,
 };
-
-static int __init sdw_slave_init(void)
-{
-	return sdw_register_driver(&rt700_sdw_driver);
-}
-
-static void __exit sdw_slave_exit(void)
-{
-	sdw_unregister_driver(&rt700_sdw_driver);
-}
-
-module_init(sdw_slave_init);
-module_exit(sdw_slave_exit);
+module_sdw_driver(rt700_sdw_driver);
 
 MODULE_DESCRIPTION("ASoC RT700 driver SDW");
-MODULE_AUTHOR("Bard Liao <bardliao@realtek.com>");
+MODULE_AUTHOR("Shuming Fan <shumingf@realtek.com>");
 MODULE_LICENSE("GPL v2");
