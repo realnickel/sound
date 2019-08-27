@@ -181,7 +181,7 @@ MODULE_PARM_DESC(cdns_mcp_int_mask, "Cadence MCP IntMask");
 
 /* Driver defaults */
 #define CDNS_DEFAULT_SSP_INTERVAL		0x18
-#define CDNS_TX_TIMEOUT				2000
+#define CDNS_TX_TIMEOUT				20000
 
 #define CDNS_SCP_RX_FIFOLEVEL			0x2
 
