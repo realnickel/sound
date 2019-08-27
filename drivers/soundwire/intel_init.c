@@ -8,7 +8,7 @@
  */
 
 #include <linux/acpi.h>
-#include <linux/export.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/soundwire/sdw_intel.h>
@@ -177,6 +177,9 @@ static struct sdw_intel_ctx
 
 		link->pdev = pdev;
 		link++;
+
+		/* add artificial delay to avoid interrupt issues */
+		msleep(500);
 	}
 
 	return ctx;
