@@ -741,9 +741,12 @@ int snd_card_register(struct snd_card *card)
 {
 	int err;
 
+	pr_err("plb: %s start\n", __func__);	
 	if (snd_BUG_ON(!card))
 		return -EINVAL;
 
+	pr_err("plb: %s 1\n", __func__);
+		
 	if (!card->registered) {
 		err = device_add(&card->card_dev);
 		if (err < 0)
@@ -751,14 +754,22 @@ int snd_card_register(struct snd_card *card)
 		card->registered = true;
 	}
 
+	pr_err("plb: %s 2\n", __func__);
+	
 	if ((err = snd_device_register_all(card)) < 0)
 		return err;
+
+	pr_err("plb: %s 3\n", __func__);
+	
 	mutex_lock(&snd_card_mutex);
 	if (snd_cards[card->number]) {
 		/* already registered */
 		mutex_unlock(&snd_card_mutex);
 		return snd_info_card_register(card); /* register pending info */
 	}
+
+	pr_err("plb: %s 4\n", __func__);
+		
 	if (*card->id) {
 		/* make a unique id name from the given string */
 		char tmpid[sizeof(card->id)];
@@ -771,16 +782,24 @@ int snd_card_register(struct snd_card *card)
 		snd_card_set_id_no_lock(card, src,
 					retrieve_id_from_card_name(src));
 	}
+
+	pr_err("plb: %s 5\n", __func__);
+		
 	snd_cards[card->number] = card;
 	mutex_unlock(&snd_card_mutex);
 	err = snd_info_card_register(card);
 	if (err < 0)
 		return err;
 
+	pr_err("plb: %s 6\n", __func__);
+		
 #if IS_ENABLED(CONFIG_SND_MIXER_OSS)
 	if (snd_mixer_oss_notify_callback)
 		snd_mixer_oss_notify_callback(card, SND_MIXER_OSS_NOTIFY_REGISTER);
 #endif
+
+	pr_err("plb: %s end\n", __func__);
+		
 	return 0;
 }
 EXPORT_SYMBOL(snd_card_register);

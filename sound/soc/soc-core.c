@@ -1910,6 +1910,8 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	struct snd_soc_aux_dev *aux;
 	int ret, i, order;
 
+	pr_err("plb: %s start\n", __func__);
+	
 	mutex_lock(&client_mutex);
 	for_each_card_prelinks(card, i, dai_link) {
 		ret = soc_init_dai_link(card, dai_link);
@@ -1933,22 +1935,28 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	/* bind DAIs */
 	for_each_card_prelinks(card, i, dai_link) {
 		ret = soc_bind_dai_link(card, dai_link);
-		if (ret != 0)
+		if (ret != 0) {
+			pr_err("plb: prelink: could not link dailink %s\n", dai_link->name);
 			goto probe_end;
+		}
 	}
 
 	/* bind aux_devs too */
 	for_each_card_pre_auxs(card, i, aux) {
 		ret = soc_bind_aux_dev(card, aux);
-		if (ret != 0)
+		if (ret != 0) {
+			pr_err("plb: aux: could not link dailink %s\n", dai_link->name);
 			goto probe_end;
+		}
 	}
 
 	/* add predefined DAI links to the list */
 	for_each_card_prelinks(card, i, dai_link) {
 		ret = snd_soc_add_dai_link(card, dai_link);
-		if (ret < 0)
+		if (ret < 0) {
+			pr_err("plb: predef: could not link dailink %s\n", dai_link->name);
 			goto probe_end;
+		}
 	}
 
 	/* card bind complete so register a sound card */
@@ -1978,8 +1986,10 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	/* initialise the sound card only once */
 	if (card->probe) {
 		ret = card->probe(card);
-		if (ret < 0)
+		if (ret < 0) {
+			pr_err("plb: card_probe failed \n");
 			goto probe_end;
+		}
 	}
 
 	/* probe all components used by DAI links on this card */
@@ -1997,8 +2007,10 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 
 	/* probe auxiliary components */
 	ret = soc_probe_aux_devices(card);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("plb: probe_aux_devices\n");
 		goto probe_end;
+	}
 
 	/*
 	 * Find new DAI links added during probing components and bind them.
@@ -2009,11 +2021,15 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 			continue;
 
 		ret = soc_init_dai_link(card, dai_link);
-		if (ret)
+		if (ret) {
+			pr_err("plb: init error dailink %s\n", dai_link->name);
 			goto probe_end;
+		}
 		ret = soc_bind_dai_link(card, dai_link);
-		if (ret)
+		if (ret) {
+			pr_err("plb: 2: bind dai link %s\n", dai_link->name);
 			goto probe_end;
+		}
 	}
 
 	/* probe all DAI links on this card */
@@ -2034,8 +2050,10 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 
 	ret = snd_soc_add_card_controls(card, card->controls,
 					card->num_controls);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("plb: add card controls failed\n");
 		goto probe_end;
+	}
 
 	ret = snd_soc_dapm_add_routes(&card->dapm, card->dapm_routes,
 				      card->num_dapm_routes);
@@ -2080,6 +2098,8 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 
 	snd_soc_dapm_new_widgets(card);
 
+	pr_err("plb: %s 2 \n", __func__);
+	
 	ret = snd_card_register(card->snd_card);
 	if (ret < 0) {
 		dev_err(card->dev, "ASoC: failed to register soundcard %d\n",
@@ -2091,6 +2111,8 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	dapm_mark_endpoints_dirty(card);
 	snd_soc_dapm_sync(&card->dapm);
 
+	pr_err("plb: %s 3 \n", __func__);
+	
 probe_end:
 	if (ret < 0)
 		soc_cleanup_card_resources(card);
@@ -2098,6 +2120,8 @@ probe_end:
 	mutex_unlock(&card->mutex);
 	mutex_unlock(&client_mutex);
 
+	pr_err("plb: %s end \n", __func__);
+		
 	return ret;
 }
 
