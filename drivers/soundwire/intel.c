@@ -1221,7 +1221,7 @@ static int intel_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(&pdev->dev);
 
 	pm_runtime_set_active(&pdev->dev);
-	pm_runtime_enable(&pdev->dev);
+	//pm_runtime_enable(&pdev->dev);
 
 	return 0;
 
