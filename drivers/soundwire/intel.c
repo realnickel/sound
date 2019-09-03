@@ -727,14 +727,16 @@ static int intel_startup(struct snd_pcm_substream *substream,
 	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
-	ret = pm_runtime_get_sync(cdns->dev);
-	if (ret < 0) {
-		dev_err_ratelimited(cdns->dev,
-				    "pm_runtime_get_sync failed in %s, ret %d\n",
-				    __func__, ret);
-		pm_runtime_put_noidle(cdns->dev);
+	if (pm_runtime_enabled(cdns->dev)) {
+		ret = pm_runtime_get_sync(cdns->dev);
+		if (ret < 0) {
+			dev_err_ratelimited(cdns->dev,
+					    "pm_runtime_get_sync failed in %s, ret %d\n",
+					    __func__, ret);
+			pm_runtime_put_noidle(cdns->dev);
 
-		return ret;
+			return ret;
+		}
 	}
 
 	return sdw_stream_setup(substream, dai);
