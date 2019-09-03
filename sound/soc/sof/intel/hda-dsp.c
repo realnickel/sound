@@ -294,6 +294,11 @@ static int hda_suspend(struct snd_sof_dev *sdev, bool runtime_suspend)
 	/* disable IPC interrupts */
 	hda_dsp_ipc_int_disable(sdev);
 
+	/* also disable SoundWire interrupts which share the same line */
+#if IS_ENABLED(CONFIG_SOUNDWIRE_INTEL)
+	hda_sdw_int_enable(sdev, false);
+#endif
+
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
 	if (runtime_suspend)
 		hda_codec_jack_wake_enable(sdev);
