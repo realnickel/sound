@@ -496,6 +496,7 @@ static int sdw_assign_device_num(struct sdw_slave *slave)
 	slave->dev_num = 0;
 
 	dev_dbg(slave->bus->dev, "in %s, writing dev_num %d\n", __func__, dev_num);
+	dev_err(slave->bus->dev, "plb: scp_devnum write\n");
 	ret = sdw_write(slave, SDW_SCP_DEVNUMBER, dev_num);
 	if (ret < 0) {
 		dev_err(&slave->dev, "Program device_num %d failed: %d\n",
@@ -735,6 +736,7 @@ static int sdw_handle_dp0_interrupt(struct sdw_slave *slave, u8 *slave_status)
 		}
 
 		/* clear the interrupt */
+		dev_err(slave->bus->dev, "plb: DP0_INT write\n");
 		ret = sdw_write(slave, SDW_DP0_INT, clear);
 		if (ret < 0) {
 			dev_err(slave->bus->dev,
@@ -805,6 +807,7 @@ static int sdw_handle_port_interrupt(struct sdw_slave *slave,
 		}
 
 		/* clear the interrupt */
+		dev_err(slave->bus->dev, "plb: clear port interrupt write\n");
 		ret = sdw_write(slave, addr, clear);
 		if (ret < 0) {
 			dev_err(slave->bus->dev,
@@ -932,6 +935,7 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 		}
 
 		/* Ack interrupt */
+		dev_err(slave->bus->dev, "plb: SCP_INT1 write\n");
 		ret = sdw_write(slave, SDW_SCP_INT1, clear);
 		if (ret < 0) {
 			dev_err(slave->bus->dev,
