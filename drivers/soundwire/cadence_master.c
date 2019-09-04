@@ -422,6 +422,8 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 	base = CDNS_MCP_CMD_BASE;
 	addr = msg->addr;
 
+	dev_err(cdns->dev, "IO transfer: dev_num %d addr %x count %d\n",
+		msg->dev_num, msg->addr, count);
 	for (i = 0; i < count; i++) {
 		data = msg->dev_num << SDW_REG_SHIFT(CDNS_MCP_CMD_DEV_ADDR);
 		data |= cmd << SDW_REG_SHIFT(CDNS_MCP_CMD_COMMAND);
@@ -435,6 +437,8 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 		base += CDNS_MCP_CMD_WORD_LEN;
 	}
 
+
+
 	if (defer)
 		return SDW_CMD_OK;
 
@@ -442,7 +446,9 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 	time = wait_for_completion_timeout(&cdns->tx_complete,
 					   msecs_to_jiffies(CDNS_TX_TIMEOUT));
 	if (!time) {
-		dev_err(cdns->dev, "IO transfer timed out\n");
+		dev_err(cdns->dev, "IO transfer timed out : dev_num %d addr %x count %d\n",
+			msg->dev_num, msg->addr, count);
+
 		msg->len = 0;
 		return SDW_CMD_TIMEOUT;
 	}
