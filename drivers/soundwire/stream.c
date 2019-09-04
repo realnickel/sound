@@ -77,6 +77,7 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 	}
 
 	/* Program DPN_OffsetCtrl2 registers */
+	pr_err("plb: DPN_OffsetCtrl2 write\n");
 	ret = sdw_write(slave, addr1, t_params->offset2);
 	if (ret < 0) {
 		dev_err(bus->dev, "DPN_OffsetCtrl2 register write failed\n");
@@ -84,6 +85,7 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 	}
 
 	/* Program DPN_BlockCtrl3 register */
+	pr_err("plb: DPN_BlockCtrl3 write\n");
 	ret = sdw_write(slave, addr2, t_params->blk_pkg_mode);
 	if (ret < 0) {
 		dev_err(bus->dev, "DPN_BlockCtrl3 register write failed\n");
@@ -103,6 +105,7 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 	wbuf &= SDW_DPN_SAMPLECTRL_HIGH;
 	wbuf >>= SDW_REG_SHIFT(SDW_DPN_SAMPLECTRL_HIGH);
 
+	pr_err("plb: DPN_SampleCtrl2 write\n");
 	ret = sdw_write(slave, addr3, wbuf);
 	if (ret < 0) {
 		dev_err(bus->dev, "DPN_SampleCtrl2 register write failed\n");
@@ -114,6 +117,7 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 	wbuf <<= SDW_REG_SHIFT(SDW_DPN_HCTRL_HSTART);
 	wbuf |= t_params->hstop;
 
+	pr_err("plb: DPN_HCtrl write\n");
 	ret = sdw_write(slave, addr4, wbuf);
 	if (ret < 0)
 		dev_err(bus->dev, "DPN_HCtrl register write failed\n");
@@ -168,6 +172,7 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 	}
 
 	/* Program DPN_BlockCtrl1 register */
+	pr_err("plb: DPN_BlockCtrl1 write\n");
 	ret = sdw_write(s_rt->slave, addr2, (p_params->bps - 1));
 	if (ret < 0) {
 		dev_err(&s_rt->slave->dev,
@@ -177,6 +182,7 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 	}
 
 	/* Program DPN_SampleCtrl1 register */
+	pr_err("plb: DPN_SampleCtrl1 write\n");
 	wbuf = (t_params->sample_interval - 1) & SDW_DPN_SAMPLECTRL_LOW;
 	ret = sdw_write(s_rt->slave, addr3, wbuf);
 	if (ret < 0) {
@@ -187,6 +193,7 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 	}
 
 	/* Program DPN_OffsetCtrl1 registers */
+	pr_err("plb: DPN_OffsetCtrl1 write\n");
 	ret = sdw_write(s_rt->slave, addr4, t_params->offset1);
 	if (ret < 0) {
 		dev_err(&s_rt->slave->dev,
@@ -197,6 +204,7 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 
 	/* Program DPN_BlockCtrl2 register*/
 	if (t_params->blk_grp_ctrl_valid) {
+		pr_err("plb: DPN_BlockCtrl2 write\n");
 		ret = sdw_write(s_rt->slave, addr5, t_params->blk_grp_ctrl);
 		if (ret < 0) {
 			dev_err(&s_rt->slave->dev,
@@ -208,6 +216,7 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 
 	/* program DPN_LaneCtrl register */
 	if (slave_prop->lane_control_support) {
+		pr_err("plb: lane control write\n");
 		ret = sdw_write(s_rt->slave, addr6, t_params->lane_ctrl);
 		if (ret < 0) {
 			dev_err(&s_rt->slave->dev,
