@@ -10,6 +10,7 @@
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
+#include <linux/io.h>
 #include <linux/platform_device.h>
 #include <sound/pcm_params.h>
 #include <linux/pm_runtime.h>
@@ -88,7 +89,7 @@
 #define SDW_ALH_STRMZCFG(x)		(0x000 + (0x4 * (x)))
 #define SDW_ALH_NUM_STREAMS		64
 
-#define SDW_ALH_STRMZCFG_DMAT_VAL	0x3
+#define SDW_ALH_STRMZCFG_DMAT_VAL	0xf
 #define SDW_ALH_STRMZCFG_DMAT		GENMASK(7, 0)
 #define SDW_ALH_STRMZCFG_CHN		GENMASK(19, 16)
 
@@ -1086,6 +1087,7 @@ static int sdw_master_read_intel_prop(struct sdw_bus *bus)
 				 "intel-sdw-ip-clock",
 				 &prop->mclk_freq);
 
+	prop->mclk_freq /= 2;
 	fwnode_property_read_u32(link,
 				 "intel-quirk-mask",
 				 &quirk_mask);
@@ -1310,6 +1312,11 @@ static int intel_resume(struct device *dev)
 		dev_err(sdw->cdns.dev, "unable to exit bus reset sequence during resume\n");
 		return ret;
 	}
+
+	/* add delay to let Slaves re-enumerate */
+	usleep_range(20000, 30000);
+
+	dev_dbg(dev, "%s done\n", __func__);
 
 	return ret;
 }

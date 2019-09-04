@@ -18,7 +18,9 @@
 #include <sound/hdaudio_ext.h>
 #include <sound/hda_register.h>
 
+#include <linux/acpi.h>
 #include <linux/module.h>
+#include <linux/soundwire/sdw_intel.h>
 #include <sound/intel-nhlt.h>
 #include <sound/sof.h>
 #include <sound/sof/xtensa.h>
@@ -34,6 +36,147 @@
 
 #define IS_CFL(pci) ((pci)->vendor == 0x8086 && (pci)->device == 0xa348)
 #define IS_CNL(pci) ((pci)->vendor == 0x8086 && (pci)->device == 0x9dc8)
+
+#if IS_ENABLED(CONFIG_SOUNDWIRE_INTEL)
+
+void hda_sdw_int_enable(struct snd_sof_dev *sdev, bool enable)
+{
+	if (enable)
+		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
+					HDA_DSP_REG_ADSPIC2,
+					HDA_DSP_ADSPIC2_SNDW,
+					HDA_DSP_ADSPIC2_SNDW);
+	else
+		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
+					HDA_DSP_REG_ADSPIC2,
+					HDA_DSP_ADSPIC2_SNDW,
+					0);
+}
+
+static int sdw_config_stream(void *arg, void *s, void *dai,
+			     void *params, int link_id, int alh_stream_id)
+{
+	struct snd_sof_dev *sdev = arg;
+	struct snd_soc_dai *d = dai;
+	struct sof_ipc_dai_config config;
+	struct sof_ipc_reply reply;
+	int ret;
+	u32 size = sizeof(config);
+
+	memset(&config, 0, size);
+	config.hdr.size = size;
+	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
+	config.type = SOF_DAI_INTEL_ALH;
+	config.dai_index = (link_id << 8) | (d->id);
+	config.alh.stream_id = alh_stream_id;
+
+	/* send message to DSP */
+	ret = sof_ipc_tx_message(sdev->ipc,
+				 config.hdr.cmd, &config, size, &reply,
+				 sizeof(reply));
+	if (ret < 0) {
+		dev_err(sdev->dev,
+			"error: failed to set DAI hw_params for link %d dai->id %d ALH %d\n",
+			link_id, d->id, alh_stream_id);
+	}
+
+	return ret;
+}
+
+static int sdw_free_stream(void *arg, void *s, void *dai, int link_id)
+{
+	struct snd_sof_dev *sdev = arg;
+	struct snd_soc_dai *d = dai;
+	struct sof_ipc_dai_config config;
+	struct sof_ipc_reply reply;
+	int ret;
+	u32 size = sizeof(config);
+
+	memset(&config, 0, size);
+	config.hdr.size = size;
+	config.hdr.cmd = SOF_IPC_GLB_DAI_MSG | SOF_IPC_DAI_CONFIG;
+	config.type = SOF_DAI_INTEL_ALH;
+	config.dai_index = (link_id << 8) | d->id;
+	config.alh.stream_id = 0xFFFF; /* invalid value on purpose */
+
+	/* send message to DSP */
+	ret = sof_ipc_tx_message(sdev->ipc,
+				 config.hdr.cmd, &config, size, &reply,
+				 sizeof(reply));
+	if (ret < 0) {
+		dev_err(sdev->dev,
+			"error: failed to free stream for link %d dai->id %d\n",
+			link_id, d->id);
+	}
+
+	return ret;
+}
+
+static const struct sdw_intel_ops sdw_callback = {
+	.config_stream = sdw_config_stream,
+	.free_stream = sdw_free_stream,
+};
+
+static int hda_sdw_init(struct snd_sof_dev *sdev, u32 *link_mask)
+{
+	acpi_handle handle;
+	struct sdw_intel_res res;
+	struct sof_intel_hda_dev *hdev;
+	void *sdw;
+
+	handle = ACPI_HANDLE(sdev->dev);
+
+	memset(&res, 0, sizeof(res));
+
+	res.mmio_base = sdev->bar[HDA_DSP_BAR];
+	res.irq = sdev->ipc_irq;
+	res.parent = sdev->dev;
+	res.ops = &sdw_callback;
+	res.arg = sdev;
+
+	sdw = sdw_intel_init(handle, &res);
+	if (!sdw) {
+		dev_err(sdev->dev, "SDW Init failed\n");
+		return -EIO;
+	}
+
+	hda_sdw_int_enable(sdev, true);
+
+	/* save context */
+	hdev = sdev->pdata->hw_pdata;
+	hdev->sdw = sdw;
+
+	/* report which links are enabled by hardware/firmware */
+	*link_mask = res.link_mask;
+
+	return 0;
+}
+
+static int hda_sdw_exit(struct snd_sof_dev *sdev)
+{
+	struct sof_intel_hda_dev *hdev;
+
+	hdev = sdev->pdata->hw_pdata;
+
+	hda_sdw_int_enable(sdev, false);
+
+	if (hdev->sdw)
+		sdw_intel_exit(hdev->sdw);
+	hdev->sdw = NULL;
+
+	return 0;
+}
+#else
+static int hda_sdw_init(struct snd_sof_dev *sdev, u32 *link_mask)
+{
+	return 0;
+}
+
+static int hda_sdw_exit(struct snd_sof_dev *sdev)
+{
+	return 0;
+}
+#endif
 
 /*
  * Debug
@@ -336,12 +479,12 @@ static const char *fixup_tplg_name(struct snd_sof_dev *sdev,
 static int hda_init_caps(struct snd_sof_dev *sdev)
 {
 	struct hdac_bus *bus = sof_to_bus(sdev);
+	struct snd_soc_acpi_mach *mach;
+	struct snd_sof_pdata *pdata = sdev->pdata;
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
 	struct hdac_ext_link *hlink;
-	struct snd_soc_acpi_mach_params *mach_params;
 	struct snd_soc_acpi_mach *hda_mach;
-	struct snd_sof_pdata *pdata = sdev->pdata;
-	struct snd_soc_acpi_mach *mach;
+	struct snd_soc_acpi_mach_params *mach_params;
 	const char *tplg_filename;
 	const char *idisp_str;
 	const char *dmic_str;
@@ -349,6 +492,7 @@ static int hda_init_caps(struct snd_sof_dev *sdev)
 	int codec_num = 0;
 	int i;
 #endif
+	u32 link_mask = 0;
 	int ret = 0;
 
 	device_disable_async_suspend(bus->dev);
@@ -375,6 +519,38 @@ static int hda_init_caps(struct snd_sof_dev *sdev)
 		hda_codec_i915_exit(sdev);
 #endif
 		return ret;
+	}
+
+	/* need to power-up core before setting-up capabilities */
+	ret = hda_dsp_core_power_up(sdev, HDA_DSP_CORE_MASK(0));
+	if (ret < 0) {
+		dev_err(sdev->dev, "error: could not power-up DSP subsystem\n");
+		return ret;
+	}
+
+	/* initialize SoundWire capabilities */
+	ret = hda_sdw_init(sdev, &link_mask);
+	if (ret < 0) {
+		dev_err(sdev->dev, "error: SoundWire get caps error\n");
+		hda_dsp_core_power_down(sdev, HDA_DSP_CORE_MASK(0));
+		return ret;
+	}
+
+	if (!pdata->machine && link_mask != 0) {
+		/* SoundWire enabled, revisit machine driver selection */
+		mach = pdata->desc->alt_machines;
+		while (mach && mach->link_mask && mach->link_mask != link_mask)
+			mach++;
+		if (mach && mach->link_mask) {
+			dev_dbg(bus->dev,
+				"SoundWire machine driver %s topology %s\n",
+				mach->drv_name,
+				mach->sof_tplg_filename);
+			pdata->machine = mach;
+			mach->mach_params.platform = dev_name(sdev->dev);
+			pdata->fw_filename = mach->sof_fw_filename;
+			pdata->tplg_filename = mach->sof_tplg_filename;
+		}
 	}
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
@@ -680,6 +856,8 @@ int hda_dsp_remove(struct snd_sof_dev *sdev)
 	/* codec removal, invoke bus_device_remove */
 	snd_hdac_ext_bus_device_remove(bus);
 #endif
+
+	hda_sdw_exit(sdev);
 
 	if (!IS_ERR_OR_NULL(hda->dmic_dev))
 		platform_device_unregister(hda->dmic_dev);
