@@ -661,7 +661,7 @@ static int rt1308_sdw_remove(struct sdw_slave *slave)
 {
 	struct rt1308_sdw_priv *rt1308 = dev_get_drvdata(&slave->dev);
 
-	regmap_write(rt1308->regmap, RT1308_SDW_RESET, 0);
+	//regmap_write(rt1308->regmap, RT1308_SDW_RESET, 0);
 	return 0;
 }
 
