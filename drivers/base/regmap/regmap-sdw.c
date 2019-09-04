@@ -12,6 +12,7 @@ static int regmap_sdw_write(void *context, unsigned int reg, unsigned int val)
 	struct device *dev = context;
 	struct sdw_slave *slave = to_sdw_slave_device(dev);
 
+	dev_err(dev, "plb: regmap_sdw_write reg %x val %x\n", reg, val);
 	return sdw_write(slave, reg, val);
 }
 
