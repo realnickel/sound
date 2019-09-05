@@ -41,6 +41,7 @@ struct sdw_intel_res {
 };
 
 void *sdw_intel_init(acpi_handle *parent_handle, struct sdw_intel_res *res);
+int sdw_intel_enable(void *arg);
 void sdw_intel_exit(void *arg);
 
 #endif

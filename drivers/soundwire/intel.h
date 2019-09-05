@@ -22,6 +22,8 @@ struct sdw_intel_link_res {
 	int irq;
 	const struct sdw_intel_ops *ops;
 	void *arg;
+	acpi_handle handle;
+	struct device *parent;
 };
 
 #define SDW_INTEL_QUIRK_MASK_BUS_DISABLE	BIT(1)

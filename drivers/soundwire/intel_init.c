@@ -84,14 +84,11 @@ static bool is_link_enabled(struct fwnode_handle *fw_node, int i)
 static struct sdw_intel_ctx
 *sdw_intel_add_controller(struct sdw_intel_res *res)
 {
-	struct platform_device_info pdevinfo;
-	struct platform_device *pdev;
 	struct sdw_link_data *link;
 	struct sdw_intel_ctx *ctx;
 	struct acpi_device *adev;
 	int ret, i;
 	u8 count;
-	u32 caps;
 
 	if (acpi_bus_get_device(res->handle, &adev))
 		return NULL;
@@ -101,19 +98,23 @@ static struct sdw_intel_ctx
 	ret = fwnode_property_read_u8_array(acpi_fwnode_handle(adev),
 					    "mipi-sdw-master-count", &count, 1);
 
-	/* Don't fail on error, continue and use hw value */
+	/*
+	 * In theory we could check the number of links supported in
+	 * hardware, but in that step we cannot assume SoundWire IP is
+	 * powered.
+	 *
+	 * In addition, if the BIOS doesn't even provide this
+	 * 'master-count' property then all the inits based on link
+	 * masks will fail as well.
+	 *
+	 * We will check the hardware capabilities in the enable step
+	 */
+
 	if (ret) {
 		dev_err(&adev->dev,
 			"Failed to read mipi-sdw-master-count: %d\n", ret);
-		count = SDW_MAX_LINKS;
+		return NULL;
 	}
-
-	/* Check SNDWLCAP.LCOUNT */
-	caps = ioread32(res->mmio_base + SDW_SHIM_BASE + SDW_SHIM_LCAP);
-	caps &= GENMASK(2, 0);
-
-	/* Check HW supported vs property value and use min of two */
-	count = min_t(u8, caps, count);
 
 	/* Check count is within bounds */
 	if (count > SDW_MAX_LINKS) {
@@ -124,8 +125,7 @@ static struct sdw_intel_ctx
 		dev_warn(&adev->dev, "No SoundWire links detected\n");
 		return NULL;
 	}
-
-	dev_dbg(&adev->dev, "Creating %d SDW Link devices\n", count);
+	dev_dbg(&adev->dev, "Detected %d SDW Link devices\n", count);
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
@@ -147,8 +147,12 @@ static struct sdw_intel_ctx
 			continue;
 		}
 
-		if (is_link_enabled(acpi_fwnode_handle(adev), i))
-			res->link_mask |= BIT(i);
+		if (!is_link_enabled(acpi_fwnode_handle(adev), i)) {
+			link++;
+			continue;
+		}
+
+		res->link_mask |= BIT(i);
 
 		link->res.irq = res->irq;
 		link->res.registers = res->mmio_base + SDW_LINK_BASE
@@ -159,9 +163,68 @@ static struct sdw_intel_ctx
 		link->res.ops = res->ops;
 		link->res.arg = res->arg;
 
+		link->res.parent = res->parent;
+		link->res.handle = adev;
+
+		link++;
+	}
+
+	return ctx;
+
+link_err:
+	kfree(ctx);
+	return NULL;
+}
+
+static int
+sdw_intel_enable_controller(struct sdw_intel_ctx *ctx)
+{
+	struct platform_device_info pdevinfo;
+	struct platform_device *pdev;
+	struct sdw_link_data *link;
+	struct acpi_device *adev;
+	u32 caps;
+	int i;
+
+	if (!ctx)
+		return -EINVAL;
+
+	if (!ctx->count)
+		return 0;
+
+	link = ctx->links;
+
+	/*
+	 * At this stage the hardware has to be powered so we check
+	 * SNDWLCAP.LCOUNT for consistency with firmware/BIOS
+	 */
+	caps = ioread32(link->res.shim + SDW_SHIM_LCAP);
+	caps &= GENMASK(2, 0);
+
+	if (caps < ctx->count) {
+		adev = link->res.handle;
+		dev_err(&adev->dev,
+			"Hardware links %d lower than firmware links %d\n",
+			caps, ctx->count);
+		return -EINVAL;
+	}
+
+	/* Create SDW Master devices */
+	for (i = 0; i < ctx->count; i++) {
+		if (link_mask && !(link_mask & BIT(i))) {
+			link++;
+			continue;
+		}
+
+		adev = link->res.handle;
+		if (!is_link_enabled(acpi_fwnode_handle(adev), i)) {
+			link++;
+			continue;
+		}
+
 		memset(&pdevinfo, 0, sizeof(pdevinfo));
 
-		pdevinfo.parent = res->parent;
+		pdevinfo.parent = link->res.parent;
 		pdevinfo.name = "int-sdw";
 		pdevinfo.id = i;
 		pdevinfo.fwnode = acpi_fwnode_handle(adev);
@@ -180,13 +243,11 @@ static struct sdw_intel_ctx
 		link++;
 	}
 
-	return ctx;
+	return 0;
 
 pdev_err:
 	sdw_intel_cleanup_pdev(ctx);
-link_err:
-	kfree(ctx);
-	return NULL;
+	return -EINVAL; /* FIXME, what is the relevant error */
 }
 
 static acpi_status sdw_intel_acpi_cb(acpi_handle handle, u32 level,
@@ -227,8 +288,9 @@ static acpi_status sdw_intel_acpi_cb(acpi_handle handle, u32 level,
  * @parent_handle: ACPI parent handle
  * @res: resource data
  *
- * This scans the namespace and creates SoundWire link controller devices
- * based on the info queried.
+ * This scans the namespace and queries firmware to figure out
+ * which links to enable. A follow-up use of sdw_intel_enable() is
+ * required for creation of devices and bus startup
  */
 void *sdw_intel_init(acpi_handle *parent_handle, struct sdw_intel_res *res)
 {
@@ -244,6 +306,20 @@ void *sdw_intel_init(acpi_handle *parent_handle, struct sdw_intel_res *res)
 	return sdw_intel_add_controller(res);
 }
 EXPORT_SYMBOL(sdw_intel_init);
+
+/**
+ * sdw_intel_enable() - SoundWire Intel enable routine
+ *
+ * This creates SoundWire link devices based on the info queried
+ * in sdw_intel_init()
+ */
+int sdw_intel_enable(void *arg)
+{
+	struct sdw_intel_ctx *ctx = arg;
+
+	return sdw_intel_enable_controller(ctx);
+}
+EXPORT_SYMBOL(sdw_intel_enable);
 
 /**
  * sdw_intel_exit() - SoundWire Intel exit
