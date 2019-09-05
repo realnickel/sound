@@ -1204,6 +1204,10 @@ static int intel_probe(struct platform_device *pdev)
 
 	intel_debugfs_init(sdw);
 
+	dev_err(&pdev->dev, "plb: adding 2s delay on %s\n", __func__);
+	msleep(2000);
+	dev_err(&pdev->dev, "plb: 2s delay elapsed on %s\n", __func__);
+
 	ret = sdw_cdns_enable_interrupt(&sdw->cdns, true);
 	if (ret < 0) {
 		dev_err(sdw->cdns.dev, "cannot enable interrupts\n");
