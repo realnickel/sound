@@ -595,6 +595,7 @@ int hda_dsp_trace_trigger(struct snd_sof_dev *sdev, int cmd);
  * SoundWire support
  */
 void hda_sdw_int_enable(struct snd_sof_dev *sdev, bool enable);
+int hda_sdw_enable(struct snd_sof_dev *sdev);
 
 /* common dai driver */
 extern struct snd_soc_dai_driver skl_dai[];

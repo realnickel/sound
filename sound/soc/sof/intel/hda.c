@@ -140,8 +140,6 @@ static int hda_sdw_init(struct snd_sof_dev *sdev, u32 *link_mask)
 		return -EIO;
 	}
 
-	hda_sdw_int_enable(sdev, true);
-
 	/* save context */
 	hdev = sdev->pdata->hw_pdata;
 	hdev->sdw = sdw;
@@ -150,6 +148,17 @@ static int hda_sdw_init(struct snd_sof_dev *sdev, u32 *link_mask)
 	*link_mask = res.link_mask;
 
 	return 0;
+}
+
+int hda_sdw_enable(struct snd_sof_dev *sdev)
+{
+	struct sof_intel_hda_dev *hdev;
+
+	hdev = sdev->pdata->hw_pdata;
+
+	hda_sdw_int_enable(sdev, true);
+
+	return sdw_intel_enable(hdev->sdw);
 }
 
 static int hda_sdw_exit(struct snd_sof_dev *sdev)
@@ -168,6 +177,11 @@ static int hda_sdw_exit(struct snd_sof_dev *sdev)
 }
 #else
 static int hda_sdw_init(struct snd_sof_dev *sdev, u32 *link_mask)
+{
+	return 0;
+}
+
+static int hda_sdw_enable(struct snd_sof_dev *sdev)
 {
 	return 0;
 }
