@@ -375,6 +375,10 @@ static int sof_probe_continue(struct snd_sof_dev *sdev)
 	/* hereafter all FW boot flows are for PM reasons */
 	sdev->first_boot = false;
 
+	dev_err(sdev->dev, "plb: adding 20s delay on %s\n", __func__);
+	msleep(20000);
+	dev_err(sdev->dev, "plb: 20s delay elapsed on %s\n", __func__);
+
 	/* now register audio DSP platform driver and dai */
 	ret = devm_snd_soc_register_component(sdev->dev, &sdev->plat_drv,
 					      sof_ops(sdev)->drv,
