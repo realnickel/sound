@@ -1194,6 +1194,16 @@ static int intel_probe(struct platform_device *pdev)
 		goto err_init;
 	}
 
+	/* Register DAIs */
+	ret = intel_register_dai(sdw);
+	if (ret) {
+		dev_err(sdw->cdns.dev, "DAI registration failed: %d\n", ret);
+		snd_soc_unregister_component(sdw->cdns.dev);
+		goto err_dai;
+	}
+
+	intel_debugfs_init(sdw);
+
 	ret = sdw_cdns_enable_interrupt(&sdw->cdns, true);
 	if (ret < 0) {
 		dev_err(sdw->cdns.dev, "cannot enable interrupts\n");
@@ -1205,16 +1215,6 @@ static int intel_probe(struct platform_device *pdev)
 		dev_err(sdw->cdns.dev, "unable to exit bus reset sequence\n");
 		goto err_init;
 	}
-
-	/* Register DAIs */
-	ret = intel_register_dai(sdw);
-	if (ret) {
-		dev_err(sdw->cdns.dev, "DAI registration failed: %d\n", ret);
-		snd_soc_unregister_component(sdw->cdns.dev);
-		goto err_dai;
-	}
-
-	intel_debugfs_init(sdw);
 
 	/* Enable PM */
 	pm_runtime_set_autosuspend_delay(&pdev->dev, 3000);
