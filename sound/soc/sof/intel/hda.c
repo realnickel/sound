@@ -824,17 +824,10 @@ int hda_dsp_probe(struct snd_sof_dev *sdev)
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = HDA_DSP_MBOX_UPLINK_OFFSET;
 
-	/* need to power-up core before setting-up capabilities */
-	ret = hda_dsp_core_power_up(sdev, HDA_DSP_CORE_MASK(0));
-	if (ret < 0) {
-		dev_err(sdev->dev, "error: could not power-up DSP subsystem\n");
-		goto free_ipc_irq;
-	}
-
 	/* initialize SoundWire capabilities */
 	ret = hda_sdw_init(sdev, &link_mask);
 	if (ret < 0) {
-		dev_err(sdev->dev, "error: SoundWire get caps error\n");
+		dev_err(sdev->dev, "error: SoundWire init error\n");
 		goto core_power_down;
 	}
 
