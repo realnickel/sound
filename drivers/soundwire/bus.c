@@ -750,6 +750,7 @@ static int sdw_handle_dp0_interrupt(struct sdw_slave *slave, u8 *slave_status)
 	u8 clear = 0, impl_int_mask;
 	int status, status2, ret, count = 0;
 
+	dev_err(slave->bus->dev, "plb: sdw_read DP0_INT\n");
 	status = sdw_read(slave, SDW_DP0_INT);
 	if (status < 0) {
 		dev_err(slave->bus->dev,
@@ -796,6 +797,7 @@ static int sdw_handle_dp0_interrupt(struct sdw_slave *slave, u8 *slave_status)
 		}
 
 		/* Read DP0 interrupt again */
+		dev_err(slave->bus->dev, "plb: sdw_read DP0_INT 2\n");
 		status2 = sdw_read(slave, SDW_DP0_INT);
 		if (status2 < 0) {
 			dev_err(slave->bus->dev,
@@ -826,6 +828,7 @@ static int sdw_handle_port_interrupt(struct sdw_slave *slave,
 		return sdw_handle_dp0_interrupt(slave, slave_status);
 
 	addr = SDW_DPN_INT(port);
+	dev_err(slave->bus->dev, "plb: sdw_read DPN_INT port %d addr %x\n", port, addr);
 	status = sdw_read(slave, addr);
 	if (status < 0) {
 		dev_err(slave->bus->dev,
@@ -867,6 +870,7 @@ static int sdw_handle_port_interrupt(struct sdw_slave *slave,
 		}
 
 		/* Read DPN interrupt again */
+		dev_err(slave->bus->dev, "plb: sdw_read DPN_INT addr %x\n", addr);
 		status2 = sdw_read(slave, addr);
 		if (status2 < 0) {
 			dev_err(slave->bus->dev,
@@ -898,6 +902,7 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 	sdw_modify_slave_status(slave, SDW_SLAVE_ALERT);
 
 	/* Read Instat 1, Instat 2 and Instat 3 registers */
+	dev_err(slave->bus->dev, "plb: sdw_read SCP_INT1\n");
 	ret = sdw_read(slave, SDW_SCP_INT1);
 	if (ret < 0) {
 		dev_err(slave->bus->dev,
@@ -906,6 +911,7 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 	}
 	buf = ret;
 
+	dev_err(slave->bus->dev, "plb: sdw_nread SCP_INSTAT2\n");
 	ret = sdw_nread(slave, SDW_SCP_INTSTAT2, 2, buf2);
 	if (ret < 0) {
 		dev_err(slave->bus->dev,
@@ -998,6 +1004,7 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 		 * Read status again to ensure no new interrupts arrived
 		 * while servicing interrupts.
 		 */
+		dev_err(slave->bus->dev, "plb: sdw_read SCP_INT1 2\n");
 		ret = sdw_read(slave, SDW_SCP_INT1);
 		if (ret < 0) {
 			dev_err(slave->bus->dev,
@@ -1006,6 +1013,7 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 		}
 		_buf = ret;
 
+		dev_err(slave->bus->dev, "plb: sdw_nread SCP_INTSTAT2\n");
 		ret = sdw_nread(slave, SDW_SCP_INTSTAT2, 2, _buf2);
 		if (ret < 0) {
 			dev_err(slave->bus->dev,

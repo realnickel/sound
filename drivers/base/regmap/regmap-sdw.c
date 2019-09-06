@@ -22,6 +22,7 @@ static int regmap_sdw_read(void *context, unsigned int reg, unsigned int *val)
 	struct sdw_slave *slave = to_sdw_slave_device(dev);
 	int read;
 
+	dev_err(dev, "plb: regmap_sdw_read reg %x\n", reg);
 	read = sdw_read(slave, reg);
 	if (read < 0)
 		return read;

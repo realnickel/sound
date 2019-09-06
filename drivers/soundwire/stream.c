@@ -491,6 +491,7 @@ static int sdw_prep_deprep_slave_ports(struct sdw_bus *bus,
 		time_left = wait_for_completion_timeout(port_ready,
 				msecs_to_jiffies(dpn_prop->ch_prep_timeout));
 
+		dev_err(&s_rt->slave->dev, "plb: sdw_read DPN_PREPARE_STATUS\n");
 		val = sdw_read(s_rt->slave, SDW_DPN_PREPARESTATUS(p_rt->num));
 		val &= p_rt->ch_mask;
 		if (!time_left || val) {
