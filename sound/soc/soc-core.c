@@ -1208,8 +1208,11 @@ static int soc_init_dai_link(struct snd_soc_card *card,
 		 * Defer card registration if codec component is not added to
 		 * component list.
 		 */
-		if (!soc_find_component(codec))
+		if (!soc_find_component(codec)) {
+			dev_err(card->dev, "ASoC: codec %s not registered\n",
+				codec->name);
 			return -EPROBE_DEFER;
+		}
 	}
 
 	for_each_link_platforms(link, i, platform) {
@@ -1229,8 +1232,11 @@ static int soc_init_dai_link(struct snd_soc_card *card,
 		 * Defer card registration if platform component is not added to
 		 * component list.
 		 */
-		if (!soc_find_component(platform))
+		if (!soc_find_component(platform)) {
+			dev_err(card->dev, "ASoC: platform %s not registered\n",
+				platform->name);
 			return -EPROBE_DEFER;
+		}
 	}
 
 	/* FIXME */
@@ -1475,7 +1481,7 @@ static int soc_probe_link_dais(struct snd_soc_card *card,
 	if (dai_link->init) {
 		ret = dai_link->init(rtd);
 		if (ret < 0) {
-			dev_err(card->dev, "ASoC: failed to init %s: %d\n",
+			dev_err(card->dev, "ASoC: failed to init 1 %s: %d\n",
 				dai_link->name, ret);
 			return ret;
 		}
@@ -1922,7 +1928,7 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	for_each_card_prelinks(card, i, dai_link) {
 		ret = soc_init_dai_link(card, dai_link);
 		if (ret) {
-			dev_err(card->dev, "ASoC: failed to init link %s: %d\n",
+			dev_err(card->dev, "ASoC: failed to init link 2 %s: %d\n",
 				dai_link->name, ret);
 			mutex_unlock(&client_mutex);
 			return ret;
