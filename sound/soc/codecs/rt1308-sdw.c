@@ -616,10 +616,6 @@ static int rt1308_sdw_probe(struct sdw_slave *slave,
 
 	rt1308_sdw_init(&slave->dev, regmap, slave);
 
-	/* Perform IO operations only if slave is in ATTACHED state */
-	if (slave->status == SDW_SLAVE_ATTACHED)
-		rt1308_io_init(&slave->dev, slave);
-
 	return 0;
 }
 
