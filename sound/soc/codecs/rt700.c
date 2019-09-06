@@ -808,14 +808,27 @@ static int rt700_probe(struct snd_soc_component *component)
 
 	rt700->component = component;
 
+	if (!rt700->hw_init) {
+		dev_dbg(component->dev,
+			"%s called before hw_init completion\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
 	return 0;
 }
 
 static int rt700_set_bias_level(struct snd_soc_component *component,
 				enum snd_soc_bias_level level)
 {
+	struct rt700_priv *rt700 = snd_soc_component_get_drvdata(component);
 	struct snd_soc_dapm_context *dapm =
 		snd_soc_component_get_dapm(component);
+
+	if (!rt700->hw_init) {
+		dev_err(component->dev,
+			"%s called before hw_init completion\n", __func__);
+		return -EINVAL;
+	}
 
 	switch (level) {
 	case SND_SOC_BIAS_PREPARE:
