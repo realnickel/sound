@@ -7,8 +7,6 @@
  * ALC715 ASoC Codec Driver based Intel Dummy SdW codec driver
  *
  */
-#define DEBUG
-
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/mod_devicetable.h>
@@ -198,8 +196,6 @@ static int rt715_read_prop(struct sdw_slave *slave)
 	unsigned long addr;
 	struct sdw_dpn_prop *dpn;
 
-	sdw_slave_read_prop(slave);
-
 	prop->paging_support = false;
 
 	/* first we need to allocate memory for set bits in port lists */
@@ -279,7 +275,6 @@ static struct sdw_slave_ops rt715_slave_ops = {
 	.read_prop = rt715_read_prop,
 	.update_status = rt715_update_status,
 	.bus_config = rt715_bus_config,
-	.port_prep = NULL,
 };
 
 static int rt715_sdw_probe(struct sdw_slave *slave,
@@ -302,7 +297,7 @@ static int rt715_sdw_probe(struct sdw_slave *slave,
 	if (slave->status == SDW_SLAVE_ATTACHED)
 		rt715_io_init(&slave->dev, slave);
 
-	return ret;
+	return 0;
 }
 
 static int rt715_sdw_remove(struct sdw_slave *slave)
