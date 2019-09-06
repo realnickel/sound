@@ -38,150 +38,6 @@
 
 #include "rt715.h"
 
-struct hda_cmd {
-	u16 vid;
-	u8 nid;
-	u16 payload;
-};
-
-static struct hda_cmd hda_dump_list[] = {
-	/* vid, nid, payload */
-	{0xf00, 0x00,  0x00}, /* Vendor ID */
-	{0xf01, 0x22,  0x00}, /* Connection Select Control */
-	{0xf01, 0x23,  0x00}, /* Connection Select Control */
-	{0xf01, 0x24,  0x00}, /* Connection Select Control */
-	{0xf01, 0x25,  0x00}, /* Connection Select Control */
-	{0xf02, 0x07,  0x00}, /* Connection List Entry */
-	{0xf02, 0x08,  0x00}, /* Connection List Entry */
-	{0xf02, 0x09,  0x00}, /* Connection List Entry */
-	{0xf02, 0x22,  0x00}, /* Connection List Entry */
-	{0xf02, 0x23,  0x00}, /* Connection List Entry */
-	{0xf02, 0x24,  0x00}, /* Connection List Entry */
-	{0xf02, 0x25,  0x00}, /* Connection List Entry */
-	{0xf02, 0x27,  0x00}, /* Connection List Entry */
-	{0xd00, 0x20,  0x00}, /* Coefficient Index */
-	{0xd00, 0x59,  0x00}, /* Coefficient Index */
-	{0xd00, 0x5d,  0x00}, /* Coefficient Index */
-	{0xd00, 0x5e,  0x00}, /* Coefficient Index */
-	{0xd00, 0x5f,  0x00}, /* Coefficient Index */
-	{0xc00, 0x20,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x59,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x5d,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x5e,  0x00}, /* Processing Coefficient */
-	{0xc00, 0x5f,  0x00}, /* Processing Coefficient */
-	{0xb00, 0x07,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x07,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x08,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x08,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x09,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x09,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x27,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x27,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x10,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x10,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x11,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x11,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x12,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x12,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x13,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x13,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x1d,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x1d,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x29,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x29,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x18,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x18,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x19,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x19,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x1a,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x1a,  0x2000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x0000}, /* Amplifier Gain */
-	{0xb00, 0x1b,  0x2000}, /* Amplifier Gain */
-	{0xa00, 0x07,  0x0000}, /* Converter Format */
-	{0xa00, 0x08,  0x0000}, /* Converter Format */
-	{0xa00, 0x09,  0x0000}, /* Converter Format */
-	{0xa00, 0x10,  0x0000}, /* Converter Format */
-	{0xa00, 0x11,  0x0000}, /* Converter Format */
-	{0xa00, 0x27,  0x0000}, /* Converter Format */
-	{0xf05, 0x01,  0x00}, /* Power State */
-	{0xf05, 0x07,  0x00}, /* Power State */
-	{0xf05, 0x08,  0x00}, /* Power State */
-	{0xf05, 0x09,  0x00}, /* Power State */
-	{0xf05, 0x12,  0x00}, /* Power State */
-	{0xf05, 0x13,  0x00}, /* Power State */
-	{0xf05, 0x15,  0x00}, /* Power State */
-	{0xf05, 0x16,  0x00}, /* Power State */
-	{0xf05, 0x17,  0x00}, /* Power State */
-	{0xf05, 0x18,  0x00}, /* Power State */
-	{0xf05, 0x19,  0x00}, /* Power State */
-	{0xf05, 0x1a,  0x00}, /* Power State */
-	{0xf05, 0x1b,  0x00}, /* Power State */
-	{0xf05, 0x1d,  0x00}, /* Power State */
-	{0xf05, 0x27,  0x00}, /* Power State */
-	{0xf05, 0x29,  0x00}, /* Power State */
-	{0xf06, 0x07,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x08,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x09,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x10,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x11,  0x00}, /* Converter Stream, Channel */
-	{0xf06, 0x27,  0x00}, /* Converter Stream, Channel */
-	{0xf07, 0x12,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x13,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x1d,  0x00}, /* Pin Widget Control */
-	{0xf07, 0x29,  0x00}, /* Pin Widget Control */
-	{0xf08, 0x01,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x5e,  0x00}, /* Unsolicited Response */
-	{0xf08, 0x59,  0x00}, /* Unsolicited Response */
-	{0xf0a, 0x01,  0x00}, /* BEEP Generator */
-	{0xf20, 0x01,  0x00}, /* Subsystem ID */
-	{0xf21, 0x01,  0x00}, /* Subsystem ID */
-	{0xf22, 0x01,  0x00}, /* Subsystem ID */
-	{0xf23, 0x01,  0x00}, /* Subsystem ID */
-	{0xf1c, 0x12,  0x00}, /* Configuration Default */
-	{0xf1c, 0x13,  0x00}, /* Configuration Default */
-	{0xf1c, 0x18,  0x00}, /* Configuration Default */
-	{0xf1c, 0x19,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1c, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1c, 0x29,  0x00}, /* Configuration Default */
-	{0xf1d, 0x12,  0x00}, /* Configuration Default */
-	{0xf1d, 0x13,  0x00}, /* Configuration Default */
-	{0xf1d, 0x18,  0x00}, /* Configuration Default */
-	{0xf1d, 0x19,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1d, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1d, 0x29,  0x00}, /* Configuration Default */
-	{0xf1e, 0x12,  0x00}, /* Configuration Default */
-	{0xf1e, 0x13,  0x00}, /* Configuration Default */
-	{0xf1e, 0x18,  0x00}, /* Configuration Default */
-	{0xf1e, 0x19,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1e, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1e, 0x29,  0x00}, /* Configuration Default */
-	{0xf1f, 0x12,  0x00}, /* Configuration Default */
-	{0xf1f, 0x13,  0x00}, /* Configuration Default */
-	{0xf1f, 0x18,  0x00}, /* Configuration Default */
-	{0xf1f, 0x19,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1a,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1b,  0x00}, /* Configuration Default */
-	{0xf1f, 0x1d,  0x00}, /* Configuration Default */
-	{0xf1f, 0x29,  0x00}, /* Configuration Default */
-	{0xf15, 0x01,  0x00}, /* GPIO Data */
-	{0xf16, 0x01,  0x00}, /* GPIO Enable Mask */
-	{0xf16, 0x20,  0x00}, /* GPIO Enable Mask */
-	{0xf17, 0x01,  0x00}, /* GPIO Direction */
-	{0xf17, 0x20,  0x00}, /* GPIO Direction */
-	{0xf19, 0x01,  0x00}, /* GPIO Unsolicited Response Enable Mask */
-	{0xf19, 0x20,  0x00}, /* GPIO Unsolicited Response Enable Mask */
-};
-
-#define RT715_HDA_DUMP_LEN ARRAY_SIZE(hda_dump_list)
-
 static int rt715_index_write(struct regmap *regmap,
 			     unsigned int reg, unsigned int value)
 {
@@ -216,87 +72,6 @@ static int rt715_index_write(struct regmap *regmap,
 
 err:
 	return ret;
-}
-
-static int rt715_index_read(struct regmap *regmap,
-			    unsigned int reg, unsigned int *value)
-{
-	int ret;
-	unsigned int val_h, val_l;
-	unsigned int sdw_data_3, sdw_data_2, sdw_data_1, sdw_data_0;
-
-	val_h = (reg >> 8) & 0xff;
-	val_l = reg & 0xff;
-	ret = regmap_write(regmap, RT715_PRIV_INDEX_W_H, val_h);
-	if (ret < 0) {
-		pr_err("Failed to set private addr: %d\n", ret);
-		goto err;
-	}
-	ret = regmap_write(regmap, RT715_PRIV_INDEX_W_L, val_l);
-	if (ret < 0) {
-		pr_err("Failed to set private addr: %d\n", ret);
-		goto err;
-	}
-	val_h = 0;
-	val_l = 0;
-	ret = regmap_write(regmap, RT715_PRIV_DATA_R_H, val_h);
-	if (ret < 0) {
-		pr_err("Failed to set private value: %d\n", ret);
-		goto err;
-	}
-	ret = regmap_write(regmap, RT715_PRIV_DATA_R_L, val_l);
-	if (ret < 0) {
-		pr_err("Failed to set private value: %d\n", ret);
-		goto err;
-	}
-
-	sdw_data_3 = 0;
-	sdw_data_2 = 0;
-	sdw_data_1 = 0;
-	sdw_data_0 = 0;
-	regmap_read(regmap, RT715_READ_HDA_3, &sdw_data_3);
-	regmap_read(regmap, RT715_READ_HDA_2, &sdw_data_2);
-	regmap_read(regmap, RT715_READ_HDA_1, &sdw_data_1);
-	regmap_read(regmap, RT715_READ_HDA_0, &sdw_data_0);
-	*value = ((sdw_data_3 & 0xff) << 24) | ((sdw_data_2 & 0xff) << 16) |
-		 ((sdw_data_1 & 0xff) << 8) | (sdw_data_0 & 0xff);
-	return 0;
-
-err:
-	return ret;
-}
-
-static int rt715_hda_read(struct regmap *regmap, unsigned int vid,
-			  unsigned int nid, unsigned int pid,
-			  unsigned int *value)
-{
-	unsigned int sdw_data_3 = 0, sdw_data_2 = 0;
-	unsigned int sdw_data_1 = 0, sdw_data_0 = 0;
-	unsigned int sdw_addr_h = 0, sdw_addr_l = 0;
-
-	sdw_data_3 = 0;
-	sdw_data_2 = 0;
-	sdw_data_1 = 0;
-	sdw_data_0 = 0;
-
-	if (vid & 0x800) { /* get command */
-		hda_to_sdw(nid, vid, pid,
-			   &sdw_addr_h, &sdw_data_1,
-			   &sdw_addr_l, &sdw_data_0);
-
-		regmap_write(regmap, sdw_addr_h, sdw_data_1);
-		if (sdw_addr_l)
-			regmap_write(regmap, sdw_addr_l, sdw_data_0);
-
-		regmap_read(regmap, RT715_READ_HDA_3, &sdw_data_3);
-		regmap_read(regmap, RT715_READ_HDA_2, &sdw_data_2);
-		regmap_read(regmap, RT715_READ_HDA_1, &sdw_data_1);
-		regmap_read(regmap, RT715_READ_HDA_0, &sdw_data_0);
-	}
-	*value = ((sdw_data_3 & 0xff) << 24) | ((sdw_data_2 & 0xff) << 16) |
-		((sdw_data_1 & 0xff) << 8) | (sdw_data_0 & 0xff);
-
-	return 0;
 }
 
 static void rt715_get_gain(struct rt715_priv *rt715, unsigned int addr_h,
@@ -714,8 +489,15 @@ static const struct snd_soc_dapm_route rt715_audio_map[] = {
 static int rt715_set_bias_level(struct snd_soc_component *component,
 				enum snd_soc_bias_level level)
 {
+	struct rt715_priv *rt715 = snd_soc_component_get_drvdata(component);
 	struct snd_soc_dapm_context *dapm =
 		snd_soc_component_get_dapm(component);
+
+	if (!rt715->hw_init) {
+		dev_err(component->dev,
+			"%s called before hw_init completion\n", __func__);
+		return -EINVAL;
+	}
 
 	switch (level) {
 	case SND_SOC_BIAS_PREPARE:
@@ -945,175 +727,6 @@ static struct snd_soc_dai_driver rt715_dai[] = {
 	},
 };
 
-static ssize_t rt715_index_cmd_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	struct rt715_priv *rt715 = dev_get_drvdata(dev);
-	unsigned int sdw_data_0;
-	int i, cnt = 0;
-
-	/* index */
-	for (i = 0; i <= 0xa0; i++) {
-		rt715_index_read(rt715->regmap, i, &sdw_data_0);
-		cnt += snprintf(buf + cnt, 12,
-				"%02x = %04x\n", i, sdw_data_0);
-	}
-
-	if (cnt >= PAGE_SIZE)
-		cnt = PAGE_SIZE - 1;
-
-	return cnt;
-}
-
-static ssize_t rt715_index_cmd_store(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf, size_t count)
-{
-	struct rt715_priv *rt715 = dev_get_drvdata(dev);
-	unsigned int index_reg = 0, index_val = 0;
-	int i;
-
-	for (i = 0; i < count; i++) {	/*rt715->dbg_nidess */
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			index_reg = (index_reg << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			index_reg = (index_reg << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			index_reg = (index_reg << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	for (i = i + 1; i < count; i++) {
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			index_val = (index_val << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			index_val = (index_val << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			index_val = (index_val << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	rt715_index_write(rt715->regmap, index_reg, index_val);
-
-	return count;
-}
-static DEVICE_ATTR(index_reg, 0664, rt715_index_cmd_show, rt715_index_cmd_store);
-
-static ssize_t rt715_hda_cmd_show(struct device *dev,
-				  struct device_attribute *attr, char *buf)
-{
-	struct rt715_priv *rt715 = dev_get_drvdata(dev);
-	int i, cnt = 0;
-	unsigned int value;
-
-	for (i = 0; i < RT715_HDA_DUMP_LEN; i++) {
-		if (cnt + 25 >= PAGE_SIZE)
-			break;
-		rt715->dbg_nid = hda_dump_list[i].nid;
-		rt715->dbg_vid = hda_dump_list[i].vid;
-		rt715->dbg_payload = hda_dump_list[i].payload;
-		rt715_hda_read(rt715->regmap, rt715->dbg_vid,
-			       rt715->dbg_nid, rt715->dbg_payload, &value);
-
-		cnt += snprintf(buf + cnt, 25,
-			"%03x %02x %04x=%x\n",
-			rt715->dbg_vid, rt715->dbg_nid,
-			rt715->dbg_payload, value);
-	}
-
-	if (cnt >= PAGE_SIZE)
-		cnt = PAGE_SIZE - 1;
-
-	return cnt;
-}
-
-static ssize_t rt715_hda_cmd_store(struct device *dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
-{
-	struct rt715_priv *rt715 = dev_get_drvdata(dev);
-	unsigned int sdw_addr_h, sdw_addr_l, sdw_data_h, sdw_data_l;
-	unsigned int sdw_data_3, sdw_data_2, sdw_data_1, sdw_data_0;
-	int i;
-
-	for (i = 0; i < count; i++) {	/*rt715->dbg_nidess */
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			rt715->dbg_nid = (rt715->dbg_nid << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			rt715->dbg_nid = (rt715->dbg_nid << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			rt715->dbg_nid = (rt715->dbg_nid << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	for (i = i + 1; i < count; i++) {
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			rt715->dbg_vid = (rt715->dbg_vid << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			rt715->dbg_vid = (rt715->dbg_vid << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			rt715->dbg_vid = (rt715->dbg_vid << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	if (rt715->dbg_vid < 0xf)
-		rt715->dbg_vid = rt715->dbg_vid << 8;
-
-	for (i = i + 1; i < count; i++) {
-		if (*(buf + i) <= '9' && *(buf + i) >= '0')
-			rt715->dbg_payload = (rt715->dbg_payload << 4) |
-						(*(buf + i) - '0');
-		else if (*(buf + i) <= 'f' && *(buf + i) >= 'a')
-			rt715->dbg_payload = (rt715->dbg_payload << 4) |
-						((*(buf + i) - 'a') + 0xa);
-		else if (*(buf + i) <= 'F' && *(buf + i) >= 'A')
-			rt715->dbg_payload = (rt715->dbg_payload << 4) |
-						((*(buf + i) - 'A') + 0xa);
-		else
-			break;
-	}
-
-	hda_to_sdw(rt715->dbg_nid, rt715->dbg_vid, rt715->dbg_payload,
-		   &sdw_addr_h, &sdw_data_h, &sdw_addr_l, &sdw_data_l);
-
-	regmap_write(rt715->regmap, sdw_addr_h, sdw_data_h);
-	if (!sdw_addr_l)
-		regmap_write(rt715->regmap, sdw_addr_l, sdw_data_l);
-
-	sdw_data_3 = 0;
-	sdw_data_2 = 0;
-	sdw_data_1 = 0;
-	sdw_data_0 = 0;
-	if (rt715->dbg_vid & 0x800) { /* get command */
-		regmap_read(rt715->regmap, RT715_READ_HDA_3, &sdw_data_3);
-		regmap_read(rt715->regmap, RT715_READ_HDA_2, &sdw_data_2);
-		regmap_read(rt715->regmap, RT715_READ_HDA_1, &sdw_data_1);
-		regmap_read(rt715->regmap, RT715_READ_HDA_0, &sdw_data_0);
-		pr_info("read (%02x %03x %04x) = %02x%02x%02x%02x\n",
-			rt715->dbg_nid, rt715->dbg_vid, rt715->dbg_payload,
-			sdw_data_3, sdw_data_2, sdw_data_1, sdw_data_0);
-	}
-
-	return count;
-}
-static DEVICE_ATTR(hda_reg, 0664, rt715_hda_cmd_show, rt715_hda_cmd_store);
-
 /* Bus clock frequency */
 #define RT715_CLK_FREQ_9600000HZ 9600000
 #define RT715_CLK_FREQ_12000000HZ 12000000
@@ -1178,29 +791,10 @@ int rt715_init(struct device *dev, struct regmap *regmap,
 	 */
 	rt715->hw_init = false;
 
-	/*
-	 * TODO: The BIOS used currently has multiple entries
-	 * for Slave(s). Ideally for a given platform, BIOS should
-	 * hold entries of actual Slave(s) present on board. So
-	 * to handle this, only register codec if it is actually
-	 * present on board, adding check accordingly
-	 */
-	ret = snd_soc_register_component(dev, &soc_codec_dev_rt715, rt715_dai,
-					ARRAY_SIZE(rt715_dai));
-
-	ret = device_create_file(&slave->dev, &dev_attr_index_reg);
-	if (ret != 0) {
-		dev_err(&slave->dev,
-			"Failed to create index_reg sysfs files: %d", ret);
-		return ret;
-	}
-
-	ret = device_create_file(&slave->dev, &dev_attr_hda_reg);
-	if (ret != 0) {
-		dev_err(&slave->dev,
-			"Failed to create hda_reg sysfs files: %d", ret);
-		return ret;
-	}
+	ret = devm_snd_soc_register_component(dev,
+					      &soc_codec_dev_rt715,
+					      rt715_dai,
+					      ARRAY_SIZE(rt715_dai));
 
 	return ret;
 }
@@ -1208,14 +802,9 @@ int rt715_init(struct device *dev, struct regmap *regmap,
 int rt715_io_init(struct device *dev, struct sdw_slave *slave)
 {
 	struct rt715_priv *rt715 = dev_get_drvdata(dev);
-	int ret;
 
 	if (rt715->hw_init)
 		return 0;
-	/* Enable Runtime PM */
-	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
-	pm_runtime_use_autosuspend(&slave->dev);
-	pm_runtime_enable(&slave->dev);
 
 	/* Mute nid=08h/09h */
 	regmap_write(rt715->regmap, RT715_SET_GAIN_LINE_ADC_H, 0xb0);
@@ -1248,18 +837,17 @@ int rt715_io_init(struct device *dev, struct sdw_slave *slave)
 	/* Finish Initial Settings, set power to D3 */
 	regmap_write(rt715->regmap, RT715_SET_AUDIO_POWER_STATE, AC_PWRST_D3);
 
-	pm_runtime_put_sync_autosuspend(&slave->dev);
 	/* Mark Slave initialization complete */
 	rt715->hw_init = true;
-	return ret;
-}
 
-int rt715_remove(struct device *dev)
-{
-	snd_soc_unregister_component(dev);
+	/* Enable Runtime PM */
+	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
+	pm_runtime_use_autosuspend(&slave->dev);
+	pm_runtime_mark_last_busy(&slave->dev);
+	pm_runtime_enable(&slave->dev);
+
 	return 0;
 }
-EXPORT_SYMBOL(rt715_remove);
 
 MODULE_DESCRIPTION("ASoC rt715 driver");
 MODULE_DESCRIPTION("ASoC rt715 driver SDW");

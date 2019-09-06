@@ -808,14 +808,27 @@ static int rt700_probe(struct snd_soc_component *component)
 
 	rt700->component = component;
 
+	if (!rt700->hw_init) {
+		dev_dbg(component->dev,
+			"%s called before hw_init completion\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
 	return 0;
 }
 
 static int rt700_set_bias_level(struct snd_soc_component *component,
 				enum snd_soc_bias_level level)
 {
+	struct rt700_priv *rt700 = snd_soc_component_get_drvdata(component);
 	struct snd_soc_dapm_context *dapm =
 		snd_soc_component_get_dapm(component);
+
+	if (!rt700->hw_init) {
+		dev_err(component->dev,
+			"%s called before hw_init completion\n", __func__);
+		return -EINVAL;
+	}
 
 	switch (level) {
 	case SND_SOC_BIAS_PREPARE:
@@ -1130,11 +1143,6 @@ int rt700_io_init(struct device *dev, struct sdw_slave *slave)
 	if (rt700->hw_init)
 		return 0;
 
-	/* Enable Runtime PM */
-	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
-	pm_runtime_use_autosuspend(&slave->dev);
-	pm_runtime_enable(&slave->dev);
-
 	/* reset */
 	regmap_write(rt700->regmap, 0xff01, 0x00);
 	regmap_write(rt700->regmap, 0x7520, 0x00);
@@ -1181,8 +1189,6 @@ int rt700_io_init(struct device *dev, struct sdw_slave *slave)
 	/* Finish Initial Settings, set power to D3 */
 	regmap_write(rt700->regmap, RT700_SET_AUDIO_POWER_STATE, AC_PWRST_D3);
 
-	pm_runtime_put_sync_autosuspend(&slave->dev);
-
 	INIT_DELAYED_WORK(&rt700->jack_detect_work,
 			rt700_jack_detect_handler);
 	INIT_DELAYED_WORK(&rt700->jack_btn_check_work,
@@ -1190,6 +1196,12 @@ int rt700_io_init(struct device *dev, struct sdw_slave *slave)
 
 	/* Mark Slave initialization complete */
 	rt700->hw_init = true;
+
+	/* Enable Runtime PM */
+	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
+	pm_runtime_use_autosuspend(&slave->dev);
+	pm_runtime_mark_last_busy(&slave->dev);
+	pm_runtime_enable(&slave->dev);
 
 	dev_dbg(&slave->dev, "%s hw_init complete\n", __func__);
 
