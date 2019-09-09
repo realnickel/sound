@@ -297,9 +297,9 @@ static int mc_probe(struct platform_device *pdev)
 
 	snd_soc_card_set_drvdata(card, ctx);
 
-	dev_dbg(&pdev->dev, "plb: 5s delay before register card\n");
-	msleep(5000);
-	dev_dbg(&pdev->dev, "plb: 5s delay expired, now register card\n");
+	dev_dbg(&pdev->dev, "plb: 10s delay before register card\n");
+	msleep(10000);
+	dev_dbg(&pdev->dev, "plb: 10s delay expired, now register card\n");
 
 	/* Register the card */
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
