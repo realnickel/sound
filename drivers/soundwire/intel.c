@@ -1194,6 +1194,8 @@ static int intel_probe(struct platform_device *pdev)
 		goto err_init;
 	}
 
+	synchronize_irq(sdw->res->irq);
+
 	ret = sdw_cdns_enable_interrupt(&sdw->cdns, true);
 	if (ret < 0) {
 		dev_err(sdw->cdns.dev, "cannot enable interrupts\n");
