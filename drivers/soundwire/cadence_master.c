@@ -181,7 +181,7 @@ MODULE_PARM_DESC(cdns_mcp_int_mask, "Cadence MCP IntMask");
 
 /* Driver defaults */
 #define CDNS_DEFAULT_SSP_INTERVAL		0x18
-#define CDNS_TX_TIMEOUT				2000
+#define CDNS_TX_TIMEOUT				20
 
 #define CDNS_SCP_RX_FIFOLEVEL			0x2
 
@@ -367,6 +367,8 @@ EXPORT_SYMBOL_GPL(sdw_cdns_debugfs_init);
 
 #endif /* CONFIG_DEBUG_FS */
 
+static void cdns_read_response(struct sdw_cdns *cdns);
+
 /*
  * IO Calls
  */
@@ -412,6 +414,7 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 	unsigned long time;
 	u32 base, i, data;
 	u16 addr;
+	u32 int_status;
 
 	/* Program the watermark level for RX FIFO */
 	if (cdns->msg_count != count) {
@@ -448,11 +451,31 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 	time = wait_for_completion_timeout(&cdns->tx_complete,
 					   msecs_to_jiffies(CDNS_TX_TIMEOUT));
 	if (!time) {
-		dev_err(cdns->dev, "IO transfer timed out : dev_num %d addr %x count %d\n",
-			msg->dev_num, msg->addr, count);
+		int_status = cdns_readl(cdns, CDNS_MCP_INTSTAT);
+		if (!(int_status & CDNS_MCP_INT_RX_WL)) {
+			dev_err(cdns->dev,
+				"IO transfer timed out : dev_num %d addr %x count %d\n",
+				msg->dev_num, msg->addr, count);
+			msg->len = 0;
+			return SDW_CMD_TIMEOUT;
+		}
 
-		msg->len = 0;
-		return SDW_CMD_TIMEOUT;
+		/*
+		 * the hardware has an interrupt status set but we've
+		 * not seen the interrupt that could signal
+		 * complete(). Log error and recover by reading the
+		 * response
+		 */
+		dev_warn(cdns->dev,
+			 "IO transfer timed out (RX_WL IRQ set): dev_num %d addr %x count %d\n",
+			 msg->dev_num, msg->addr, count);
+
+		cdns_read_response(cdns);
+		// FIXME: is this necessary since we've already timed-out
+		complete(&cdns->tx_complete);
+		// FIXME: do we really need to clear INT_IRQ?
+		cdns_writel(cdns, CDNS_MCP_INTSTAT,
+			    CDNS_MCP_INT_IRQ | CDNS_MCP_INT_RX_WL);
 	}
 
 	return cdns_fill_msg_resp(cdns, msg, count, offset);
