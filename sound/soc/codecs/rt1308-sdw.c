@@ -126,7 +126,7 @@ static int rt1308_read_prop(struct sdw_slave *slave)
 	unsigned long addr;
 	struct sdw_dpn_prop *dpn;
 
-	prop->paging_support = true;
+	prop->paging_support = false;
 
 	/* first we need to allocate memory for set bits in port lists */
 	prop->source_ports = 0x00;	/* BITMAP: 00010100 (not enable yet) */
