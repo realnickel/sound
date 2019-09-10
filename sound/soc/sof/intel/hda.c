@@ -41,12 +41,13 @@
 
 void hda_sdw_int_enable(struct snd_sof_dev *sdev, bool enable)
 {
-	if (enable)
+	if (enable) {
+		dev_err(sdev->dev, "IRQ: enabling ASDPIC2\n");
 		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
 					HDA_DSP_REG_ADSPIC2,
 					HDA_DSP_ADSPIC2_SNDW,
 					HDA_DSP_ADSPIC2_SNDW);
-	else
+	} else
 		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
 					HDA_DSP_REG_ADSPIC2,
 					HDA_DSP_ADSPIC2_SNDW,
@@ -153,12 +154,20 @@ static int hda_sdw_init(struct snd_sof_dev *sdev, u32 *link_mask)
 int hda_sdw_enable(struct snd_sof_dev *sdev)
 {
 	struct sof_intel_hda_dev *hdev;
+	int ret;
 
 	hdev = sdev->pdata->hw_pdata;
 
-	hda_sdw_int_enable(sdev, true);
+	if (0) {
+		hda_sdw_int_enable(sdev, true);
+		ret = sdw_intel_enable(hdev->sdw);
+	} else {
+		ret = sdw_intel_enable(hdev->sdw);
+		msleep(2000);
+		hda_sdw_int_enable(sdev, true);
+	}
 
-	return sdw_intel_enable(hdev->sdw);
+	return ret;
 }
 
 static int hda_sdw_exit(struct snd_sof_dev *sdev)
