@@ -47,11 +47,13 @@ void hda_sdw_int_enable(struct snd_sof_dev *sdev, bool enable)
 					HDA_DSP_REG_ADSPIC2,
 					HDA_DSP_ADSPIC2_SNDW,
 					HDA_DSP_ADSPIC2_SNDW);
-	} else
+	} else {
+		dev_err(sdev->dev, "IRQ: disabling ASDPIC2\n");
 		snd_sof_dsp_update_bits(sdev, HDA_DSP_BAR,
 					HDA_DSP_REG_ADSPIC2,
 					HDA_DSP_ADSPIC2_SNDW,
 					0);
+	}
 }
 
 static int sdw_config_stream(void *arg, void *s, void *dai,
@@ -861,6 +863,20 @@ int hda_dsp_probe(struct snd_sof_dev *sdev)
 		goto sdw_exit;
 	}
 
+#ifdef SOUNDWIRE_POWER_FIRST
+	/* need to power-up core before setting-up capabilities */
+	ret = hda_dsp_core_power_up(sdev, HDA_DSP_CORE_MASK(0));
+	if (ret < 0) {
+		dev_err(sdev->dev, "error: could not power-up DSP subsystem\n");
+		goto free_ipc_irq;
+	}
+
+	ret = hda_sdw_enable(sdev);
+	if (ret < 0) {
+		dev_err(sdev->dev, "error: could not enable SoundWire links\n");
+		return ret;
+	}
+#endif
 	return 0;
 
 sdw_exit:
