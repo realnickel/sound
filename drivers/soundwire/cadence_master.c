@@ -760,7 +760,14 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 	if (!(int_status & CDNS_MCP_INT_IRQ))
 		return IRQ_NONE;
 
+	dev_err(cdns->dev,
+		"IRQ: received Cadence interrupt, INT_IRQ set\n");
+
 	if (int_status & CDNS_MCP_INT_RX_WL) {
+
+		dev_err(cdns->dev,
+			"IRQ: received RX_WL interrupt\n");
+
 		cdns_read_response(cdns);
 
 		if (cdns->defer) {
@@ -792,6 +799,9 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 	}
 
 	if (int_status & CDNS_MCP_INT_SLAVE_MASK) {
+		dev_err(cdns->dev,
+			"IRQ: received SLAVE_MASK interrupt\n");
+
 		/* Mask the Slave interrupt and wake thread */
 		cdns_updatel(cdns, CDNS_MCP_INTMASK,
 			     CDNS_MCP_INT_SLAVE_MASK, 0);
@@ -926,6 +936,8 @@ update_masks:
 	cdns_writel(cdns, CDNS_MCP_SLAVE_INTMASK0, slave_intmask0);
 	cdns_writel(cdns, CDNS_MCP_SLAVE_INTMASK1, slave_intmask1);
 	cdns_writel(cdns, CDNS_MCP_INTMASK, mask);
+
+	dev_err(cdns->dev, "IRQ: enabling SoundWire INTMASK, updating config\n");
 
 	/* commit changes */
 	return cdns_update_config(cdns);
