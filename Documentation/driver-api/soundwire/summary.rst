@@ -165,7 +165,7 @@ used to avoid ambiguity.
 	};
 	MODULE_DEVICE_TABLE(sdw, slave_id);
 
-	static struct sdw_driver slave_sdw_driver = {
+	static struct sdw_slave_driver slave_driver = {
 	        .driver = {
 	                   .name = "slave_xxx",
 	                   .pm = &slave_runtime_pm,
