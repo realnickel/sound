@@ -566,7 +566,7 @@ struct sdw_slave {
 
 #define dev_to_sdw_dev(_dev) container_of(_dev, struct sdw_slave, dev)
 
-struct sdw_driver {
+struct sdw_slave_driver {
 	const char *name;
 
 	int (*probe)(struct sdw_slave *sdw,
