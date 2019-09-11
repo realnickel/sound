@@ -10,7 +10,7 @@
 #include <linux/acpi.h>
 #include <linux/export.h>
 #include <linux/module.h>
-#include <linux/platform_device.h>
+#include <linux/soundwire/sdw.h>
 #include <linux/soundwire/sdw_intel.h>
 #include "intel.h"
 
@@ -28,7 +28,7 @@ MODULE_PARM_DESC(sdw_link_mask, "Intel link mask (one bit per link)");
 
 struct sdw_link_data {
 	struct sdw_intel_link_res res;
-	struct platform_device *pdev;
+	struct sdw_master_device *md;
 };
 
 struct sdw_intel_ctx {
@@ -36,17 +36,21 @@ struct sdw_intel_ctx {
 	struct sdw_link_data *links;
 };
 
-static int sdw_intel_cleanup_pdev(struct sdw_intel_ctx *ctx)
+static int sdw_intel_cleanup(struct sdw_intel_ctx *ctx)
 {
 	struct sdw_link_data *link = ctx->links;
+	struct sdw_master_device *md;
 	int i;
 
 	if (!link)
 		return 0;
 
 	for (i = 0; i < ctx->count; i++) {
-		if (link->pdev)
-			platform_device_unregister(link->pdev);
+		md = link->md;
+		if (md) {
+			md->driver->remove(md);
+			put_device(&md->dev);
+		}
 		link++;
 	}
 
@@ -59,11 +63,10 @@ static int sdw_intel_cleanup_pdev(struct sdw_intel_ctx *ctx)
 static struct sdw_intel_ctx
 *sdw_intel_add_controller(struct sdw_intel_res *res)
 {
-	struct platform_device_info pdevinfo;
-	struct platform_device *pdev;
 	struct sdw_link_data *link;
 	struct sdw_intel_ctx *ctx;
 	struct acpi_device *adev;
+	struct sdw_master_device *md;
 	int ret, i;
 	u8 count;
 	u32 caps;
@@ -131,31 +134,26 @@ static struct sdw_intel_ctx
 		link->res.ops = res->ops;
 		link->res.arg = res->arg;
 
-		memset(&pdevinfo, 0, sizeof(pdevinfo));
+		md = sdw_md_add(&intel_sdw_driver,
+				&adev->dev,
+				i);
 
-		pdevinfo.parent = res->parent;
-		pdevinfo.name = "int-sdw";
-		pdevinfo.id = i;
-		pdevinfo.fwnode = acpi_fwnode_handle(adev);
-		pdevinfo.data = &link->res;
-		pdevinfo.size_data = sizeof(link->res);
-
-		pdev = platform_device_register_full(&pdevinfo);
-		if (IS_ERR(pdev)) {
-			dev_err(&adev->dev,
-				"platform device creation failed: %ld\n",
-				PTR_ERR(pdev));
-			goto pdev_err;
+		if (IS_ERR(md)) {
+			dev_err(&adev->dev, "Could not create link %d\n", i);
+			goto err;
 		}
+		link->md = md;
 
-		link->pdev = pdev;
+		/* pass the context */
+		md->driver->probe(md, &link->res);
+
 		link++;
 	}
 
 	return ctx;
 
-pdev_err:
-	sdw_intel_cleanup_pdev(ctx);
+err:
+	sdw_intel_cleanup(ctx);
 link_err:
 	kfree(ctx);
 	return NULL;
@@ -227,7 +225,7 @@ void sdw_intel_exit(void *arg)
 {
 	struct sdw_intel_ctx *ctx = arg;
 
-	sdw_intel_cleanup_pdev(ctx);
+	sdw_intel_cleanup(ctx);
 	kfree(ctx);
 }
 EXPORT_SYMBOL(sdw_intel_exit);

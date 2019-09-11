@@ -996,24 +996,24 @@ static struct sdw_master_ops sdw_intel_ops = {
 /*
  * probe and init
  */
-static int intel_probe(struct platform_device *pdev)
+static int intel_probe(struct sdw_master_device *md, void *context)
 {
 	struct sdw_cdns_stream_config config;
 	struct sdw_intel *sdw;
 	int ret;
 
-	sdw = devm_kzalloc(&pdev->dev, sizeof(*sdw), GFP_KERNEL);
+	sdw = devm_kzalloc(&md->dev, sizeof(*sdw), GFP_KERNEL);
 	if (!sdw)
 		return -ENOMEM;
 
-	sdw->instance = pdev->id;
-	sdw->res = dev_get_platdata(&pdev->dev);
-	sdw->cdns.dev = &pdev->dev;
+	sdw->instance = md->link_id;
+	sdw->res = context;
+	sdw->cdns.dev = &md->dev;
 	sdw->cdns.registers = sdw->res->registers;
 	sdw->cdns.instance = sdw->instance;
 	sdw->cdns.msg_count = 0;
-	sdw->cdns.bus.dev = &pdev->dev;
-	sdw->cdns.bus.link_id = pdev->id;
+	sdw->cdns.bus.dev = &md->dev;
+	sdw->cdns.bus.link_id = md->link_id;
 
 	sdw_cdns_probe(&sdw->cdns);
 
@@ -1021,16 +1021,16 @@ static int intel_probe(struct platform_device *pdev)
 	sdw_intel_ops.read_prop = intel_prop_read;
 	sdw->cdns.bus.ops = &sdw_intel_ops;
 
-	platform_set_drvdata(pdev, sdw);
+	md->pdata = sdw;
 
 	ret = sdw_add_bus_master(&sdw->cdns.bus);
 	if (ret) {
-		dev_err(&pdev->dev, "sdw_add_bus_master fail: %d\n", ret);
+		dev_err(&md->dev, "sdw_add_bus_master fail: %d\n", ret);
 		goto err_master_reg;
 	}
 
 	if (sdw->cdns.bus.prop.hw_disabled) {
-		dev_info(&pdev->dev, "SoundWire master %d is disabled, ignoring\n",
+		dev_info(&md->dev, "SoundWire master %d is disabled, ignoring\n",
 			 sdw->cdns.bus.link_id);
 		return 0;
 	}
@@ -1082,11 +1082,11 @@ err_master_reg:
 	return ret;
 }
 
-static int intel_remove(struct platform_device *pdev)
+static int intel_remove(struct sdw_master_device *md)
 {
 	struct sdw_intel *sdw;
 
-	sdw = platform_get_drvdata(pdev);
+	sdw = md->pdata;
 
 	if (!sdw->cdns.bus.prop.hw_disabled) {
 		intel_debugfs_exit(sdw);
@@ -1098,16 +1098,11 @@ static int intel_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver sdw_intel_drv = {
+struct sdw_md_driver intel_sdw_driver = {
 	.probe = intel_probe,
 	.remove = intel_remove,
-	.driver = {
-		.name = "int-sdw",
-
-	},
 };
-
-module_platform_driver(sdw_intel_drv);
+EXPORT_SYMBOL(intel_sdw_driver);
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_ALIAS("platform:int-sdw");

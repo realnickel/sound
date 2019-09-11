@@ -24,4 +24,6 @@ struct sdw_intel_link_res {
 	void *arg;
 };
 
+struct sdw_md_driver intel_sdw_driver;
+
 #endif /* __SDW_INTEL_LOCAL_H */
