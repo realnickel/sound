@@ -2650,6 +2650,8 @@ static int snd_soc_component_initialize(struct snd_soc_component *component,
 	INIT_LIST_HEAD(&component->card_list);
 	mutex_init(&component->io_mutex);
 
+	pr_err("%s devname %s \n", __func__, dev_name(dev));
+	pr_err("%s drvname %s \n", __func__, dev->driver->name);
 	component->name = fmt_single_name(dev, &component->id);
 	if (!component->name) {
 		dev_err(dev, "ASoC: Failed to allocate name\n");
@@ -2659,6 +2661,7 @@ static int snd_soc_component_initialize(struct snd_soc_component *component,
 	component->dev = dev;
 	component->driver = driver;
 
+	pr_err("%s end \n", __func__);
 	return 0;
 }
 
@@ -2799,10 +2802,12 @@ int snd_soc_add_component(struct device *dev,
 	int ret;
 	int i;
 
+	pr_err("%s 1\n", __func__);
 	ret = snd_soc_component_initialize(component, component_driver, dev);
 	if (ret)
 		goto err_free;
 
+	pr_err("%s 2\n", __func__);
 	if (component_driver->endianness) {
 		for (i = 0; i < num_dai; i++) {
 			convert_endianness_formats(&dai_drv[i].playback);
@@ -2810,15 +2815,20 @@ int snd_soc_add_component(struct device *dev,
 		}
 	}
 
+	pr_err("%s 3\n", __func__);
 	ret = snd_soc_register_dais(component, dai_drv, num_dai);
 	if (ret < 0) {
 		dev_err(dev, "ASoC: Failed to register DAIs: %d\n", ret);
 		goto err_cleanup;
 	}
 
+	pr_err("%s 4\n", __func__);
 	snd_soc_component_add(component);
+
+	pr_err("%s 5\n", __func__);
 	snd_soc_try_rebind_card();
 
+	pr_err("%s end\n", __func__);
 	return 0;
 
 err_cleanup:
