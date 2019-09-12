@@ -55,8 +55,8 @@ static int sdw_uevent(struct device *dev, struct kobj_uevent_env *env)
 
 	if (is_sdw_md(dev)) {
 		md = to_sdw_master_device(dev);
-		dev_dbg(dev, "uevent for SoundWire master device %d\n",
-			md->link_id);
+		//dev_dbg(dev, "uevent for SoundWire master device %d\n",
+		//	md->link_id);
 		/* TODO: do we need to call add_uevent_var() ? */
 	} else if (is_sdw_slave(dev)) {
 		slave = to_sdw_slave_device(dev);
