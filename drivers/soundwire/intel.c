@@ -1373,8 +1373,6 @@ static int intel_resume(struct device *dev)
 		return ret;
 	}
 
-	msleep(2000);
-
 	return ret;
 }
 
