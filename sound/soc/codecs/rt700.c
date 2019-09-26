@@ -1171,6 +1171,7 @@ int rt700_init(struct device *dev, struct regmap *regmap,
 	 * HW init will be performed when device reports present
 	 */
 	rt700->hw_init = false;
+	rt700->first_init = false;
 
 	ret =  devm_snd_soc_register_component(dev,
 					  &soc_codec_dev_rt700,
@@ -1245,10 +1246,15 @@ int rt700_io_init(struct device *dev, struct sdw_slave *slave)
 	rt700->hw_init = true;
 
 	/* Enable Runtime PM */
-	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
-	pm_runtime_use_autosuspend(&slave->dev);
-	pm_runtime_mark_last_busy(&slave->dev);
-	pm_runtime_enable(&slave->dev);
+	if (!rt700->first_init) {
+		pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
+		pm_runtime_use_autosuspend(&slave->dev);
+		pm_runtime_mark_last_busy(&slave->dev);
+		pm_runtime_enable(&slave->dev);
+		rt700->first_init = true;
+	} else {
+		pm_runtime_mark_last_busy(&slave->dev);
+	}
 
 	dev_dbg(&slave->dev, "%s hw_init complete\n", __func__);
 
