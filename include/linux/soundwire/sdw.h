@@ -567,6 +567,7 @@ struct sdw_slave {
 	u16 dev_num_sticky;
 	bool probed;
 	struct completion probe_complete;
+	struct completion enumeration_complete;
 };
 
 #define to_sdw_slave_device(d) \
