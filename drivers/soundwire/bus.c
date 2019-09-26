@@ -372,6 +372,7 @@ int sdw_write_no_pm(struct sdw_slave *slave, u32 addr, u8 value)
  */
 int sdw_nread(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 {
+	unsigned long time;
 	int ret;
 
 	ret = pm_runtime_get_sync(slave->bus->dev);
@@ -385,6 +386,13 @@ int sdw_nread(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 		dev_err(slave->bus->dev,
 			"plb: %s trying to access non-enumerated, non-attached device, addr %x\n",
 			__func__, addr);
+
+		time = wait_for_completion_timeout(&slave->enumeration_complete,
+						   msecs_to_jiffies(DEFAULT_PROBE_TIMEOUT));
+		if (!time) {
+			dev_err(&slave->dev, "Enumeration not complete, timed out\n");
+			return -ETIMEDOUT;
+		}
 	}
 
 	ret = sdw_nread_no_pm(slave, addr, count, val);
@@ -405,6 +413,7 @@ EXPORT_SYMBOL(sdw_nread);
  */
 int sdw_nwrite(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 {
+	unsigned long time;
 	int ret;
 
 	ret = pm_runtime_get_sync(slave->bus->dev);
@@ -413,11 +422,22 @@ int sdw_nwrite(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 		return ret;
 	}
 
+	dev_dbg(&slave->dev,
+		"plb: %s trying to access slave %d status %d addr %x\n",
+		__func__, slave->dev_num, slave->status, addr);
+
 	if (!(slave->status == SDW_SLAVE_ATTACHED ||
 	      slave->status == SDW_SLAVE_ALERT)) {
 		dev_err(slave->bus->dev,
 			"plb: %s trying to access non-enumerated, non-attached device, addr %x\n",
 			__func__, addr);
+
+		time = wait_for_completion_timeout(&slave->enumeration_complete,
+						   msecs_to_jiffies(DEFAULT_PROBE_TIMEOUT));
+		if (!time) {
+			dev_err(&slave->dev, "Enumeration not complete, timed out\n");
+			return -ETIMEDOUT;
+		}
 	}
 
 	ret = sdw_nwrite_no_pm(slave, addr, count, val);
