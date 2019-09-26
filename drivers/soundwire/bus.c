@@ -380,6 +380,13 @@ int sdw_nread(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 		return ret;
 	}
 
+	if (!(slave->status == SDW_SLAVE_ATTACHED ||
+	      slave->status == SDW_SLAVE_ALERT)) {
+		dev_err(slave->bus->dev,
+			"plb: %s trying to access non-enumerated, non-attached device, addr %x\n",
+			__func__, addr);
+	}
+
 	ret = sdw_nread_no_pm(slave, addr, count, val);
 
 	pm_runtime_mark_last_busy(slave->bus->dev);
@@ -404,6 +411,13 @@ int sdw_nwrite(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 	if (ret < 0 && ret != -EACCES) {
 		pm_runtime_put_noidle(slave->bus->dev);
 		return ret;
+	}
+
+	if (!(slave->status == SDW_SLAVE_ATTACHED ||
+	      slave->status == SDW_SLAVE_ALERT)) {
+		dev_err(slave->bus->dev,
+			"plb: %s trying to access non-enumerated, non-attached device, addr %x\n",
+			__func__, addr);
 	}
 
 	ret = sdw_nwrite_no_pm(slave, addr, count, val);
