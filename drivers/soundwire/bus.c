@@ -416,7 +416,7 @@ int sdw_nwrite(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 	if (!(slave->status == SDW_SLAVE_ATTACHED ||
 	      slave->status == SDW_SLAVE_ALERT)) {
 		dev_err(slave->bus->dev,
-			"plb: trying to access non-enumerated, non-attached device, addr %x\n",
+			"plb: %s trying to access non-enumerated, non-attached device, addr %x\n",
 			__func__, addr);
 	}
 
