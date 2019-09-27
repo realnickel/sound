@@ -34,12 +34,21 @@ struct snd_soc_acpi_mach snd_soc_acpi_intel_icl_machines[] = {
 EXPORT_SYMBOL_GPL(snd_soc_acpi_intel_icl_machines);
 
 struct snd_soc_acpi_mach snd_soc_acpi_intel_icl_sdw_machines[] = {
+#if 0								  
 	{
 		.link_mask = 0xF, /* 4 active links required */
 		.drv_name = "sdw_rt711_rt1308_rt715",
 		.sof_fw_filename = "sof-icl.ri",
 		.sof_tplg_filename = "sof-icl-rt711-rt1308-rt715.tplg",
 	},
+#endif
+	{
+		.link_mask = 0x1, /* rt711 connected on link0 */
+		.drv_name = "sdw_rt711",
+		.sof_fw_filename = "sof-icl.ri",
+		.sof_tplg_filename = "sof-icl-rt711.tplg",
+	},
+
 	{
 		.link_mask = 0x1, /* rt700 connected on link0 */
 		.drv_name = "sdw_rt700",
