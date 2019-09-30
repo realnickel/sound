@@ -408,7 +408,8 @@ static int rt711_set_jack_detect(struct snd_soc_component *component,
 
 	if (!rt711->hw_init) {
 		dev_dbg(&rt711->slave->dev, "%s hw_init not ready yet\n", __func__);
-		return -EAGAIN;
+		//return -EAGAIN;
+		return 0;
 	}
 
 	mutex_lock(&rt711->calibrate_mutex);
