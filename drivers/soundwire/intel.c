@@ -1337,6 +1337,8 @@ static int intel_suspend(struct device *dev)
 
 	intel_shim_wake(sdw, false);
 
+	dev_dbg(dev, "%s: done\n", __func__);
+
 	return 0;
 }
 
@@ -1372,6 +1374,8 @@ static int intel_resume(struct device *dev)
 		dev_err(dev, "unable to exit bus reset sequence during resume\n");
 		return ret;
 	}
+
+	dev_dbg(dev, "%s: done\n", __func__);
 
 	return ret;
 }
