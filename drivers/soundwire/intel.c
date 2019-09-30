@@ -860,6 +860,8 @@ static int intel_prepare(struct snd_pcm_substream *substream,
 {
 	struct sdw_cdns_dma_data *dma;
 
+	dev_dbg(dai->dev, "plb: %s before sdw_prepare_stream\n", __func__);
+
 	dma = snd_soc_dai_get_dma_data(dai, substream);
 	if (!dma) {
 		dev_err(dai->dev, "failed to get dma data in %s",
