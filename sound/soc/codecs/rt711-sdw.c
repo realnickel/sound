@@ -239,10 +239,55 @@ static const struct sdw_device_id rt711_id[] = {
 };
 MODULE_DEVICE_TABLE(sdw, rt711_id);
 
+static int rt711_dev_suspend(struct device *dev)
+{
+	struct rt711_priv *rt711 = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "plb: %s\n", __func__);
+
+	regcache_cache_only(rt711->regmap, true);
+	regcache_mark_dirty(rt711->regmap);
+
+	dev_dbg(dev, "plb: %s done\n", __func__);
+
+	return 0;
+}
+
+#define DEFAULT_PROBE_TIMEOUT 2000
+
+static int rt711_dev_resume(struct device *dev)
+{
+	struct sdw_slave *slave = to_sdw_slave_device(dev);
+	struct rt711_priv *rt711 = dev_get_drvdata(dev);
+	unsigned long time;
+
+	dev_dbg(dev, "plb: %s\n", __func__);
+
+	time = wait_for_completion_timeout(&slave->enumeration_complete,
+					   msecs_to_jiffies(DEFAULT_PROBE_TIMEOUT));
+	if (!time) {
+		dev_err(&slave->dev, "Enumeration not complete, timed out\n");
+		return -ETIMEDOUT;
+	}
+
+	regcache_sync(rt711->regmap);
+
+	dev_dbg(dev, "plb: %s done\n", __func__);
+
+	return 0;
+}
+
+static const struct dev_pm_ops rt711_pm = {
+	SET_SYSTEM_SLEEP_PM_OPS(rt711_dev_suspend, rt711_dev_resume)
+	SET_RUNTIME_PM_OPS(rt711_dev_suspend, rt711_dev_resume, NULL)
+};
+
 static struct sdw_driver rt711_sdw_driver = {
 	.driver = {
 		.name = "rt711",
 		.owner = THIS_MODULE,
+		.pm = &rt711_pm,
+
 	},
 	.probe = rt711_sdw_probe,
 	.remove = rt711_sdw_remove,
