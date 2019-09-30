@@ -653,12 +653,12 @@ static int rt711_mux_get(struct snd_kcontrol *kcontrol,
 	reg = RT711_VERB_GET_CONNECT_SEL | nid;
 	ret = snd_soc_component_write(component, reg, 0x0);
 	if (ret < 0) {
-		dev_err(component->dev, "sdw write failed\n");
+		dev_err(component->dev, "%s: sdw write failed, ret %d\n", __func__, ret);
 		return ret;
 	}
 	ret = snd_soc_component_read(component, RT711_READ_HDA_0, &val);
 	if (ret < 0) {
-		dev_err(component->dev, "sdw read failed\n");
+		dev_err(component->dev, "%s: sdw read failed, ret %d\n", __func__, ret);
 		return ret;
 	}
 	ucontrol->value.enumerated.item[0] = val;
@@ -694,12 +694,12 @@ static int rt711_mux_put(struct snd_kcontrol *kcontrol,
 	reg = RT711_VERB_GET_CONNECT_SEL | nid;
 	ret = snd_soc_component_write(component, reg, 0x0);
 	if (ret < 0) {
-		dev_err(component->dev, "sdw write failed\n");
+		dev_err(component->dev, "%s: sdw write failed, ret %d\n", __func__, ret);
 		return ret;
 	}
 	ret = snd_soc_component_read(component, RT711_READ_HDA_0, &val2);
 	if (ret < 0) {
-		dev_err(component->dev, "sdw read failed\n");
+		dev_err(component->dev, "%s: sdw read failed, ret %d\n", __func__, ret);
 		return ret;
 	}
 	if (val == val2)
