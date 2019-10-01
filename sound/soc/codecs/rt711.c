@@ -1184,11 +1184,16 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 	if (!rt711->first_init) {
 		// with pm_runtime_set_active, the codec is always active
 		// without it's always suspended.
-		// pm_runtime_set_active(&slave->dev);
+		pm_runtime_set_active(&slave->dev);
 		pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
 		pm_runtime_use_autosuspend(&slave->dev);
 		pm_runtime_mark_last_busy(&slave->dev);
 		pm_runtime_enable(&slave->dev);
+
+		pm_runtime_get_noresume(&slave->dev);
+		pm_runtime_mark_last_busy(&slave->dev);
+		pm_runtime_put_autosuspend(&slave->dev);
+
 		rt711->first_init = true;
 	}
 
