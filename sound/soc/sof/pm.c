@@ -265,6 +265,9 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 	struct snd_sof_dev *sdev = dev_get_drvdata(dev);
 	int ret;
 
+	dev_dbg(sdev->dev,
+		"plb: %s %d\n", __func__, runtime_resume);
+
 	/* do nothing if dsp resume callbacks are not set */
 	if (!sof_ops(sdev)->resume || !sof_ops(sdev)->runtime_resume)
 		return 0;
@@ -329,6 +332,9 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 	/* initialize default D0 sub-state */
 	sdev->d0_substate = SOF_DSP_D0I0;
 
+	dev_dbg(sdev->dev,
+		"plb: %s done\n", __func__);
+	
 	return ret;
 }
 
@@ -336,6 +342,9 @@ static int sof_suspend(struct device *dev, bool runtime_suspend)
 {
 	struct snd_sof_dev *sdev = dev_get_drvdata(dev);
 	int ret;
+
+	dev_dbg(sdev->dev,
+		"plb: %s %d\n", __func__, runtime_suspend);
 
 	/* do nothing if dsp suspend callback is not set */
 	if (!sof_ops(sdev)->suspend)
@@ -387,6 +396,9 @@ static int sof_suspend(struct device *dev, bool runtime_suspend)
 		dev_err(sdev->dev,
 			"error: failed to power down DSP during suspend %d\n",
 			ret);
+
+	dev_dbg(sdev->dev,
+		"plb: %s done\n", __func__);
 
 	return ret;
 }
