@@ -1342,7 +1342,7 @@ static int _suspend(struct device *dev, bool clock_stop)
 
 	intel_shim_wake(sdw, clock_stop);
 
-	dev_dbg(dev, "%s: done\n", __func__);
+	dev_dbg(dev, "%s: done clock_stop %d\n", __func__, clock_stop);
 
 	return 0;
 }
@@ -1397,7 +1397,7 @@ static int _resume(struct device *dev, bool clock_stop)
 		}
 	}
 
-	dev_dbg(dev, "%s: done\n", __func__);
+	dev_dbg(dev, "%s: done clock_stop %d\n", __func__, clock_stop);
 
 	return ret;
 }
