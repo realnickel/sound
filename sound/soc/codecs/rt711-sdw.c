@@ -250,7 +250,7 @@ static int rt711_dev_suspend(struct device *dev, bool init)
 		regcache_mark_dirty(rt711->regmap);
 	}
 
-	dev_dbg(dev, "plb: %s done\n", __func__);
+	dev_err(dev, "plb: %s done\n", __func__);
 
 	return 0;
 }
@@ -276,7 +276,7 @@ static int rt711_dev_resume(struct device *dev, bool init)
 		regcache_sync(rt711->regmap);
 	}
 
-	dev_dbg(dev, "plb: %s done\n", __func__);
+	dev_err(dev, "plb: %s done\n", __func__);
 
 	return 0;
 }
