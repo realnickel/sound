@@ -1255,7 +1255,7 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 		pm_runtime_use_autosuspend(&slave->dev);
 		pm_runtime_mark_last_busy(&slave->dev);
 		pm_runtime_enable(&slave->dev);
-		rt711->hw_init = true;
+		rt711->first_init = true;
 	} else {
 		pm_runtime_mark_last_busy(&slave->dev);
 	}
