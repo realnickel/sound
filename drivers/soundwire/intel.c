@@ -1156,11 +1156,14 @@ static struct sdw_master_ops sdw_intel_ops = {
 	.post_bank_switch = intel_post_bank_switch,
 };
 
-static int intel_init(struct sdw_intel *sdw)
+static int intel_init(struct sdw_intel *sdw, bool clock_stop)
 {
 	/* Initialize shim and controller */
 	intel_link_power_up(sdw);
 	intel_shim_init(sdw);
+
+	if (clock_stop)
+		return 0;
 
 	return sdw_cdns_init(&sdw->cdns, false);
 }
@@ -1232,7 +1235,7 @@ static int intel_master_startup(struct sdw_master_device *md)
 	}
 
 	/* Initialize shim, controller and Cadence IP */
-	ret = intel_init(sdw);
+	ret = intel_init(sdw, false);
 	if (ret)
 		goto err_init;
 
@@ -1311,7 +1314,7 @@ static int intel_master_remove(struct sdw_master_device *md)
 
 #ifdef CONFIG_PM
 
-static int intel_suspend(struct device *dev)
+static int _suspend(struct device *dev, bool clock_stop)
 {
 	struct sdw_cdns *cdns = dev_get_drvdata(dev);
 	struct sdw_intel *sdw = cdns_to_intel(cdns);
@@ -1323,10 +1326,12 @@ static int intel_suspend(struct device *dev)
 		return 0;
 	}
 
-	ret = sdw_cdns_enable_interrupt(cdns, false);
-	if (ret < 0) {
-		dev_err(dev, "cannot disable interrupts on suspend\n");
-		return ret;
+	if (!clock_stop) {
+		ret = sdw_cdns_enable_interrupt(cdns, false);
+		if (ret < 0) {
+			dev_err(dev, "cannot disable interrupts on suspend\n");
+			return ret;
+		}
 	}
 
 	ret = intel_link_power_down(sdw);
@@ -1335,17 +1340,18 @@ static int intel_suspend(struct device *dev)
 		return ret;
 	}
 
-	intel_shim_wake(sdw, false);
+	intel_shim_wake(sdw, clock_stop);
 
 	dev_dbg(dev, "%s: done\n", __func__);
 
 	return 0;
 }
 
-static int intel_resume(struct device *dev)
+static int _resume(struct device *dev, bool clock_stop)
 {
 	struct sdw_cdns *cdns = dev_get_drvdata(dev);
 	struct sdw_intel *sdw = cdns_to_intel(cdns);
+	bool resume;
 	int ret;
 
 	if (cdns->bus.prop.hw_disabled) {
@@ -1354,25 +1360,41 @@ static int intel_resume(struct device *dev)
 		return 0;
 	}
 
-	ret = intel_init(sdw);
+	if (clock_stop) {
+		resume = sdw_cdns_check_resume_status(&sdw->cdns);
+		if (resume)
+			return 0; /* it's already running */
+
+		/* Invoke shim for wake disable */
+		intel_shim_wake(sdw, false);
+	}
+
+	ret = intel_init(sdw, clock_stop);
 	if (ret) {
 		dev_err(dev, "%s failed: %d", __func__, ret);
 		return ret;
 	}
 
-	/* make sure all Slaves are tagged as UNATTACHED */
-	sdw_clear_slave_status(&sdw->cdns.bus);
+	if (!clock_stop)
+		/* make sure all Slaves are tagged as UNATTACHED */
+		sdw_clear_slave_status(&sdw->cdns.bus);
 
 	ret = sdw_cdns_enable_interrupt(cdns, true);
 	if (ret < 0) {
-		dev_err(dev, "cannot enable interrupts during resume\n");
+		dev_err(dev,
+			"cannot enable interrupts during resume\n");
 		return ret;
 	}
 
-	ret = sdw_cdns_exit_reset(cdns);
-	if (ret < 0) {
-		dev_err(dev, "unable to exit bus reset sequence during resume\n");
-		return ret;
+	if (clock_stop) {
+		ret = sdw_bus_exit_clk_stop(&sdw->cdns.bus);
+	} else {
+		ret = sdw_cdns_exit_reset(cdns);
+		if (ret < 0) {
+			dev_err(dev,
+				"unable to exit bus reset sequence during resume\n");
+			return ret;
+		}
 	}
 
 	dev_dbg(dev, "%s: done\n", __func__);
@@ -1380,11 +1402,49 @@ static int intel_resume(struct device *dev)
 	return ret;
 }
 
+static int intel_suspend(struct device *dev)
+{
+	return _suspend(dev, false);
+}
+
+static int intel_suspend_runtime(struct device *dev)
+{
+	struct sdw_cdns *cdns = dev_get_drvdata(dev);
+	struct sdw_intel *sdw = cdns_to_intel(cdns);
+	int link_flags;
+	bool clock_stop = true;
+
+	link_flags = md_flags >> (sdw->cdns.bus.link_id * 8);
+	if (link_flags & SDW_INTEL_MASTER_DISABLE_CLOCK_STOP)
+		clock_stop = false;
+
+	return _suspend(dev, clock_stop);
+}
+
+static int intel_resume(struct device *dev)
+{
+	return _resume(dev, false);
+}
+
+static int intel_resume_runtime(struct device *dev)
+{
+	struct sdw_cdns *cdns = dev_get_drvdata(dev);
+	struct sdw_intel *sdw = cdns_to_intel(cdns);
+	int link_flags;
+	bool clock_stop = true;
+
+	link_flags = md_flags >> (sdw->cdns.bus.link_id * 8);
+	if (link_flags & SDW_INTEL_MASTER_DISABLE_CLOCK_STOP)
+		clock_stop = false;
+
+	return _resume(dev, clock_stop);
+}
+
 #endif
 
 static const struct dev_pm_ops intel_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(intel_suspend, intel_resume)
-	SET_RUNTIME_PM_OPS(intel_suspend, intel_resume, NULL)
+	SET_RUNTIME_PM_OPS(intel_suspend_runtime, intel_resume_runtime, NULL)
 };
 
 struct sdw_md_driver intel_sdw_driver = {
