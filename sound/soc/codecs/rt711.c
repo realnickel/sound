@@ -1180,6 +1180,18 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 	if (rt711->hw_init)
 		return 0;
 
+	/* Enable Runtime PM */
+	if (!rt711->first_init) {
+		// with pm_runtime_set_active, the codec is always active
+		// without it's always suspended.
+		// pm_runtime_set_active(&slave->dev);
+		pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
+		pm_runtime_use_autosuspend(&slave->dev);
+		pm_runtime_mark_last_busy(&slave->dev);
+		pm_runtime_enable(&slave->dev);
+		rt711->first_init = true;
+	}
+
 	rt711_reset(rt711->regmap);
 
 	/* power on */
@@ -1248,17 +1260,6 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 
 	/* Mark Slave initialization complete */
 	rt711->hw_init = true;
-
-	/* Enable Runtime PM */
-	if (!rt711->first_init) {
-		pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
-		pm_runtime_use_autosuspend(&slave->dev);
-		pm_runtime_mark_last_busy(&slave->dev);
-		pm_runtime_enable(&slave->dev);
-		rt711->first_init = true;
-	} else {
-		pm_runtime_mark_last_busy(&slave->dev);
-	}
 
 	dev_dbg(&slave->dev, "%s hw_init complete\n", __func__);
 	return 0;
