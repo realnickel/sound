@@ -1168,6 +1168,18 @@ int rt711_init(struct device *dev, struct regmap *regmap,
 						  rt711_dai,
 						  ARRAY_SIZE(rt711_dai));
 
+	/* set autosuspend parameters */
+	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
+	pm_runtime_use_autosuspend(&slave->dev);
+
+	/* update count of parent 'active' children */
+	pm_runtime_set_active(&slave->dev);
+
+	/* make sure the device does not suspend immediately */
+	pm_runtime_mark_last_busy(&slave->dev);
+
+	pm_runtime_enable(&slave->dev);
+
 	dev_dbg(&slave->dev, "%s\n", __func__);
 
 	return ret;
@@ -1176,26 +1188,12 @@ int rt711_init(struct device *dev, struct regmap *regmap,
 int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 {
 	struct rt711_priv *rt711 = dev_get_drvdata(dev);
+	int ret;
 
 	if (rt711->hw_init)
 		return 0;
 
-	/* Enable Runtime PM */
-	if (!rt711->first_init) {
-		// with pm_runtime_set_active, the codec is always active
-		// without it's always suspended.
-		pm_runtime_set_active(&slave->dev);
-		pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
-		pm_runtime_use_autosuspend(&slave->dev);
-		pm_runtime_mark_last_busy(&slave->dev);
-		pm_runtime_enable(&slave->dev);
-
-		pm_runtime_get_noresume(&slave->dev);
-		pm_runtime_mark_last_busy(&slave->dev);
-		pm_runtime_put_autosuspend(&slave->dev);
-
-		rt711->first_init = true;
-	}
+	pm_runtime_get_noresume(&slave->dev);
 
 	rt711_reset(rt711->regmap);
 
@@ -1262,6 +1260,9 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 	mutex_init(&rt711->calibrate_mutex);
 	INIT_WORK(&rt711->calibration_work, rt711_calibration_work);
 	schedule_work(&rt711->calibration_work);
+
+	pm_runtime_mark_last_busy(&slave->dev);
+	pm_runtime_put_autosuspend(&slave->dev);
 
 	/* Mark Slave initialization complete */
 	rt711->hw_init = true;
