@@ -1168,18 +1168,6 @@ int rt711_init(struct device *dev, struct regmap *regmap,
 						  rt711_dai,
 						  ARRAY_SIZE(rt711_dai));
 
-	/* set autosuspend parameters */
-	pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
-	pm_runtime_use_autosuspend(&slave->dev);
-
-	/* update count of parent 'active' children */
-	pm_runtime_set_active(&slave->dev);
-
-	/* make sure the device does not suspend immediately */
-	pm_runtime_mark_last_busy(&slave->dev);
-
-	pm_runtime_enable(&slave->dev);
-
 	dev_dbg(&slave->dev, "%s\n", __func__);
 
 	return ret;
@@ -1193,7 +1181,24 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 	if (rt711->hw_init)
 		return 0;
 
-	pm_runtime_get_noresume(&slave->dev);
+	/*
+	 * PM runtime is only enabled when a Slave reports as Attached
+	 */
+	if (!rt711->first_init) {
+		/* set autosuspend parameters */
+		pm_runtime_set_autosuspend_delay(&slave->dev, 3000);
+		pm_runtime_use_autosuspend(&slave->dev);
+
+		/* update count of parent 'active' children */
+		pm_runtime_set_active(&slave->dev);
+
+		/* make sure the device does not suspend immediately */
+		pm_runtime_mark_last_busy(&slave->dev);
+
+		pm_runtime_enable(&slave->dev);
+
+		rt711->first_init = true;
+	}
 
 	rt711_reset(rt711->regmap);
 
@@ -1260,9 +1265,6 @@ int rt711_io_init(struct device *dev, struct sdw_slave *slave)
 	mutex_init(&rt711->calibrate_mutex);
 	INIT_WORK(&rt711->calibration_work, rt711_calibration_work);
 	schedule_work(&rt711->calibration_work);
-
-	pm_runtime_mark_last_busy(&slave->dev);
-	pm_runtime_put_autosuspend(&slave->dev);
 
 	/* Mark Slave initialization complete */
 	rt711->hw_init = true;
