@@ -30,6 +30,12 @@ int sdw_add_bus_master(struct sdw_bus *bus)
 		return -EINVAL;
 	}
 
+	if (!bus->compute_params) {
+		dev_err(bus->dev,
+			"Bandwidth allocation not configured, compute_parems no set\n");
+		return -EINVAL;
+	}
+
 	mutex_init(&bus->msg_lock);
 	mutex_init(&bus->bus_lock);
 	INIT_LIST_HEAD(&bus->slaves);
@@ -110,7 +116,7 @@ EXPORT_SYMBOL(sdw_add_bus_master);
 
 static int sdw_delete_slave(struct device *dev, void *data)
 {
-	struct sdw_slave *slave = dev_to_sdw_dev(dev);
+	struct sdw_slave *slave = to_sdw_slave_device(dev);
 	struct sdw_bus *bus = slave->bus;
 
 	sdw_slave_debugfs_exit(slave);
@@ -317,14 +323,15 @@ int sdw_fill_msg(struct sdw_msg *msg, struct sdw_slave *slave,
 	return 0;
 }
 
-/**
- * sdw_nread() - Read "n" contiguous SDW Slave registers
- * @slave: SDW Slave
- * @addr: Register address
- * @count: length
- * @val: Buffer for values to be read
+/*
+ * Read/Write IO functions.
+ * no_pm versions can only be called by the bus, e.g. while enumerating or
+ * handling suspend-resume sequences.
+ * all clients need to use the pm versions
  */
-int sdw_nread(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
+
+static int
+sdw_nread_no_pm(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 {
 	struct sdw_msg msg;
 	int ret;
@@ -334,11 +341,48 @@ int sdw_nread(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 	if (ret < 0)
 		return ret;
 
-	ret = pm_runtime_get_sync(slave->bus->dev);
+	return sdw_transfer(slave->bus, &msg);
+}
+
+static int
+sdw_nwrite_no_pm(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
+{
+	struct sdw_msg msg;
+	int ret;
+
+	ret = sdw_fill_msg(&msg, slave, addr, count,
+			   slave->dev_num, SDW_MSG_FLAG_WRITE, val);
 	if (ret < 0)
 		return ret;
 
-	ret = sdw_transfer(slave->bus, &msg);
+	return sdw_transfer(slave->bus, &msg);
+}
+
+int sdw_write_no_pm(struct sdw_slave *slave, u32 addr, u8 value)
+{
+	return sdw_nwrite_no_pm(slave, addr, 1, &value);
+}
+
+/**
+ * sdw_nread() - Read "n" contiguous SDW Slave registers
+ * @slave: SDW Slave
+ * @addr: Register address
+ * @count: length
+ * @val: Buffer for values to be read
+ */
+int sdw_nread(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
+{
+	int ret;
+
+	ret = pm_runtime_get_sync(slave->bus->dev);
+	if (ret < 0 && ret != -EACCES) {
+		pm_runtime_put_noidle(slave->bus->dev);
+		return ret;
+	}
+
+	ret = sdw_nread_no_pm(slave, addr, count, val);
+
+	pm_runtime_mark_last_busy(slave->bus->dev);
 	pm_runtime_put(slave->bus->dev);
 
 	return ret;
@@ -354,19 +398,17 @@ EXPORT_SYMBOL(sdw_nread);
  */
 int sdw_nwrite(struct sdw_slave *slave, u32 addr, size_t count, u8 *val)
 {
-	struct sdw_msg msg;
 	int ret;
 
-	ret = sdw_fill_msg(&msg, slave, addr, count,
-			   slave->dev_num, SDW_MSG_FLAG_WRITE, val);
-	if (ret < 0)
-		return ret;
-
 	ret = pm_runtime_get_sync(slave->bus->dev);
-	if (ret < 0)
+	if (ret < 0 && ret != -EACCES) {
+		pm_runtime_put_noidle(slave->bus->dev);
 		return ret;
+	}
 
-	ret = sdw_transfer(slave->bus, &msg);
+	ret = sdw_nwrite_no_pm(slave, addr, count, val);
+
+	pm_runtime_mark_last_busy(slave->bus->dev);
 	pm_runtime_put(slave->bus->dev);
 
 	return ret;
@@ -455,28 +497,43 @@ err:
 static int sdw_assign_device_num(struct sdw_slave *slave)
 {
 	int ret, dev_num;
+	bool new_device = false;
+
+	dev_dbg(slave->bus->dev, "in %s\n", __func__);
+
+
+	dev_dbg(slave->bus->dev, "in %s\n", __func__);
 
 	/* check first if device number is assigned, if so reuse that */
 	if (!slave->dev_num) {
-		mutex_lock(&slave->bus->bus_lock);
-		dev_num = sdw_get_device_num(slave);
-		mutex_unlock(&slave->bus->bus_lock);
-		if (dev_num < 0) {
-			dev_err(slave->bus->dev, "Get dev_num failed: %d\n",
-				dev_num);
-			return dev_num;
+		if (!slave->dev_num_sticky) {
+			mutex_lock(&slave->bus->bus_lock);
+			dev_num = sdw_get_device_num(slave);
+			mutex_unlock(&slave->bus->bus_lock);
+			if (dev_num < 0) {
+				dev_err(slave->bus->dev, "Get dev_num failed: %d\n",
+					dev_num);
+				return dev_num;
+			}
+			slave->dev_num = dev_num;
+			slave->dev_num_sticky = dev_num;
+			new_device = true;
+		} else {
+			slave->dev_num = slave->dev_num_sticky;
 		}
-	} else {
-		dev_info(slave->bus->dev,
-			 "Slave already registered dev_num:%d\n",
-			 slave->dev_num);
-
-		/* Clear the slave->dev_num to transfer message on device 0 */
-		dev_num = slave->dev_num;
-		slave->dev_num = 0;
 	}
 
-	ret = sdw_write(slave, SDW_SCP_DEVNUMBER, dev_num);
+	if (!new_device)
+		dev_info(slave->bus->dev,
+			 "Slave already registered, reusing dev_num:%d\n",
+			 slave->dev_num);
+
+	/* Clear the slave->dev_num to transfer message on device 0 */
+	dev_num = slave->dev_num;
+	slave->dev_num = 0;
+
+	dev_dbg(slave->bus->dev, "in %s, writing dev_num %d\n", __func__, dev_num);
+	ret = sdw_write_no_pm(slave, SDW_SCP_DEVNUMBER, dev_num);
 	if (ret < 0) {
 		dev_err(&slave->dev, "Program device_num %d failed: %d\n",
 			dev_num, ret);
@@ -484,7 +541,7 @@ static int sdw_assign_device_num(struct sdw_slave *slave)
 	}
 
 	/* After xfer of msg, restore dev_num */
-	slave->dev_num = dev_num;
+	slave->dev_num = slave->dev_num_sticky;
 
 	return 0;
 }
@@ -592,6 +649,8 @@ static int sdw_program_device_num(struct sdw_bus *bus)
 		 */
 
 	} while (ret == 0 && count < (SDW_MAX_DEVICES * 2));
+
+	dev_err(bus->dev, "End of %s ret %d\n", __func__, ret);
 
 	return ret;
 }
@@ -960,10 +1019,28 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 static int sdw_update_slave_status(struct sdw_slave *slave,
 				   enum sdw_slave_status status)
 {
-	if (slave->ops && slave->ops->update_status)
-		return slave->ops->update_status(slave, status);
+	unsigned long time;
 
-	return 0;
+	if (!slave->ops || !slave->ops->update_status)
+		return 0;
+
+	if (!slave->probed) {
+		/*
+		 * the slave status update is typically handled in an
+		 * interrupt thread, which can race with the driver
+		 * probe, e.g. when a module needs to be loaded.
+		 *
+		 * make sure the probe is complete before updating
+		 * status.
+		 */
+		time = wait_for_completion_timeout(&slave->probe_complete,
+				msecs_to_jiffies(DEFAULT_PROBE_TIMEOUT));
+		if (!time) {
+			dev_err(&slave->dev, "Probe not complete, timed out\n");
+			return -ETIMEDOUT;
+		}
+	}
+	return slave->ops->update_status(slave, status);
 }
 
 /**
@@ -977,6 +1054,8 @@ int sdw_handle_slave_status(struct sdw_bus *bus,
 	enum sdw_slave_status prev_status;
 	struct sdw_slave *slave;
 	int i, ret = 0;
+
+	dev_dbg(bus->dev, "%s: start\n", __func__);
 
 	if (status[0] == SDW_SLAVE_ATTACHED) {
 		dev_dbg(bus->dev, "Slave attached, programming device number\n");
@@ -1003,6 +1082,8 @@ int sdw_handle_slave_status(struct sdw_bus *bus,
 		if (!slave)
 			continue;
 
+		dev_dbg(bus->dev, "processing Slave %d Status %d\n", i, status[i]);
+
 		switch (status[i]) {
 		case SDW_SLAVE_UNATTACHED:
 			if (slave->status == SDW_SLAVE_UNATTACHED)
@@ -1020,15 +1101,19 @@ int sdw_handle_slave_status(struct sdw_bus *bus,
 			break;
 
 		case SDW_SLAVE_ATTACHED:
-			if (slave->status == SDW_SLAVE_ATTACHED)
+			if (slave->status == SDW_SLAVE_ATTACHED) {
+				dev_err(bus->dev, "Slave %d status attached, was already attached, ignoring\n", i);
 				break;
-
+			}
 			prev_status = slave->status;
 			sdw_modify_slave_status(slave, SDW_SLAVE_ATTACHED);
 
-			if (prev_status == SDW_SLAVE_ALERT)
+			if (prev_status == SDW_SLAVE_ALERT)  {
+				dev_err(bus->dev, "Slave %d status attached, was alert, ignoring\n", i);
 				break;
+			}
 
+			dev_err(bus->dev, "Slave %d initializing\n", i);
 			ret = sdw_initialize_slave(slave);
 			if (ret)
 				dev_err(bus->dev,
@@ -1043,11 +1128,17 @@ int sdw_handle_slave_status(struct sdw_bus *bus,
 			break;
 		}
 
+		dev_err(bus->dev, "Updating Slave %d status\n", i);
 		ret = sdw_update_slave_status(slave, status[i]);
 		if (ret)
 			dev_err(slave->bus->dev,
 				"Update Slave status failed:%d\n", ret);
+
+		dev_err(bus->dev, "%s: Updating Slave %d status done\n",
+			__func__, i);
 	}
+
+	dev_dbg(bus->dev, "%s: end\n", __func__);
 
 	return ret;
 }
