@@ -1367,6 +1367,8 @@ static void intel_master_remove(struct sdw_intel_master_dev *master_dev)
 	struct sdw_intel *sdw = master_dev->pdata;
 	struct sdw_bus *bus = &sdw->cdns.bus;
 
+	pm_runtime_disable(dev);
+
 	if (!bus->prop.hw_disabled) {
 		intel_debugfs_exit(sdw);
 		sdw_cdns_enable_interrupt(&sdw->cdns, false);
