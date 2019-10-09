@@ -1363,6 +1363,8 @@ static int intel_master_delete(struct sdw_bus *bus)
 	if (!bus)
 		return -EINVAL;
 
+	pm_runtime_disable(&bus->dev);
+
 	sdw = bus->pdata;
 
 	if (!sdw->cdns.bus.prop.hw_disabled) {
