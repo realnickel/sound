@@ -1349,6 +1349,8 @@ static int intel_master_del(struct sdw_bus *bus)
 {
 	struct sdw_intel *sdw;
 
+	pm_runtime_disable(bus->dev);
+
 	sdw = bus->pdata;
 
 	if (!bus->prop.hw_disabled) {
