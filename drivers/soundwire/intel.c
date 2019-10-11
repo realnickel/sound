@@ -1313,6 +1313,7 @@ static int intel_master_remove(struct sdw_master_device *md)
 
 static int intel_suspend(struct device *dev)
 {
+	struct sdw_master_device *md = to_sdw_master_device(dev);
 	struct sdw_cdns *cdns = dev_get_drvdata(dev);
 	struct sdw_intel *sdw = cdns_to_intel(cdns);
 	int ret;
@@ -1326,6 +1327,13 @@ static int intel_suspend(struct device *dev)
 	if (pm_runtime_status_suspended(dev)) {
 		dev_dbg(dev, "SoundWire master %d is already suspended\n",
 			cdns->bus.link_id);
+
+		/* 
+		 * keep track of the state for the system resume, where
+		 * we will need to reset the pm_runtime status
+		 */
+		md->pm_runtime_suspended = true;
+		
 		return 0;
 	}
 
@@ -1385,6 +1393,7 @@ static int intel_suspend_runtime(struct device *dev)
 
 static int intel_resume(struct device *dev)
 {
+	struct sdw_master_device *md = to_sdw_master_device(dev);
 	struct sdw_cdns *cdns = dev_get_drvdata(dev);
 	struct sdw_intel *sdw = cdns_to_intel(cdns);
 	int ret;
@@ -1396,7 +1405,20 @@ static int intel_resume(struct device *dev)
 	}
 
 	dev_err(dev, "%s start\n", __func__);
-			
+
+	if (md->pm_runtime_suspended) {
+		dev_err(dev, "%s: resetting pm_runtime status\n", __func__);
+
+		/* follow required sequence from runtime_pm.rst */
+		pm_runtime_disable(dev);
+		pm_runtime_set_active(dev);
+		pm_runtime_mark_last_busy(dev);
+		pm_runtime_enable(dev);
+
+		dev_err(dev, "%s: done resetting pm_runtime status\n", __func__);
+		md->pm_runtime_suspended = false;
+	}
+		    
 	ret = intel_init(sdw);
 	if (ret) {
 		dev_err(dev, "%s failed: %d", __func__, ret);
