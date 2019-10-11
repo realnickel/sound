@@ -21,6 +21,7 @@ struct sdw_intel_master_dev {
 	struct sdw_intel_link_res *link_res;
 	struct fwnode_handle *fwnode;
 	void *pdata;
+	bool pm_runtime_suspended;
 };
 
 /*
