@@ -638,10 +638,13 @@ struct sdw_link_ops;
  * struct sdw_master_device - SoundWire 'Master Device' representation
  * @dev: Linux device for this Master
  * @bus: Bus handle shortcut to improve readability (same as container_of)
+ * @pm_runtime_suspended: flag set with the value of pm_runtime_suspended()
+ * during system suspend and checked during system resume.
  */
 struct sdw_master_device {
 	struct device dev;
 	struct sdw_bus *bus;
+	bool pm_runtime_suspended;
 };
 
 /**
