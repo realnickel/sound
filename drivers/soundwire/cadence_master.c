@@ -212,7 +212,7 @@ static inline void cdns_updatel(struct sdw_cdns *cdns,
 
 static int cdns_clear_bit(struct sdw_cdns *cdns, int offset, u32 value)
 {
-	int timeout = 10;
+	int timeout = 100;
 	u32 reg_read;
 
 	writel(value, cdns->registers + offset);

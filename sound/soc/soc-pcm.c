@@ -1056,12 +1056,14 @@ static int soc_pcm_trigger_start(struct snd_pcm_substream *substream, int cmd)
 	struct snd_soc_dai *codec_dai;
 	int i, ret;
 
+	dev_err(rtd->dev, "%s: dailink trigger\n", __func__);
 	if (rtd->dai_link->ops->trigger) {
 		ret = rtd->dai_link->ops->trigger(substream, cmd);
 		if (ret < 0)
 			return ret;
 	}
 
+	dev_err(rtd->dev, "%s: components trigger\n", __func__);
 	for_each_rtdcom(rtd, rtdcom) {
 		component = rtdcom->component;
 
@@ -1070,11 +1072,15 @@ static int soc_pcm_trigger_start(struct snd_pcm_substream *substream, int cmd)
 			return ret;
 	}
 
+	dev_err(rtd->dev, "%s: cpu_dai trigger %s \n", __func__, cpu_dai->name);
 	ret = snd_soc_dai_trigger(cpu_dai, substream, cmd);
 	if (ret < 0)
 		return ret;
 
 	for_each_rtd_codec_dai(rtd, i, codec_dai) {
+
+		dev_err(rtd->dev, "%s: codec_dai trigger %s \n", __func__, codec_dai->name);
+			
 		ret = snd_soc_dai_trigger(codec_dai, substream, cmd);
 		if (ret < 0)
 			return ret;
@@ -1093,15 +1099,22 @@ static int soc_pcm_trigger_stop(struct snd_pcm_substream *substream, int cmd)
 	int i, ret;
 
 	for_each_rtd_codec_dai(rtd, i, codec_dai) {
+
+		dev_err(rtd->dev, "%s: codec_dai trigger %s \n", __func__, codec_dai->name);
+				
 		ret = snd_soc_dai_trigger(codec_dai, substream, cmd);
 		if (ret < 0)
 			return ret;
 	}
 
+	dev_err(rtd->dev, "%s: cpu_dai trigger %s \n", __func__, cpu_dai->name);
+	
 	ret = snd_soc_dai_trigger(cpu_dai, substream, cmd);
 	if (ret < 0)
 		return ret;
 
+	dev_err(rtd->dev, "%s: components trigger\n", __func__);
+		
 	for_each_rtdcom(rtd, rtdcom) {
 		component = rtdcom->component;
 
@@ -1110,6 +1123,8 @@ static int soc_pcm_trigger_stop(struct snd_pcm_substream *substream, int cmd)
 			return ret;
 	}
 
+	dev_err(rtd->dev, "%s: dailink trigger\n", __func__);
+	
 	if (rtd->dai_link->ops->trigger) {
 		ret = rtd->dai_link->ops->trigger(substream, cmd);
 		if (ret < 0)
@@ -1121,16 +1136,21 @@ static int soc_pcm_trigger_stop(struct snd_pcm_substream *substream, int cmd)
 
 static int soc_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
+  	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	int ret;
 
 	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
+		dev_err(rtd->dev, "plb: %s: TRIGGER_RESUME\n", __func__);
+		/* fallthrough */
+	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		ret = soc_pcm_trigger_start(substream, cmd);
 		break;
-	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
+		dev_err(rtd->dev, "plb: %s: TRIGGER_SUSPEND\n", __func__);
+		/* fallthrough */	  
+	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		ret = soc_pcm_trigger_stop(substream, cmd);
 		break;

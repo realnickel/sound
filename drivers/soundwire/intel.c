@@ -1322,6 +1322,14 @@ static int intel_suspend(struct device *dev)
 			cdns->bus.link_id);
 		return 0;
 	}
+		
+	if (pm_runtime_status_suspended(dev)) {
+		dev_dbg(dev, "SoundWire master %d is already suspended\n",
+			cdns->bus.link_id);
+		return 0;
+	}
+
+	dev_err(dev, "%s start\n", __func__);
 
 	ret = sdw_cdns_enable_interrupt(cdns, false);
 	if (ret < 0) {
@@ -1337,6 +1345,41 @@ static int intel_suspend(struct device *dev)
 
 	intel_shim_wake(sdw, false);
 
+	dev_err(dev, "%s done\n", __func__);
+		
+	return 0;
+}
+
+static int intel_suspend_runtime(struct device *dev)
+{
+	struct sdw_cdns *cdns = dev_get_drvdata(dev);
+	struct sdw_intel *sdw = cdns_to_intel(cdns);
+	int ret;
+
+	if (cdns->bus.prop.hw_disabled) {
+		dev_dbg(dev, "SoundWire master %d is disabled, ignoring\n",
+			cdns->bus.link_id);
+		return 0;
+	}
+		
+	dev_err(dev, "%s start\n", __func__);
+
+	ret = sdw_cdns_enable_interrupt(cdns, false);
+	if (ret < 0) {
+		dev_err(dev, "cannot disable interrupts on suspend\n");
+		return ret;
+	}
+
+	ret = intel_link_power_down(sdw);
+	if (ret) {
+		dev_err(dev, "Link power down failed: %d", ret);
+		return ret;
+	}
+
+	intel_shim_wake(sdw, false);
+
+	dev_err(dev, "%s done\n", __func__);
+		
 	return 0;
 }
 
@@ -1352,6 +1395,8 @@ static int intel_resume(struct device *dev)
 		return 0;
 	}
 
+	dev_err(dev, "%s start\n", __func__);
+			
 	ret = intel_init(sdw);
 	if (ret) {
 		dev_err(dev, "%s failed: %d", __func__, ret);
@@ -1373,14 +1418,57 @@ static int intel_resume(struct device *dev)
 		return ret;
 	}
 
+	dev_err(dev, "%s done\n", __func__);
+		
 	return ret;
 }
+
+static int intel_resume_runtime(struct device *dev)
+{
+	struct sdw_cdns *cdns = dev_get_drvdata(dev);
+	struct sdw_intel *sdw = cdns_to_intel(cdns);
+	int ret;
+
+	if (cdns->bus.prop.hw_disabled) {
+		dev_dbg(dev, "SoundWire master %d is disabled, ignoring\n",
+			cdns->bus.link_id);
+		return 0;
+	}
+
+	dev_err(dev, "%s start\n", __func__);
+			
+	ret = intel_init(sdw);
+	if (ret) {
+		dev_err(dev, "%s failed: %d", __func__, ret);
+		return ret;
+	}
+
+	/* make sure all Slaves are tagged as UNATTACHED */
+	sdw_clear_slave_status(&sdw->cdns.bus);
+
+	ret = sdw_cdns_enable_interrupt(cdns, true);
+	if (ret < 0) {
+		dev_err(dev, "cannot enable interrupts during resume\n");
+		return ret;
+	}
+
+	ret = sdw_cdns_exit_reset(cdns);
+	if (ret < 0) {
+		dev_err(dev, "unable to exit bus reset sequence during resume\n");
+		return ret;
+	}
+
+	dev_err(dev, "%s done\n", __func__);
+		
+	return ret;
+}
+
 
 #endif
 
 static const struct dev_pm_ops intel_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(intel_suspend, intel_resume)
-	SET_RUNTIME_PM_OPS(intel_suspend, intel_resume, NULL)
+	SET_RUNTIME_PM_OPS(intel_suspend_runtime, intel_resume_runtime, NULL)
 };
 
 struct sdw_md_driver intel_sdw_driver = {
