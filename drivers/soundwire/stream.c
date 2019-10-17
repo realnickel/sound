@@ -1462,7 +1462,8 @@ static void sdw_release_bus_lock(struct sdw_stream_runtime *stream)
 	}
 }
 
-static int _sdw_prepare_stream(struct sdw_stream_runtime *stream)
+static int _sdw_prepare_stream(struct sdw_stream_runtime *stream,
+			       bool update_params)
 {
 	struct sdw_master_runtime *m_rt;
 	struct sdw_bus *bus = NULL;
@@ -1482,6 +1483,9 @@ static int _sdw_prepare_stream(struct sdw_stream_runtime *stream)
 			return -EINVAL;
 		}
 
+		if (!update_params)
+			goto program_params;
+
 		/* Increment cumulative bus bandwidth */
 		/* TODO: Update this during Device-Device support */
 		bus->params.bandwidth += m_rt->stream->params.rate *
@@ -1497,6 +1501,7 @@ static int _sdw_prepare_stream(struct sdw_stream_runtime *stream)
 			}
 		}
 
+program_params:
 		/* Program params */
 		ret = sdw_program_params(bus);
 		if (ret < 0) {
@@ -1546,23 +1551,46 @@ restore_params:
  */
 int sdw_prepare_stream(struct sdw_stream_runtime *stream)
 {
+	bool update_params = true;
 	int ret = 0;
+
+	pr_err("%s: %s start\n", __func__, stream->name);
 
 	if (!stream) {
 		pr_err("SoundWire: Handle not found for stream\n");
 		return -EINVAL;
 	}
 
-	if (stream->state != SDW_STREAM_CONFIGURED)
-		return 0;
-
 	sdw_acquire_bus_lock(stream);
 
-	ret = _sdw_prepare_stream(stream);
+	if (stream->state != SDW_STREAM_CONFIGURED &&
+	    stream->state != SDW_STREAM_DEPREPARED &&
+	    stream->state != SDW_STREAM_DISABLED) {
+		pr_err("%s: %s: inconsistent state state %d\n",
+		       __func__, stream->name, stream->state);
+		ret = -EINVAL;
+		goto state_err;
+	}
+
+	/*
+	 * when the stream is DISABLED, this means sdw_prepare_stream()
+	 * is called as a result of an underflow or a resume operation.
+	 * In this case, the bus parameters shall not be recomputed, but
+	 * still need to be re-applied
+	 */
+	if (stream->state == SDW_STREAM_DISABLED)
+		update_params = false;
+
+	ret = _sdw_prepare_stream(stream, update_params);
+
 	if (ret < 0)
 		pr_err("Prepare for stream:%s failed: %d\n", stream->name, ret);
 
+state_err:
 	sdw_release_bus_lock(stream);
+
+	pr_err("%s: %s: done\n", __func__, stream->name);
+
 	return ret;
 }
 EXPORT_SYMBOL(sdw_prepare_stream);
@@ -1619,6 +1647,8 @@ int sdw_enable_stream(struct sdw_stream_runtime *stream)
 {
 	int ret;
 
+	pr_err("%s: %s: start\n", __func__, stream->name);
+
 	if (!stream) {
 		pr_err("SoundWire: Handle not found for stream\n");
 		return -EINVAL;
@@ -1626,11 +1656,22 @@ int sdw_enable_stream(struct sdw_stream_runtime *stream)
 
 	sdw_acquire_bus_lock(stream);
 
+	if (stream->state != SDW_STREAM_PREPARED &&
+	    stream->state != SDW_STREAM_DISABLED) {
+		pr_err("%s: %s: inconsistent state state %d\n",
+		       __func__, stream->name, stream->state);
+		ret = -EINVAL;
+		goto state_err;
+	}
+
 	ret = _sdw_enable_stream(stream);
 	if (ret < 0)
 		pr_err("Enable for stream:%s failed: %d\n", stream->name, ret);
 
+state_err:
 	sdw_release_bus_lock(stream);
+
+	pr_err("%s: %s: done\n", __func__, stream->name);
 	return ret;
 }
 EXPORT_SYMBOL(sdw_enable_stream);
@@ -1695,6 +1736,8 @@ int sdw_disable_stream(struct sdw_stream_runtime *stream)
 {
 	int ret;
 
+	pr_err("%s: %s: start\n", __func__, stream->name);
+
 	if (!stream) {
 		pr_err("SoundWire: Handle not found for stream\n");
 		return -EINVAL;
@@ -1702,11 +1745,22 @@ int sdw_disable_stream(struct sdw_stream_runtime *stream)
 
 	sdw_acquire_bus_lock(stream);
 
+	if (stream->state != SDW_STREAM_ENABLED) {
+		pr_err("%s: %s: inconsistent state state %d\n",
+		       __func__, stream->name, stream->state);
+		ret = -EINVAL;
+		goto state_err;
+	}
+
 	ret = _sdw_disable_stream(stream);
 	if (ret < 0)
 		pr_err("Disable for stream:%s failed: %d\n", stream->name, ret);
 
+state_err:
 	sdw_release_bus_lock(stream);
+
+	pr_err("%s: %s: done\n", __func__, stream->name);
+
 	return ret;
 }
 EXPORT_SYMBOL(sdw_disable_stream);
@@ -1764,17 +1818,32 @@ int sdw_deprepare_stream(struct sdw_stream_runtime *stream)
 {
 	int ret;
 
+	pr_err("%s: %s: start\n", __func__, stream->name);
+
 	if (!stream) {
 		pr_err("SoundWire: Handle not found for stream\n");
 		return -EINVAL;
 	}
 
 	sdw_acquire_bus_lock(stream);
+
+	if (stream->state != SDW_STREAM_PREPARED &&
+	    stream->state != SDW_STREAM_DISABLED) {
+		pr_err("%s: %s: inconsistent state state %d\n",
+		       __func__, stream->name, stream->state);
+		ret = -EINVAL;
+		goto state_err;
+	}
+
 	ret = _sdw_deprepare_stream(stream);
 	if (ret < 0)
 		pr_err("De-prepare for stream:%d failed: %d\n", ret, ret);
 
+state_err:
 	sdw_release_bus_lock(stream);
+
+	pr_err("%s: %s: done\n", __func__, stream->name);
+
 	return ret;
 }
 EXPORT_SYMBOL(sdw_deprepare_stream);
