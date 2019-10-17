@@ -924,6 +924,7 @@ static int intel_trigger(struct snd_pcm_substream *substream, int cmd,
 			 struct snd_soc_dai *dai)
 {
 	struct sdw_cdns_dma_data *dma;
+	int state;
 	int ret;
 
 	dev_err(dai->dev, "%s: %s: start\n", __func__, dai->name);
@@ -934,20 +935,42 @@ static int intel_trigger(struct snd_pcm_substream *substream, int cmd,
 		return -EIO;
 	}
 
+	state = dma->stream->state;
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_RESUME:
-		dev_err(dai->dev, "%s: %s: resume\n", __func__, dai->name);
+		dev_err(dai->dev, "%s: %s: trigger_resume %d\n", __func__, dai->name, state);
 		/* fallthrough */
 	case SNDRV_PCM_TRIGGER_START:
+		if (cmd == SNDRV_PCM_TRIGGER_START) {
+			dev_err(dai->dev,
+				"%s: %s: trigger_start %d\n", __func__, dai->name, state);
+		}
+		/* fallthrough */
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		if (cmd == SNDRV_PCM_TRIGGER_PAUSE_RELEASE) {
+			dev_err(dai->dev,
+				"%s: %s: trigger_pause_release %d\n", __func__, dai->name, state);
+		}
+
 		ret = sdw_enable_stream(dma->stream);
 		break;
 
 	case SNDRV_PCM_TRIGGER_SUSPEND:
-		dev_err(dai->dev, "%s: %s: suspend\n", __func__, dai->name);
+		dev_err(dai->dev, "%s: %s: trigger_suspend %d \n", __func__, dai->name, state);
 		/* fallthrough */
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		if (cmd == SNDRV_PCM_TRIGGER_PAUSE_PUSH) {
+			dev_err(dai->dev,
+				"%s: %s: trigger_pause_push %d\n", __func__, dai->name, state);
+		}
+		/* fallthrough */
 	case SNDRV_PCM_TRIGGER_STOP:
+		if (cmd == SNDRV_PCM_TRIGGER_STOP) {
+			dev_err(dai->dev,
+				"%s: %s: trigger_stop %d\n", __func__, dai->name, state);
+		}
+
 		ret = sdw_disable_stream(dma->stream);
 		break;
 
