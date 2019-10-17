@@ -95,6 +95,36 @@ DEFINE_PCM_GROUP_LOCK(unlock, unlock);
 DEFINE_PCM_GROUP_LOCK(lock_irq, lock);
 DEFINE_PCM_GROUP_LOCK(unlock_irq, unlock);
 
+static void log_pcm_state(snd_pcm_state_t state, const char *caller)
+{
+	char *log;
+
+	switch (state) {
+	case SNDRV_PCM_STATE_OPEN:
+		log = "PCM_OPEN"; break;
+	case SNDRV_PCM_STATE_SETUP:
+		log = "PCM_SETUP"; break;
+	case SNDRV_PCM_STATE_PREPARED:
+		log = "PCM_PREPARED"; break;
+	case SNDRV_PCM_STATE_RUNNING:
+		log = "PCM_RUNNING"; break;
+	case SNDRV_PCM_STATE_XRUN:
+		log = "PCM_XRUN"; break;
+	case SNDRV_PCM_STATE_DRAINING:
+		log = "PCM_DRAINING"; break;
+	case SNDRV_PCM_STATE_PAUSED:
+		log = "PCM_PAUSED"; break;
+	case SNDRV_PCM_STATE_SUSPENDED:
+		log = "PCM_SUSPENDED"; break;
+	case SNDRV_PCM_STATE_DISCONNECTED:
+		log = "PCM_DISCONNECTED"; break;
+	default:
+		log = "UNKNOWN_STATE"; break;
+	}
+
+	pr_err("plb: %s: state %s\n", caller, log);
+}
+
 /**
  * snd_pcm_stream_lock - Lock the PCM stream
  * @substream: PCM substream
@@ -1196,11 +1226,18 @@ static int snd_pcm_action_nonatomic(const struct action_ops *ops,
 static int snd_pcm_pre_start(struct snd_pcm_substream *substream, int state)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	if (runtime->status->state != SNDRV_PCM_STATE_PREPARED)
+
+	log_pcm_state(runtime->status->state, __func__);
+
+	if (runtime->status->state != SNDRV_PCM_STATE_PREPARED) {
+		pr_err("plb: state is not PREPARED\n");
 		return -EBADFD;
+	}
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK &&
-	    !snd_pcm_playback_data(substream))
+	    !snd_pcm_playback_data(substream)) {
+		pr_err("plb: -EPIPE\n");
 		return -EPIPE;
+	}
 	runtime->trigger_tstamp_latched = false;
 	runtime->trigger_master = substream;
 	return 0;
@@ -1266,8 +1303,12 @@ static int snd_pcm_start_lock_irq(struct snd_pcm_substream *substream)
 static int snd_pcm_pre_stop(struct snd_pcm_substream *substream, int state)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	if (runtime->status->state == SNDRV_PCM_STATE_OPEN)
+
+	log_pcm_state(runtime->status->state, __func__);
+	if (runtime->status->state == SNDRV_PCM_STATE_OPEN) {
+		pr_err("plb: BADFD state was OPEN\n");
 		return -EBADFD;
+	}
 	runtime->trigger_master = substream;
 	return 0;
 }
@@ -1288,6 +1329,7 @@ static void snd_pcm_post_stop(struct snd_pcm_substream *substream, int state)
 		runtime->status->state = state;
 		snd_pcm_timer_notify(substream, SNDRV_TIMER_EVENT_MSTOP);
 	}
+	log_pcm_state(runtime->status->state, __func__);
 	wake_up(&runtime->sleep);
 	wake_up(&runtime->tsleep);
 }
@@ -1358,10 +1400,19 @@ static int snd_pcm_pre_pause(struct snd_pcm_substream *substream, int push)
 	if (!(runtime->info & SNDRV_PCM_INFO_PAUSE))
 		return -ENOSYS;
 	if (push) {
-		if (runtime->status->state != SNDRV_PCM_STATE_RUNNING)
+		log_pcm_state(runtime->status->state, "snd_pcm_pre_pause_push");
+
+		if (runtime->status->state != SNDRV_PCM_STATE_RUNNING) {
+			pr_err("plb: BADFD, state is not RUNNING\n");
 			return -EBADFD;
-	} else if (runtime->status->state != SNDRV_PCM_STATE_PAUSED)
-		return -EBADFD;
+		}
+	} else {
+		log_pcm_state(runtime->status->state, "snd_pcm_pre_pause_release");
+		if (runtime->status->state != SNDRV_PCM_STATE_PAUSED) {
+			pr_err("plb: BADFD, state is not PAUSED\n");
+			return -EBADFD;
+		}
+	}
 	runtime->trigger_master = substream;
 	return 0;
 }
@@ -1398,11 +1449,13 @@ static void snd_pcm_post_pause(struct snd_pcm_substream *substream, int push)
 	snd_pcm_trigger_tstamp(substream);
 	if (push) {
 		runtime->status->state = SNDRV_PCM_STATE_PAUSED;
+		log_pcm_state(runtime->status->state, "snd_pcm_post_pause_push");
 		snd_pcm_timer_notify(substream, SNDRV_TIMER_EVENT_MPAUSE);
 		wake_up(&runtime->sleep);
 		wake_up(&runtime->tsleep);
 	} else {
 		runtime->status->state = SNDRV_PCM_STATE_RUNNING;
+		log_pcm_state(runtime->status->state, "snd_pcm_post_pause_release");
 		snd_pcm_timer_notify(substream, SNDRV_TIMER_EVENT_MCONTINUE);
 	}
 }
@@ -1428,6 +1481,8 @@ static int snd_pcm_pause(struct snd_pcm_substream *substream, int push)
 static int snd_pcm_pre_suspend(struct snd_pcm_substream *substream, int state)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+
+	log_pcm_state(runtime->status->state, __func__);
 	switch (runtime->status->state) {
 	case SNDRV_PCM_STATE_SUSPENDED:
 		return -EBUSY;
@@ -1458,6 +1513,7 @@ static void snd_pcm_post_suspend(struct snd_pcm_substream *substream, int state)
 	snd_pcm_trigger_tstamp(substream);
 	runtime->status->suspended_state = runtime->status->state;
 	runtime->status->state = SNDRV_PCM_STATE_SUSPENDED;
+	log_pcm_state(runtime->status->state, __func__);
 	snd_pcm_timer_notify(substream, SNDRV_TIMER_EVENT_MSUSPEND);
 	wake_up(&runtime->sleep);
 	wake_up(&runtime->tsleep);
@@ -1532,8 +1588,13 @@ EXPORT_SYMBOL(snd_pcm_suspend_all);
 static int snd_pcm_pre_resume(struct snd_pcm_substream *substream, int state)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	if (!(runtime->info & SNDRV_PCM_INFO_RESUME))
+
+	log_pcm_state(runtime->status->state, __func__);
+	if (!(runtime->info & SNDRV_PCM_INFO_RESUME)) {
+		pr_err("plb: RESUME not supported\n");
 		return -ENOSYS;
+	}
+	log_pcm_state(runtime->status->state, __func__);
 	runtime->trigger_master = substream;
 	return 0;
 }
@@ -1543,11 +1604,17 @@ static int snd_pcm_do_resume(struct snd_pcm_substream *substream, int state)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	if (runtime->trigger_master != substream)
 		return 0;
+
+	log_pcm_state(runtime->status->state, __func__);
+	log_pcm_state(runtime->status->suspended_state, "suspended_state was");
+
 	/* DMA not running previously? */
 	if (runtime->status->suspended_state != SNDRV_PCM_STATE_RUNNING &&
 	    (runtime->status->suspended_state != SNDRV_PCM_STATE_DRAINING ||
-	     substream->stream != SNDRV_PCM_STREAM_PLAYBACK))
+	     substream->stream != SNDRV_PCM_STREAM_PLAYBACK)) {
+		pr_err("plb: do_resume not doing anything\n");
 		return 0;
+	}
 	return substream->ops->trigger(substream, SNDRV_PCM_TRIGGER_RESUME);
 }
 
@@ -1563,6 +1630,7 @@ static void snd_pcm_post_resume(struct snd_pcm_substream *substream, int state)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_trigger_tstamp(substream);
 	runtime->status->state = runtime->status->suspended_state;
+	log_pcm_state(runtime->status->state, __func__);
 	snd_pcm_timer_notify(substream, SNDRV_TIMER_EVENT_MRESUME);
 }
 
@@ -1672,6 +1740,8 @@ static int snd_pcm_pre_prepare(struct snd_pcm_substream *substream,
 			       int f_flags)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+
+	log_pcm_state(substream->runtime->status->state, __func__);
 	if (runtime->status->state == SNDRV_PCM_STATE_OPEN ||
 	    runtime->status->state == SNDRV_PCM_STATE_DISCONNECTED)
 		return -EBADFD;
@@ -1694,7 +1764,12 @@ static void snd_pcm_post_prepare(struct snd_pcm_substream *substream, int state)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	runtime->control->appl_ptr = runtime->status->hw_ptr;
+
+	log_pcm_state(substream->runtime->status->state, __func__);
+
 	snd_pcm_set_state(substream, SNDRV_PCM_STATE_PREPARED);
+
+	log_pcm_state(substream->runtime->status->state, __func__);
 }
 
 static const struct action_ops snd_pcm_action_prepare = {
@@ -1721,12 +1796,21 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream,
 		f_flags = substream->f_flags;
 
 	snd_pcm_stream_lock_irq(substream);
+
+	log_pcm_state(substream->runtime->status->state, __func__);
 	switch (substream->runtime->status->state) {
 	case SNDRV_PCM_STATE_PAUSED:
 		snd_pcm_pause(substream, 0);
+
+		log_pcm_state(substream->runtime->status->state,
+			      "after PAUSED");
 		/* fallthru */
 	case SNDRV_PCM_STATE_SUSPENDED:
 		snd_pcm_stop(substream, SNDRV_PCM_STATE_SETUP);
+
+		log_pcm_state(substream->runtime->status->state,
+			      "after SUSPENDED");
+
 		break;
 	}
 	snd_pcm_stream_unlock_irq(substream);
