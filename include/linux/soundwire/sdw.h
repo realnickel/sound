@@ -403,7 +403,7 @@ int sdw_slave_read_prop(struct sdw_slave *slave);
  * SDW Slave Structures and APIs
  */
 
-#define SDW_IGNORED_UNIQUE_ID -1
+#define SDW_IGNORED_UNIQUE_ID 0xFF
 
 /**
  * struct sdw_slave_id - Slave ID
@@ -420,7 +420,7 @@ struct sdw_slave_id {
 	__u16 mfg_id;
 	__u16 part_id;
 	__u8 class_id;
-	__u8 unique_id:4;
+	__u8 unique_id;
 	__u8 sdw_version:4;
 };
 
