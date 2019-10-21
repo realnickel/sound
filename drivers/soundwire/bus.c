@@ -471,11 +471,17 @@ static int sdw_compare_devid(struct sdw_slave *slave, struct sdw_slave_id id)
 		slave->id.mfg_id, slave->id.part_id,
 		id.mfg_id, id.part_id);
 
-	if (slave->id.unique_id != id.unique_id ||
-	    slave->id.mfg_id != id.mfg_id ||
+	if (slave->id.mfg_id != id.mfg_id ||
 	    slave->id.part_id != id.part_id ||
 	    slave->id.class_id != id.class_id)
 		return -ENODEV;
+
+	if (slave->id.unique_id != SDW_IGNORED_UNIQUE_ID &&
+	    slave->id.unique_id != id.unique_id) {
+		dev_dbg(slave->bus->dev, "plb: unique IDs are different in %s\n",
+			__func__);
+		return -ENODEV;
+	}
 
 	return 0;
 }

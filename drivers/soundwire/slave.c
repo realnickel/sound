@@ -34,10 +34,17 @@ static int sdw_slave_add(struct sdw_bus *bus,
 	slave->dev.parent = bus->dev;
 	slave->dev.fwnode = fwnode;
 
-	/* name shall be sdw:link:mfg:part:class:unique */
-	dev_set_name(&slave->dev, "sdw:%x:%x:%x:%x:%x",
-		     bus->link_id, id->mfg_id, id->part_id,
-		     id->class_id, id->unique_id);
+	if (id->unique_id == SDW_IGNORED_UNIQUE_ID) {
+		/* name shall be sdw:link:mfg:part:class */
+		dev_set_name(&slave->dev, "sdw:%x:%x:%x:%x",
+			     bus->link_id, id->mfg_id, id->part_id,
+			     id->class_id, id->unique_id);
+	} else {
+		/* name shall be sdw:link:mfg:part:class:unique */
+		dev_set_name(&slave->dev, "sdw:%x:%x:%x:%x:%x",
+			     bus->link_id, id->mfg_id, id->part_id,
+			     id->class_id, id->unique_id);
+	}
 
 	slave->dev.bus = &sdw_bus_type;
 	slave->dev.of_node = of_node_get(to_of_node(fwnode));
@@ -120,10 +127,26 @@ int sdw_acpi_find_slaves(struct sdw_bus *bus)
 
 	list_for_each_entry(adev, &parent->children, node) {
 		struct sdw_slave_id id;
+		bool ignore_unique_id = false;
 
 		if (!find_slave(bus, adev, &id))
 			continue;
 
+		if (0) {
+			/*
+			 * this point is only reached when there is a
+			 * single device of the same type per link
+			 */
+			ignore_unique_id = true;
+		}
+
+		if (ignore_unique_id)
+			id.unique_id = SDW_IGNORED_UNIQUE_ID;
+
+		/*
+		 * don't error check for sdw_slave_add as we want to continue
+		 * adding Slaves
+		 */
 		sdw_slave_add(bus, &id, acpi_fwnode_handle(adev));
 	}
 

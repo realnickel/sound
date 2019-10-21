@@ -403,6 +403,8 @@ int sdw_slave_read_prop(struct sdw_slave *slave);
  * SDW Slave Structures and APIs
  */
 
+#define SDW_IGNORED_UNIQUE_ID -1
+
 /**
  * struct sdw_slave_id - Slave ID
  * @mfg_id: MIPI Manufacturer ID
