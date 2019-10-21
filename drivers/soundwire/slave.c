@@ -38,7 +38,7 @@ static int sdw_slave_add(struct sdw_bus *bus,
 		/* name shall be sdw:link:mfg:part:class */
 		dev_set_name(&slave->dev, "sdw:%x:%x:%x:%x",
 			     bus->link_id, id->mfg_id, id->part_id,
-			     id->class_id, id->unique_id);
+			     id->class_id);
 	} else {
 		/* name shall be sdw:link:mfg:part:class:unique */
 		dev_set_name(&slave->dev, "sdw:%x:%x:%x:%x:%x",
@@ -132,7 +132,7 @@ int sdw_acpi_find_slaves(struct sdw_bus *bus)
 		if (!find_slave(bus, adev, &id))
 			continue;
 
-		if (0) {
+		if (1) {
 			/*
 			 * this point is only reached when there is a
 			 * single device of the same type per link
