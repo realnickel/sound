@@ -118,6 +118,7 @@ static bool find_slave(struct sdw_bus *bus,
 int sdw_acpi_find_slaves(struct sdw_bus *bus)
 {
 	struct acpi_device *adev, *parent;
+	struct acpi_device *adev2, *parent2;
 
 	parent = ACPI_COMPANION(bus->dev);
 	if (!parent) {
@@ -127,17 +128,41 @@ int sdw_acpi_find_slaves(struct sdw_bus *bus)
 
 	list_for_each_entry(adev, &parent->children, node) {
 		struct sdw_slave_id id;
-		bool ignore_unique_id = false;
+		struct sdw_slave_id id2;
+		bool ignore_unique_id = true;
 
 		if (!find_slave(bus, adev, &id))
 			continue;
 
-		if (1) {
-			/*
-			 * this point is only reached when there is a
-			 * single device of the same type per link
-			 */
-			ignore_unique_id = true;
+		/* brute-force O(N^2) search for duplicates */
+		parent2 = parent;
+		list_for_each_entry(adev2, &parent2->children, node) {
+
+			if (adev == adev2)
+				continue;
+
+			if (!find_slave(bus, adev2, &id2))
+				continue;
+
+			if (id.sdw_version != id2.sdw_version ||
+			    id.mfg_id != id2.mfg_id ||
+			    id.part_id != id2.part_id ||
+			    id.class_id != id2.class_id)
+				continue;
+
+			if (id.unique_id != id2.unique_id) {
+				dev_dbg(bus->dev,
+					"Valid unique IDs %x %x for Slave mfg %x part %d\n",
+					id.unique_id, id2.unique_id,
+					id.mfg_id, id.part_id);
+				ignore_unique_id = false;
+			} else {
+				dev_err(bus->dev,
+					"Invalid unique IDs %x %x for Slave mfg %x part %d\n",
+					id.unique_id, id2.unique_id,
+					id.mfg_id, id.part_id);
+				return -ENODEV;
+			}
 		}
 
 		if (ignore_unique_id)
