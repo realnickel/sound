@@ -65,21 +65,96 @@ struct snd_soc_acpi_mach snd_soc_acpi_intel_cnl_machines[] = {
 };
 EXPORT_SYMBOL_GPL(snd_soc_acpi_intel_cnl_machines);
 
+static const u64 rt700_1_adr[] = {
+	0x000110025D070000
+};
+
+static const struct snd_soc_acpi_link cml_rvp[] = {
+	{
+		.mask = BIT(1),
+		.dev_num = ARRAY_SIZE(rt700_1_adr),
+		.adr = rt700_1_adr,
+	},
+	{}
+};
+
+static const u64 rt711_0_adr[] = {
+	0x000010025D071100
+};
+
+static const u64 rt1308_1_adr[] = {
+	0x000110025D130800
+};
+
+static const u64 rt1308_2_adr[] = {
+	0x000210025D130800
+};
+
+static const u64 rt715_3_adr[] = {
+	0x000310025D715000
+};
+
+static const struct snd_soc_acpi_link cml_3_in_1_default[] = {
+	{
+		.mask = BIT(0),
+		.dev_num = ARRAY_SIZE(rt711_0_adr),
+		.adr = rt711_0_adr,
+	},
+	{
+		.mask = BIT(1),
+		.dev_num = ARRAY_SIZE(rt1308_1_adr),
+		.adr = rt1308_1_adr,
+	},
+	{
+		.mask = BIT(2),
+		.dev_num = ARRAY_SIZE(rt1308_2_adr),
+		.adr = rt1308_2_adr,
+	},
+	{
+		.mask = BIT(3),
+		.dev_num = ARRAY_SIZE(rt715_3_adr),
+		.adr = rt715_3_adr,
+	},
+	{}
+};
+
+static const struct snd_soc_acpi_link cml_3_in_1_mono_amp[] = {
+	{
+		.mask = BIT(0),
+		.dev_num = ARRAY_SIZE(rt711_0_adr),
+		.adr = rt711_0_adr,
+	},
+	{
+		.mask = BIT(1),
+		.dev_num = ARRAY_SIZE(rt1308_1_adr),
+		.adr = rt1308_1_adr,
+	},
+	{
+		.mask = BIT(3),
+		.dev_num = ARRAY_SIZE(rt715_3_adr),
+		.adr = rt715_3_adr,
+	},
+	{}
+};
+
 struct snd_soc_acpi_mach snd_soc_acpi_intel_cnl_sdw_machines[] = {
 	{
 		.link_mask = 0xF, /* 4 active links required */
+		.links = cml_3_in_1_default,
 		.drv_name = "sdw_rt711_rt1308_rt715",
 		.sof_fw_filename = "sof-cnl.ri",
 		.sof_tplg_filename = "sof-cml-rt711-rt1308-rt715.tplg",
 	},
 	{
 		.link_mask = 0xB, /* 3 active links required */
+		.links = cml_3_in_1_mono_amp,
 		.drv_name = "sdw_rt711_rt1308_rt715",
 		.sof_fw_filename = "sof-cnl.ri",
-		.sof_tplg_filename = "sof-cml-rt711-rt1308-rt715.tplg",
+		.sof_tplg_filename = "sof-cml-rt711-rt1308-rt715-mono.tplg",
 	},
 	{
 		.link_mask = 0x2, /* RT700 connected on Link1 */
+		.links = cml_rvp,
 		.drv_name = "sdw_rt700",
 		.sof_fw_filename = "sof-cnl.ri",
 		.sof_tplg_filename = "sof-cml-rt700.tplg",

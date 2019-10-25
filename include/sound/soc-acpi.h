@@ -60,12 +60,31 @@ static inline struct snd_soc_acpi_mach *snd_soc_acpi_codec_list(void *arg)
  * @acpi_ipc_irq_index: used for BYT-CR detection
  * @platform: string used for HDaudio codec support
  * @codec_mask: used for HDAudio support
+ * @link_mask: links enabled on the board
+ * @links: array of links (null terminated)
  */
 struct snd_soc_acpi_mach_params {
 	u32 acpi_ipc_irq_index;
 	const char *platform;
 	u32 codec_mask;
 	u32 dmic_num;
+	u32 link_mask;
+	const struct snd_soc_acpi_link *links;
+};
+
+/**
+ * snd_soc_acpi_link_adr: ACPI-based list of _ADR, with a variable
+ * number of devices per link
+ *
+ * @mask: one bit set indicates the link this list applies to
+ * @num_adr: ARRAY_SIZE of adr
+ * @adr: array of _ADR (represented as u64).
+ */
+
+struct snd_soc_acpi_link {
+	const u32 mask;
+	const u32 dev_num;
+	const u64 *adr;
 };
 
 /**
@@ -76,6 +95,7 @@ struct snd_soc_acpi_mach_params {
  *
  * @id: ACPI ID (usually the codec's) used to find a matching machine driver.
  * @link_mask: describes required board layout, e.g. for SoundWire.
+ * @links: array of descriptors, null terminated.
  * @drv_name: machine driver name
  * @fw_filename: firmware file name. Used when SOF is not enabled.
  * @board: board name
@@ -92,6 +112,7 @@ struct snd_soc_acpi_mach_params {
 struct snd_soc_acpi_mach {
 	const u8 id[ACPI_ID_LEN];
 	const u32 link_mask;
+	const struct snd_soc_acpi_link *links;
 	const char *drv_name;
 	const char *fw_filename;
 	const char *board;
