@@ -661,6 +661,10 @@ static int sdw_bank_switch(struct sdw_bus *bus, int m_rt_count)
 	int ret;
 	u16 addr;
 
+	dev_dbg(bus->dev, "%s: switching to bank %d\n",
+		__func__,
+		bus->params.next_bank);
+
 	wr_msg = kzalloc(sizeof(*wr_msg), GFP_KERNEL);
 	if (!wr_msg)
 		return -ENOMEM;
@@ -781,6 +785,8 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 			}
 		}
 
+		dev_dbg(bus->dev, "%s: stream %s\n", __func__, stream->name);
+		
 		/*
 		 * Perform Bank switch operation.
 		 * For multi link cases, the actual bank switch is

@@ -1136,6 +1136,8 @@ static int cdns_transport_params(struct sdw_bus *bus,
 	int num = t_params->port_num;
 	int dpn_samplectrl_off;
 
+	dev_dbg(bus->dev, "plb: Reprogramming transport master port %d bank %d\n", num, bank);
+	
 	/*
 	 * Note: Only full data port is supported on the Master side for
 	 * both PCM and PDM ports.
@@ -1153,19 +1155,26 @@ static int cdns_transport_params(struct sdw_bus *bus,
 		dpn_offsetctrl_off = CDNS_DPN_B0_OFFSET_CTRL(num);
 	}
 
+	/* why are we reading this? */
 	dpn_config = cdns_readl(cdns, dpn_config_off);
 
+	dev_dbg(bus->dev, "plb: dpn_config_old %x\n", dpn_config);
+		
 	dpn_config |= (t_params->blk_grp_ctrl <<
 				SDW_REG_SHIFT(CDNS_DPN_CONFIG_BGC));
 	dpn_config |= (t_params->blk_pkg_mode <<
 				SDW_REG_SHIFT(CDNS_DPN_CONFIG_BPM));
 	cdns_writel(cdns, dpn_config_off, dpn_config);
 
+	dev_dbg(bus->dev, "plb: dpn_config_new %x\n", dpn_config);
+
 	dpn_offsetctrl |= (t_params->offset1 <<
 				SDW_REG_SHIFT(CDNS_DPN_OFFSET_CTRL_1));
 	dpn_offsetctrl |= (t_params->offset2 <<
 				SDW_REG_SHIFT(CDNS_DPN_OFFSET_CTRL_2));
 	cdns_writel(cdns, dpn_offsetctrl_off,  dpn_offsetctrl);
+
+	dev_dbg(bus->dev, "plb: dpn_offsetctrl %x\n", dpn_offsetctrl);
 
 	dpn_hctrl |= (t_params->hstart <<
 				SDW_REG_SHIFT(CDNS_DPN_HCTRL_HSTART));
@@ -1174,7 +1183,12 @@ static int cdns_transport_params(struct sdw_bus *bus,
 				SDW_REG_SHIFT(CDNS_DPN_HCTRL_LCTRL));
 
 	cdns_writel(cdns, dpn_hctrl_off, dpn_hctrl);
+
+	dev_dbg(bus->dev, "plb: dpn_htctl %x\n", dpn_hctrl);
+	
 	cdns_writel(cdns, dpn_samplectrl_off, (t_params->sample_interval - 1));
+
+	dev_dbg(bus->dev, "plb: dpn_samplectrl %x\n", (t_params->sample_interval - 1));
 
 	return 0;
 }
@@ -1193,6 +1207,12 @@ static int cdns_port_enable(struct sdw_bus *bus,
 	ch_mask = enable_ch->ch_mask * enable_ch->enable;
 	cdns_writel(cdns, dpn_chnen_off, ch_mask);
 
+	dev_dbg(bus->dev, "plb: %s: port %d bank %d action %x\n",
+		__func__,
+		enable_ch->port_num,
+		bank,
+		ch_mask);
+		
 	return 0;
 }
 
