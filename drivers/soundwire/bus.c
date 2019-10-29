@@ -13,42 +13,78 @@ static void sdw_dump_slave_dpN(struct sdw_slave *slave,
 			       enum sdw_dpn_type type)
 {
 	u32 addr1, addr2, addr3, addr4;
+	u32 addr5, addr6, addr7, addr8;
+	u32 addr9, addr10;
 	int ret;
 
-	dev_dbg(&slave->dev, "Dumping port %d info\n", port_num);
+	dev_dbg(&slave->dev, "\nDumping port %d info\n", port_num);
+
+	/* Read DPN_PortCtrl register */
+	addr1 = SDW_DPN_PORTCTRL(port_num);
+	ret = sdw_read(slave, addr1);
+	dev_dbg(&slave->dev, "DPN_PortCtrl %0x\n", ret);
+
+	/* Read DPN_BlockCtrl1 register */
+	addr2 = SDW_DPN_BLOCKCTRL1(port_num);
+	ret = sdw_read(slave, addr2);
+	dev_dbg(&slave->dev, "DPN_BlockCtrl1 %0x\n", ret);
+
 	if (slave->bus->params.curr_bank) {
-		addr1 = SDW_DPN_OFFSETCTRL2_B1(port_num);
-		addr2 = SDW_DPN_BLOCKCTRL3_B1(port_num);
-		addr3 = SDW_DPN_SAMPLECTRL2_B1(port_num);
-		addr4 = SDW_DPN_HCTRL_B1(port_num);
+		addr3 = SDW_DPN_CHANNELEN_B1(port_num);
+		addr4 = SDW_DPN_SAMPLECTRL1_B1(port_num);
+		addr5 = SDW_DPN_OFFSETCTRL1_B1(port_num);
+		addr6 = SDW_DPN_BLOCKCTRL2_B1(port_num);
+		addr7 = SDW_DPN_SAMPLECTRL2_B1(port_num);
+		addr8 = SDW_DPN_OFFSETCTRL2_B1(port_num);
+		addr9 = SDW_DPN_HCTRL_B1(port_num);
+		addr10 = SDW_DPN_BLOCKCTRL3_B0(port_num);
+
 	} else {
-		addr1 = SDW_DPN_OFFSETCTRL2_B0(port_num);
-		addr2 = SDW_DPN_BLOCKCTRL3_B0(port_num);
-		addr3 = SDW_DPN_SAMPLECTRL2_B0(port_num);
-		addr4 = SDW_DPN_HCTRL_B0(port_num);
+		addr3 = SDW_DPN_CHANNELEN_B0(port_num);
+		addr4 = SDW_DPN_SAMPLECTRL1_B0(port_num);
+		addr5 = SDW_DPN_OFFSETCTRL1_B0(port_num);
+		addr6 = SDW_DPN_BLOCKCTRL2_B0(port_num);
+		addr7 = SDW_DPN_SAMPLECTRL2_B0(port_num);
+		addr8 = SDW_DPN_OFFSETCTRL2_B0(port_num);
+		addr9 = SDW_DPN_HCTRL_B0(port_num);
+		addr10 = SDW_DPN_BLOCKCTRL3_B0(port_num);
+
 	}
 
-	/* Read DPN_OffsetCtrl2 registers */
-	ret = sdw_read(slave, addr1);
-	dev_dbg(&slave->dev, "DPN_OffsetCtrl2 %0x\n", ret);
+	/* Read DPN_ChannelEn register */
+	ret = sdw_read(slave, addr3);
+	dev_dbg(&slave->dev, "DPN_ChannelEn %0x\n", ret);
 
-	/* Read DPN_BlockCtrl3 register */
-	ret = sdw_read(slave, addr2);
-	dev_dbg(&slave->dev, "DPN_BlockCtrl3 %0x\n", ret);
+	/* Read DPN_SampleCtrl1 register */
+	ret = sdw_read(slave, addr4);
+	dev_dbg(&slave->dev, "DPN_SampleCtrl1 %0x\n", ret);
 
-	/*
-	 * Data ports are FULL, SIMPLE and REDUCED. This function handles
-	 * FULL and REDUCED only and beyond this point only FULL is
-	 * handled, so bail out if we are not FULL data port type
-	 */
+	/* Read DPN_OffsetCtrl1 registers */
+	ret = sdw_read(slave, addr5);
+	dev_dbg(&slave->dev, "DPN_OffsetCtrl1 %0x\n", ret);
+
 	if (type != SDW_DPN_FULL)
 		return;
 
-	ret = sdw_read(slave, addr3);
+//	/* Read DPN_BlockCtrl2 register */
+//	ret = sdw_read(slave, addr6);
+//	dev_dbg(&slave->dev, "DPN_BlockCtrl2 %0x\n", ret);
+
+	/* Read DPN_SampleCtrl2 register */
+	ret = sdw_read(slave, addr7);
 	dev_dbg(&slave->dev, "DPN_SampleCtrl2 %0x\n", ret);
 
-	ret = sdw_read(slave, addr4);
+	/* Read DPN_OffsetCtrl2 register */
+	ret = sdw_read(slave, addr8);
+	dev_dbg(&slave->dev, "DPN_OffsetCtrl2 %0x\n", ret);
+
+	/* Read DPN_HCtrl register */
+	ret = sdw_read(slave, addr9);
 	dev_dbg(&slave->dev, "DPN_HCtrl %0x\n", ret);
+
+	/* Read DPN_BlockCtrl3 register */
+	ret = sdw_read(slave, addr10);
+	dev_dbg(&slave->dev, "DPN_BlockCtrl3 %0x\n", ret);
 }
 
 /**
