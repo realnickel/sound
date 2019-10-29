@@ -8,6 +8,49 @@
 #include <linux/soundwire/sdw.h>
 #include "bus.h"
 
+static void sdw_dump_slave_dpN(struct sdw_slave *slave,
+			       int port_num,
+			       enum sdw_dpn_type type)
+{
+	u32 addr1, addr2, addr3, addr4;
+	int ret;
+
+	dev_dbg(&slave->dev, "Dumping port %d info\n", port_num);
+	if (slave->bus->params.curr_bank) {
+		addr1 = SDW_DPN_OFFSETCTRL2_B1(port_num);
+		addr2 = SDW_DPN_BLOCKCTRL3_B1(port_num);
+		addr3 = SDW_DPN_SAMPLECTRL2_B1(port_num);
+		addr4 = SDW_DPN_HCTRL_B1(port_num);
+	} else {
+		addr1 = SDW_DPN_OFFSETCTRL2_B0(port_num);
+		addr2 = SDW_DPN_BLOCKCTRL3_B0(port_num);
+		addr3 = SDW_DPN_SAMPLECTRL2_B0(port_num);
+		addr4 = SDW_DPN_HCTRL_B0(port_num);
+	}
+
+	/* Read DPN_OffsetCtrl2 registers */
+	ret = sdw_read(slave, addr1);
+	dev_dbg(&slave->dev, "DPN_OffsetCtrl2 %0x\n", ret);
+
+	/* Read DPN_BlockCtrl3 register */
+	ret = sdw_read(slave, addr2);
+	dev_dbg(&slave->dev, "DPN_BlockCtrl3 %0x\n", ret);
+
+	/*
+	 * Data ports are FULL, SIMPLE and REDUCED. This function handles
+	 * FULL and REDUCED only and beyond this point only FULL is
+	 * handled, so bail out if we are not FULL data port type
+	 */
+	if (type != SDW_DPN_FULL)
+		return;
+
+	ret = sdw_read(slave, addr3);
+	dev_dbg(&slave->dev, "DPN_SampleCtrl2 %0x\n", ret);
+
+	ret = sdw_read(slave, addr4);
+	dev_dbg(&slave->dev, "DPN_HCtrl %0x\n", ret);
+}
+
 /**
  * sdw_add_bus_master() - add a bus Master instance
  * @bus: bus instance
@@ -931,6 +974,10 @@ static int sdw_handle_slave_alerts(struct sdw_slave *slave)
 		if (buf & SDW_SCP_INT1_BUS_CLASH) {
 			dev_err(&slave->dev, "Bus clash error detected\n");
 			clear |= SDW_SCP_INT1_BUS_CLASH;
+
+			sdw_dump_slave_dpN(slave, 3, SDW_DPN_FULL);
+			sdw_dump_slave_dpN(slave, 2, SDW_DPN_FULL);
+			sdw_dump_slave_dpN(slave, 4, SDW_DPN_FULL);
 		}
 
 		/*

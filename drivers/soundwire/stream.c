@@ -84,6 +84,7 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 		dev_err(bus->dev, "DPN_OffsetCtrl2 register write failed\n");
 		return ret;
 	}
+	dev_dbg(bus->dev, "DPN_OffsetCtrl2 %0x\n", t_params->offset2);
 
 	/* Program DPN_BlockCtrl3 register */
 	ret = sdw_write(slave, addr2, t_params->blk_pkg_mode);
@@ -91,6 +92,7 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 		dev_err(bus->dev, "DPN_BlockCtrl3 register write failed\n");
 		return ret;
 	}
+	dev_dbg(bus->dev, "DPN_BlockCtrl3 %0x\n", t_params->blk_pkg_mode);
 
 	/*
 	 * Data ports are FULL, SIMPLE and REDUCED. This function handles
@@ -110,7 +112,8 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 		dev_err(bus->dev, "DPN_SampleCtrl2 register write failed\n");
 		return ret;
 	}
-
+	dev_dbg(bus->dev, "DPN_SampleCtrl2 %0x\n", wbuf);
+		
 	/* Program DPN_HCtrl register */
 	wbuf = t_params->hstart;
 	wbuf <<= SDW_REG_SHIFT(SDW_DPN_HCTRL_HSTART);
@@ -119,7 +122,8 @@ static int _sdw_program_slave_port_params(struct sdw_bus *bus,
 	ret = sdw_write(slave, addr4, wbuf);
 	if (ret < 0)
 		dev_err(bus->dev, "DPN_HCtrl register write failed\n");
-
+	dev_dbg(bus->dev, "DPN_HCtrl %0x\n", wbuf);
+	
 	return ret;
 }
 
@@ -187,7 +191,8 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 			t_params->port_num);
 		return ret;
 	}
-
+	dev_dbg(bus->dev, "DPN_SampleCtrl1 %0x\n", wbuf);
+	
 	/* Program DPN_OffsetCtrl1 registers */
 	ret = sdw_write(s_rt->slave, addr4, t_params->offset1);
 	if (ret < 0) {
@@ -196,6 +201,7 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 			t_params->port_num);
 		return ret;
 	}
+	dev_dbg(bus->dev, "DPN_OffsetCtrl1 %0x\n", t_params->offset1);
 
 	/* Program DPN_BlockCtrl2 register*/
 	if (t_params->blk_grp_ctrl_valid) {
@@ -265,6 +271,8 @@ static int sdw_program_port_params(struct sdw_master_runtime *m_rt)
 	struct sdw_bus *bus = m_rt->bus;
 	struct sdw_port_runtime *p_rt;
 	int ret = 0;
+
+	dev_dbg(bus->dev, "%s: stream  %s\n", __func__, m_rt->stream->name);
 
 	/* Program transport & port parameters for Slave(s) */
 	list_for_each_entry(s_rt, &m_rt->slave_rt_list, m_rt_node) {
@@ -626,13 +634,18 @@ static int sdw_program_params(struct sdw_bus *bus)
 		}
 
 		/* Enable port(s) on alternate bank for all active streams */
-		if (m_rt->stream->state != SDW_STREAM_ENABLED)
-			continue;
-
-		ret = sdw_enable_disable_ports(m_rt, true);
-		if (ret < 0) {
-			dev_err(bus->dev, "Enable channel failed: %d\n", ret);
-			return ret;
+		if (m_rt->stream->state == SDW_STREAM_ENABLED) {
+			ret = sdw_enable_disable_ports(m_rt, true);
+			if (ret < 0) {
+				dev_err(bus->dev, "Enable ports failed: %d\n", ret);
+				return ret;
+			}
+		} else if (m_rt->stream->state == SDW_STREAM_DISABLED) {
+			ret = sdw_enable_disable_ports(m_rt, false);
+			if (ret < 0) {
+				dev_err(bus->dev, "Disable ports failed: %d\n", ret);
+				return ret;
+			}
 		}
 	}
 
@@ -1477,6 +1490,15 @@ static int _sdw_prepare_stream(struct sdw_stream_runtime *stream,
 		prop = &bus->prop;
 		memcpy(&params, &bus->params, sizeof(params));
 
+		dev_dbg(bus->dev, "Bus parameters for %s\n", stream->name);
+		dev_dbg(bus->dev, "curr_bank %d\n", params.curr_bank);
+		dev_dbg(bus->dev, "next_bank %d\n", params.next_bank);
+		dev_dbg(bus->dev, "max_dr_freq %d\n", params.max_dr_freq);
+		dev_dbg(bus->dev, "curr_dr_freq %d\n", params.curr_dr_freq);
+		dev_dbg(bus->dev, "bandwidth %d\n", params.bandwidth);
+		dev_dbg(bus->dev, "col %d\n", params.col);
+		dev_dbg(bus->dev, "row %d\n", params.row);
+
 		/* TODO: Support Asynchronous mode */
 		if ((prop->max_clk_freq % stream->params.rate) != 0) {
 			dev_err(bus->dev, "Async mode not supported\n");
@@ -1583,8 +1605,10 @@ int sdw_prepare_stream(struct sdw_stream_runtime *stream)
 	 * In this case, the bus parameters shall not be recomputed, but
 	 * still need to be re-applied
 	 */
-	if (stream->state == SDW_STREAM_DISABLED)
+	if (stream->state == SDW_STREAM_DISABLED) {
+		pr_err("%s: %s was disabled\n", __func__, stream->name);
 		update_params = false;
+	}
 
 	ret = _sdw_prepare_stream(stream, update_params);
 
@@ -1686,6 +1710,7 @@ static int _sdw_disable_stream(struct sdw_stream_runtime *stream)
 	struct sdw_master_runtime *m_rt;
 	int ret;
 
+#if 0
 	list_for_each_entry(m_rt, &stream->master_list, stream_node) {
 		struct sdw_bus *bus = m_rt->bus;
 
@@ -1696,6 +1721,8 @@ static int _sdw_disable_stream(struct sdw_stream_runtime *stream)
 			return ret;
 		}
 	}
+#endif
+	
 	stream->state = SDW_STREAM_DISABLED;
 
 	list_for_each_entry(m_rt, &stream->master_list, stream_node) {
@@ -1715,6 +1742,7 @@ static int _sdw_disable_stream(struct sdw_stream_runtime *stream)
 		return ret;
 	}
 
+#if 1
 	/* make sure alternate bank (previous current) is also disabled */
 	list_for_each_entry(m_rt, &stream->master_list, stream_node) {
 		struct sdw_bus *bus = m_rt->bus;
@@ -1726,7 +1754,7 @@ static int _sdw_disable_stream(struct sdw_stream_runtime *stream)
 			return ret;
 		}
 	}
-
+#endif
 	return 0;
 }
 
