@@ -120,6 +120,7 @@ struct sdw_intel {
 	struct sdw_intel_link_res *link_res;
 	struct snd_pcm_hw_params *hw_params;
 	struct sdw_cdns_pdi *pdi;
+	bool suspended;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs;
 #endif
@@ -886,30 +887,37 @@ static int intel_prepare(struct snd_pcm_substream *substream,
 		return -EIO;
 	}
 
-	/*
-	 * .prepare() is called after system resume, where we need to
-	 * reinitialize the SHIM/ALH/Cadence IP. To avoid dealing with
-	 * complicated state machines, we just re-initialize in all
-	 * cases since there are no side effects.
-	 */
+	if (sdw->suspended) {
 
-	/* configure stream */
-	ch = params_channels(sdw->hw_params);
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		dir = SDW_DATA_DIR_RX;
-	else
-		dir = SDW_DATA_DIR_TX;
+		sdw->suspended = false;
 
-	intel_pdi_shim_configure(sdw, sdw->pdi);
-	intel_pdi_alh_configure(sdw, sdw->pdi);
-	sdw_cdns_config_stream(cdns, ch, dir, sdw->pdi);
+		/*
+		 * .prepare() is called after system resume, where we
+		 * need to reinitialize the SHIM/ALH/Cadence IP.
+		 * .prepare() is also called to deal with underflows,
+		 * but in those cases we cannot touch ALH/SHIM
+		 * registers
+		 */
 
-	/* Inform DSP about PDI stream number */
-	ret = intel_params_stream(sdw, substream, dai, sdw->hw_params,
-				  sdw->instance,
-				  sdw->pdi->intel_alh_id);
-	if (ret)
-		goto err;
+		/* configure stream */
+		ch = params_channels(sdw->hw_params);
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+			dir = SDW_DATA_DIR_RX;
+		else
+			dir = SDW_DATA_DIR_TX;
+
+		intel_pdi_shim_configure(sdw, sdw->pdi);
+		intel_pdi_alh_configure(sdw, sdw->pdi);
+		sdw_cdns_config_stream(cdns, ch, dir, sdw->pdi);
+
+		/* Inform DSP about PDI stream number */
+		ret = intel_params_stream(sdw, substream, dai,
+					  sdw->hw_params,
+					  sdw->instance,
+					  sdw->pdi->intel_alh_id);
+		if (ret)
+			goto err;
+	}
 
 	ret = sdw_prepare_stream(dma->stream);
 
@@ -1027,6 +1035,17 @@ static void intel_shutdown(struct snd_pcm_substream *substream,
 	dev_err(dai->dev, "%s: %s: done\n", __func__, dai->name);
 }
 
+int intel_dai_suspend(struct snd_soc_dai *dai)
+{
+	struct sdw_cdns *cdns = snd_soc_dai_get_drvdata(dai);
+	struct sdw_intel *sdw = cdns_to_intel(cdns);
+
+	if (sdw)
+		sdw->suspended = true;
+
+	return 0;
+}
+
 static int intel_pcm_set_sdw_stream(struct snd_soc_dai *dai,
 				    void *stream, int direction)
 {
@@ -1098,6 +1117,8 @@ static int intel_create_dai(struct sdw_cdns *cdns,
 			dais[i].ops = &intel_pcm_dai_ops;
 		else
 			dais[i].ops = &intel_pdm_dai_ops;
+
+		dais[i].suspend = intel_dai_suspend;
 	}
 
 	return 0;
