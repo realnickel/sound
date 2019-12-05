@@ -1351,6 +1351,7 @@ static int intel_master_startup(struct sdw_bus *bus)
 	struct sdw_cdns_stream_config config;
 	struct sdw_intel *sdw;
 	int link_flags;
+	u32 clock_stop_quirks;
 	int ret;
 
 	sdw = bus->pdata;
@@ -1409,6 +1410,20 @@ static int intel_master_startup(struct sdw_bus *bus)
 		pm_runtime_enable(bus->dev);
 	}
 
+	clock_stop_quirks = sdw->link_res->clock_stop_quirks;
+	if (clock_stop_quirks & SDW_INTEL_CLK_STOP_NOT_ALLOWED) {
+		/*
+		 * To keep the clock running we need to prevent
+		 * pm_runtime suspend from happening by increasing the
+		 * reference count.
+		 * This quirk is specified by the parent PCI device in
+		 * case of specific latency requirements. It will have
+		 * no effect if pm_runtime is disabled by the user via
+		 * a module parameter for testing purposes.
+		 */
+		pm_runtime_get_noresume(bus->dev);
+	}
+
 	/*
 	 * The runtime PM status of Slave devices is "Unsupported"
 	 * until they report as ATTACHED. If they don't, e.g. because
@@ -1440,6 +1455,12 @@ static int intel_master_del(struct sdw_bus *bus)
 	pm_runtime_disable(bus->dev);
 
 	sdw = bus->pdata;
+
+	/*
+	 * Since pm_runtime is already disabled, we don't decrease
+	 * the refcount when the clock_stop_quirk is
+	 * SDW_INTEL_CLK_STOP_NOT_ALLOWED
+	 */
 
 	if (!bus->prop.hw_disabled) {
 		intel_debugfs_exit(sdw);
