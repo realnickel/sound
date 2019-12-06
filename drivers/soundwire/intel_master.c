@@ -198,6 +198,60 @@ int sdw_intel_master_startup(struct sdw_intel_master_dev *master_dev)
 }
 EXPORT_SYMBOL_GPL(sdw_intel_master_startup);
 
+int sdw_intel_master_process_wake(struct sdw_intel_master_dev *master_dev)
+{
+	struct sdw_intel_master_drv *master_drv;
+	struct device *dev;
+	struct device_driver *driver;
+#if IS_ENABLED(CONFIG_VIRTUAL_BUS)
+	struct virtbus_device *vdev;
+	struct virtbus_driver *vdrv;
+#else
+	struct platform_device *pdev;
+	struct platform_driver *pdrv;
+#endif
+
+	/* paranoid sanity check */
+	if (!master_dev)
+		return -EINVAL;
+
+#if IS_ENABLED(CONFIG_VIRTUAL_BUS)
+	vdev = &master_dev->vdev;
+	dev = &vdev->dev;
+	driver = dev->driver;
+
+	/* even more paranoid sanity check */
+	if (!driver)
+		return -EINVAL;
+
+	vdrv = to_virtbus_drv(driver);
+
+	master_drv = container_of(vdrv,
+				  struct sdw_intel_master_drv,
+				  virtbus_drv);
+#else
+	pdev = &master_dev->pdev;
+	dev = &pdev->dev;
+	driver = dev->driver;
+
+	/* even more paranoid sanity check */
+	if (!driver)
+		return -EINVAL;
+
+	pdrv = container_of(driver, struct platform_driver, driver);
+
+	master_drv = container_of(pdrv,
+				  struct sdw_intel_master_drv,
+				  platform_drv);
+#endif
+
+	if (master_drv->link_ops->process_wake_event)
+		return master_drv->link_ops->process_wake_event(master_dev);
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(sdw_intel_master_process_wake);
+
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("sdw:intel-master-core");
 MODULE_DESCRIPTION("Intel Soundwire Master core Driver");
