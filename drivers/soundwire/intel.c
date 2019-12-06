@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/pm_runtime.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/soundwire/sdw_registers.h>
@@ -1377,6 +1378,50 @@ static int intel_master_delete(struct sdw_bus *bus)
 	return 0;
 }
 
+static int intel_master_process_wakeen_event(struct sdw_bus *bus)
+{
+	struct sdw_intel *sdw;
+	struct sdw_slave *slave;
+	void __iomem *shim;
+	u16 wake_sts;
+
+	if (!bus)
+		return -EINVAL;
+
+	sdw = bus->pdata;
+
+	if (sdw->cdns.bus.prop.hw_disabled) {
+		dev_info(&bus->dev,
+			 "SoundWire master %d is disabled, ignoring\n",
+			 sdw->cdns.bus.link_id);
+		return 0;
+	}
+
+	shim = sdw->link_res->shim;
+	wake_sts = intel_readw(shim, SDW_SHIM_WAKESTS);
+
+	if (!(wake_sts & BIT(sdw->instance)))
+		return 0;
+
+	/* disable WAKEEN interrupt ASAP to prevent interrupt flood */
+	intel_shim_wake(sdw, false);
+
+	/*
+	 * wake up master and slave so that slave can notify master
+	 * the wakeen event and let codec driver check codec status
+	 */
+	list_for_each_entry(slave, &bus->slaves, node) {
+		if (slave->prop.wake_capable) {
+			if (slave->status != SDW_SLAVE_ATTACHED &&
+			    slave->status != SDW_SLAVE_ALERT)
+				continue;
+
+			pm_request_resume(&slave->dev);
+		}
+	}
+
+	return 0;
+}
 
 static struct device_driver sdw_intel_driver = {
 	.name = "intel-master",
@@ -1388,6 +1433,7 @@ struct sdw_link_ops sdw_intel_link_ops = {
 	.add = intel_master_add,
 	.startup = intel_master_startup,
 	.del = intel_master_delete,
+	.process_wake_event = intel_master_process_wakeen_event
 };
 EXPORT_SYMBOL(sdw_intel_link_ops);
 
