@@ -1589,15 +1589,16 @@ static int intel_suspend_runtime(struct device *dev)
 		intel_shim_wake(sdw, false);
 	} else if (clock_stop_quirks & SDW_INTEL_CLK_STOP_BUS_RESET ||
 		!clock_stop_quirks) {
-		ret = sdw_cdns_clock_stop(cdns, true);
-		if (ret < 0) {
-			dev_err(dev, "cannot enable clock stop on suspend\n");
-			return ret;
-		}
 
 		ret = sdw_cdns_enable_interrupt(cdns, false);
 		if (ret < 0) {
 			dev_err(dev, "cannot disable interrupts on suspend\n");
+			return ret;
+		}
+
+		ret = sdw_cdns_clock_stop(cdns, true);
+		if (ret < 0) {
+			dev_err(dev, "cannot enable clock stop on suspend\n");
 			return ret;
 		}
 
@@ -1666,15 +1667,15 @@ static int intel_resume(struct device *dev)
 	sdw_clear_slave_status(&sdw->cdns.bus,
 			       SDW_UNATTACH_REQUEST_MASTER_RESET);
 
-	ret = sdw_cdns_enable_interrupt(cdns, true);
-	if (ret < 0) {
-		dev_err(dev, "cannot enable interrupts during resume\n");
-		return ret;
-	}
-
 	ret = sdw_cdns_exit_reset(cdns);
 	if (ret < 0) {
 		dev_err(dev, "unable to exit bus reset sequence during resume\n");
+		return ret;
+	}
+
+	ret = sdw_cdns_enable_interrupt(cdns, true);
+	if (ret < 0) {
+		dev_err(dev, "cannot enable interrupts during resume\n");
 		return ret;
 	}
 
@@ -1728,17 +1729,18 @@ static int intel_resume_runtime(struct device *dev)
 		sdw_clear_slave_status(&sdw->cdns.bus,
 				       SDW_UNATTACH_REQUEST_MASTER_RESET);
 
+		ret = sdw_cdns_exit_reset(cdns);
+		if (ret < 0) {
+			dev_err(dev, "unable to exit bus reset sequence during resume\n");
+			return ret;
+		}
+
 		ret = sdw_cdns_enable_interrupt(cdns, true);
 		if (ret < 0) {
 			dev_err(dev, "cannot enable interrupts during resume\n");
 			return ret;
 		}
 
-		ret = sdw_cdns_exit_reset(cdns);
-		if (ret < 0) {
-			dev_err(dev, "unable to exit bus reset sequence during resume\n");
-			return ret;
-		}
 	} else if (clock_stop_quirks & SDW_INTEL_CLK_STOP_BUS_RESET) {
 		ret = intel_init(sdw);
 		if (ret) {
@@ -1764,17 +1766,18 @@ static int intel_resume_runtime(struct device *dev)
 			sdw_clear_slave_status(&sdw->cdns.bus, status);
 		}
 
+		ret = sdw_cdns_clock_restart(cdns, !clock_stop0);
+		if (ret < 0) {
+			dev_err(dev, "unable to restart clock during resume\n");
+			return ret;
+		}
+
 		ret = sdw_cdns_enable_interrupt(cdns, true);
 		if (ret < 0) {
 			dev_err(dev, "cannot enable interrupts during resume\n");
 			return ret;
 		}
 
-		ret = sdw_cdns_clock_restart(cdns, !clock_stop0);
-		if (ret < 0) {
-			dev_err(dev, "unable to restart clock during resume\n");
-			return ret;
-		}
 	} else if (!clock_stop_quirks) {
 		ret = intel_init(sdw);
 		if (ret) {
@@ -1782,15 +1785,15 @@ static int intel_resume_runtime(struct device *dev)
 			return ret;
 		}
 
-		ret = sdw_cdns_enable_interrupt(cdns, true);
-		if (ret < 0) {
-			dev_err(dev, "cannot enable interrupts during resume\n");
-			return ret;
-		}
-
 		ret = sdw_cdns_clock_restart(cdns, false);
 		if (ret < 0) {
 			dev_err(dev, "unable to resume master during resume\n");
+			return ret;
+		}
+
+		ret = sdw_cdns_enable_interrupt(cdns, true);
+		if (ret < 0) {
+			dev_err(dev, "cannot enable interrupts during resume\n");
 			return ret;
 		}
 	} else {
