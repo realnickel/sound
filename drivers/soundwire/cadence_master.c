@@ -1343,6 +1343,8 @@ EXPORT_SYMBOL(sdw_cdns_clock_stop);
  */
 int sdw_cdns_clock_restart(struct sdw_cdns *cdns, bool bus_reset)
 {
+	u32 slave0;
+	u32 slave1;
 	int ret;
 
 	dev_dbg(cdns->dev, "%s: start\n", __func__);
@@ -1369,6 +1371,19 @@ int sdw_cdns_clock_restart(struct sdw_cdns *cdns, bool bus_reset)
 	 */
 	cdns_updatel(cdns, CDNS_MCP_INTMASK,
 		     CDNS_MCP_INT_WAKEUP, CDNS_MCP_INT_WAKEUP);
+
+	/* clear slave status to avoid spurious interrupts */
+	slave0 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT0);
+	slave1 = cdns_readl(cdns, CDNS_MCP_SLAVE_INTSTAT1);
+	if (slave0)
+		dev_dbg(cdns->dev, "%s: slave0 status 0x%x\n",
+			__func__, slave0);
+	if (slave1)
+		dev_dbg(cdns->dev, "%s: slave1 status 0x%x\n",
+			__func__, slave1);
+
+	cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT0, slave0);
+	cdns_writel(cdns, CDNS_MCP_SLAVE_INTSTAT1, slave1);
 
 	/*
 	 * clear CMD_ACCEPT so that the command ignored
