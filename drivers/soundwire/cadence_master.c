@@ -793,6 +793,12 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 		dev_err_ratelimited(cdns->dev, "Bus clash for data word\n");
 	}
 
+	if (int_status & CDNS_MCP_INT_WAKEUP) {
+		dev_dbg(cdns->dev, "WakeUp interrupt: Master left clock stop mode\n");
+		cdns_updatel(cdns, CDNS_MCP_INTMASK,
+			     CDNS_MCP_INT_WAKEUP, 0);
+	}
+
 	if (int_status & CDNS_MCP_INT_SLAVE_MASK) {
 		/* Mask the Slave interrupt and wake thread */
 		cdns_updatel(cdns, CDNS_MCP_INTMASK,
@@ -1356,6 +1362,13 @@ int sdw_cdns_clock_restart(struct sdw_cdns *cdns, bool bus_reset)
 
 	cdns_updatel(cdns, CDNS_MCP_CONTROL,
 		     CDNS_MCP_CONTROL_BLOCK_WAKEUP, 0);
+
+	/*
+	 * enable WAKEUP interrupt so that we can track when the Master IP
+	 * leaves the clock stop mode. This is a one shot operation.
+	 */
+	cdns_updatel(cdns, CDNS_MCP_INTMASK,
+		     CDNS_MCP_INT_WAKEUP, CDNS_MCP_INT_WAKEUP);
 
 	/*
 	 * clear CMD_ACCEPT so that the command ignored
