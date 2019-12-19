@@ -12,6 +12,7 @@
 #include <sound/sof/header.h>
 #include <sound/sof/dai-intel.h>
 #include <sound/sof/dai-imx.h>
+#include <sound/sof/channel_map.h>
 
 /*
  * DAI Configuration.
@@ -53,6 +54,30 @@ enum sof_ipc_dai_type {
 	SOF_DAI_INTEL_ALH,		/**< Intel ALH  */
 	SOF_DAI_IMX_SAI,		/**< i.MX SAI */
 	SOF_DAI_IMX_ESAI,		/**< i.MX ESAI */
+	SOF_DAI_COMPOUND_DAI,           /**< Compound DAI composed on multiple DAIs */
+};
+
+/* COMPOUND_DAI Configuration Request - SOF_IPC_COMPOUND_DAI_CONFIG */
+struct sof_ipc_compound_dai_params {
+	/* number of components */
+	uint32_t num_comp;
+	/*
+	 * one map per child DAI, the ext_type encoded the DAI_TYPE
+	 * (16 msb) and the DAI_INDEX (16 lsb)
+	 * (e.g. msb==DAI_TYPE and lsg DAI_INDEX)
+	 */
+
+	struct sof_ipc_channel_map ch_map[0];
+
+	/* one configuration per child DAI */
+	union {
+		struct sof_ipc_dai_ssp_params ssp;
+		struct sof_ipc_dai_dmic_params dmic;
+		struct sof_ipc_dai_hda_params hda;
+		struct sof_ipc_dai_alh_params alh;
+		struct sof_ipc_dai_esai_params esai;
+		struct sof_ipc_dai_sai_params sai;
+	} child_configs[0];
 };
 
 /* general purpose DAI configuration */
@@ -76,6 +101,7 @@ struct sof_ipc_dai_config {
 		struct sof_ipc_dai_alh_params alh;
 		struct sof_ipc_dai_esai_params esai;
 		struct sof_ipc_dai_sai_params sai;
+		struct sof_ipc_compound_dai_params compound_dai;
 	};
 } __packed;
 
