@@ -283,6 +283,7 @@ static struct sdw_intel_ctx
 		link->cdns = &sdw->cdns;
 
 		list_add_tail(&link->list, &ctx->link_list);
+
 		/* Calculate number of slaves */
 		list_for_each(node, &bus->slaves)
 			num_slaves++;
