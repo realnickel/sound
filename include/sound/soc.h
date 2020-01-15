@@ -1126,8 +1126,8 @@ struct snd_soc_pcm_runtime {
 	/* runtime devices */
 	struct snd_pcm *pcm;
 	struct snd_compr *compr;
-	struct snd_soc_dai *codec_dai;
-	struct snd_soc_dai *cpu_dai;
+	struct snd_soc_dai *old_codec_dai;
+	struct snd_soc_dai *old_cpu_dai;
 
 	struct snd_soc_dai **codec_dais;
 	unsigned int num_codecs;
@@ -1345,8 +1345,8 @@ struct snd_soc_dai *snd_soc_card_get_codec_dai(struct snd_soc_card *card,
 	struct snd_soc_pcm_runtime *rtd;
 
 	list_for_each_entry(rtd, &card->rtd_list, list) {
-		if (!strcmp(rtd->codec_dai->name, dai_name))
-			return rtd->codec_dai;
+		if (!strcmp(rtd->old_codec_dai->name, dai_name))
+			return rtd->old_codec_dai;
 	}
 
 	return NULL;

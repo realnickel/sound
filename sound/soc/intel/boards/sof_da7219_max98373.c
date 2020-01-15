@@ -96,8 +96,8 @@ static struct snd_soc_jack headset;
 
 static int da7219_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_component *component = rtd->codec_dai->component;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_component *component = rtd->old_codec_dai->component;
+	struct snd_soc_dai *codec_dai = rtd->old_codec_dai;
 	struct snd_soc_jack *jack;
 	int ret;
 
@@ -181,7 +181,7 @@ static struct snd_soc_codec_conf max98373_codec_conf[] = {
 static int hdmi_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
-	struct snd_soc_dai *dai = rtd->codec_dai;
+	struct snd_soc_dai *dai = rtd->old_codec_dai;
 	struct hdmi_pcm *pcm;
 
 	pcm = devm_kzalloc(rtd->card->dev, sizeof(*pcm), GFP_KERNEL);
