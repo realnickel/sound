@@ -1380,7 +1380,7 @@ static int intel_init(struct sdw_intel *sdw)
 	if (clock_stop)
 		return 0;
 
-	return sdw_cdns_init(&sdw->cdns);
+	return sdw_cdns_init(&sdw->cdns, false);
 }
 
 /*

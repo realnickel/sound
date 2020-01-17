@@ -1074,8 +1074,9 @@ static void cdns_init_clock_ctrl(struct sdw_cdns *cdns)
 /**
  * sdw_cdns_init() - Cadence initialization
  * @cdns: Cadence instance
+ * @multi_master: synchronized multi-master operation
  */
-int sdw_cdns_init(struct sdw_cdns *cdns)
+int sdw_cdns_init(struct sdw_cdns *cdns, bool multi_master)
 {
 	u32 val;
 
@@ -1108,7 +1109,10 @@ int sdw_cdns_init(struct sdw_cdns *cdns)
 	/* Disable auto bus release */
 	val &= ~CDNS_MCP_CONFIG_BUS_REL;
 
-	/* Multi-master support to be added here */
+	if (multi_master) {
+		/* Set Multi-master mode to take gsync into account */
+		val |= CDNS_MCP_CONFIG_MMASTER;
+	}
 
 	/* leave frame delay to hardware default of 0x1F */
 
