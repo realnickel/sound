@@ -798,13 +798,21 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 		bus = m_rt->bus;
 		ops = bus->ops;
 
+		dev_dbg(bus->dev, "%s 1\n", __func__);
+
 		if (bus->multi_link && m_rt_count >= bus->hw_sync_min_links) {
+
+			dev_dbg(bus->dev, "%s 2\n", __func__);
+
 			multi_link = true;
 			mutex_lock(&bus->msg_lock);
 		}
 
+		dev_dbg(bus->dev, "%s 3\n", __func__);
+
 		/* Pre-bank switch */
 		if (ops->pre_bank_switch) {
+			dev_dbg(bus->dev, "%s 4\n", __func__);
 			ret = ops->pre_bank_switch(bus);
 			if (ret < 0) {
 				dev_err(bus->dev,
@@ -813,6 +821,7 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 			}
 		}
 
+		dev_dbg(bus->dev, "%s 5\n", __func__);
 		/*
 		 * Perform Bank switch operation.
 		 * For multi link cases, the actual bank switch is
@@ -824,6 +833,8 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 			dev_err(bus->dev, "Bank switch failed: %d\n", ret);
 			goto error;
 		}
+
+		dev_dbg(bus->dev, "%s 6\n", __func__);
 	}
 
 	/*
@@ -836,8 +847,12 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 		bus = m_rt->bus;
 		ops = bus->ops;
 
+		dev_dbg(bus->dev, "%s 7\n", __func__);
 		/* Post-bank switch */
 		if (ops->post_bank_switch) {
+
+			dev_dbg(bus->dev, "%s 8\n", __func__);
+
 			ret = ops->post_bank_switch(bus);
 			if (ret < 0) {
 				dev_err(bus->dev,
@@ -851,6 +866,8 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 			goto error;
 		}
 
+		dev_dbg(bus->dev, "%s 9\n", __func__);
+
 		/* Set the bank switch timeout to default, if not set */
 		if (!bus->bank_switch_timeout)
 			bus->bank_switch_timeout = DEFAULT_BANK_SWITCH_TIMEOUT;
@@ -863,13 +880,19 @@ static int do_bank_switch(struct sdw_stream_runtime *stream)
 			goto error;
 		}
 
+		dev_dbg(bus->dev, "%s 10\n", __func__);
+
 		if (multi_link)
 			mutex_unlock(&bus->msg_lock);
+
+		dev_dbg(bus->dev, "%s 11\n", __func__);
 	}
 
 	return ret;
 
 error:
+	dev_dbg(bus->dev, "%s 12\n", __func__);
+
 	list_for_each_entry(m_rt, &stream->master_list, stream_node) {
 		bus = m_rt->bus;
 
@@ -879,6 +902,7 @@ error:
 
 msg_unlock:
 
+	dev_dbg(bus->dev, "%s 13\n", __func__);
 	if (multi_link) {
 		list_for_each_entry(m_rt, &stream->master_list, stream_node) {
 			bus = m_rt->bus;
