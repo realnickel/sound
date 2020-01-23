@@ -512,6 +512,8 @@ static void intel_shim_sync_arm(struct sdw_intel *sdw)
 	void __iomem *shim = sdw->link_res->shim;
 	u32 sync_reg;
 
+	dev_err(sdw->cdns.dev, "%s start\n", __func__);
+
 	mutex_lock(sdw->link_res->shim_lock);
 
 	/* update SYNC register */
@@ -520,6 +522,8 @@ static void intel_shim_sync_arm(struct sdw_intel *sdw)
 	intel_writel(shim, SDW_SHIM_SYNC, sync_reg);
 
 	mutex_unlock(sdw->link_res->shim_lock);
+
+	dev_err(sdw->cdns.dev, "%s end\n", __func__);
 }
 
 static int intel_shim_sync_go_unlocked(struct sdw_intel *sdw)
@@ -527,6 +531,8 @@ static int intel_shim_sync_go_unlocked(struct sdw_intel *sdw)
 	void __iomem *shim = sdw->link_res->shim;
 	u32 sync_reg;
 	int ret;
+
+	dev_err(sdw->cdns.dev, "%s start\n", __func__);
 
 	/* Read SYNC register */
 	sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
@@ -543,6 +549,8 @@ static int intel_shim_sync_go_unlocked(struct sdw_intel *sdw)
 
 	if (ret < 0)
 		dev_err(sdw->cdns.dev, "SyncGO clear failed: %d\n", ret);
+
+	dev_err(sdw->cdns.dev, "%s end\n", __func__);
 
 	return ret;
 }
