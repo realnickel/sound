@@ -852,6 +852,11 @@ struct sdw_master_ops {
  * appropriate firmware (ACPI/DT).
  * @link_ops: optional link-specific ops
  * @pdata: optional link-specific private data
+ * @hw_sync_min_links: Number of links used by a stream above which
+ * hardware-based synchronization is required. This value is only
+ * meaningful if multi_link is set. If set to 1, hardware-based
+ * synchronization will be used even if a stream only uses a single
+ * SoundWire segment.
  */
 struct sdw_bus {
 	struct device *dev;
@@ -876,6 +881,7 @@ struct sdw_bus {
 	bool multi_link;
 	struct sdw_link_ops *link_ops;
 	void *pdata;
+	int hw_sync_min_links;
 };
 
 int sdw_bus_master_add(struct sdw_bus *bus, struct device *parent,
