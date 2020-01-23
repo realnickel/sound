@@ -1354,6 +1354,12 @@ static int intel_master_add(struct sdw_bus *bus)
 			 "SoundWire master %d is disabled, will be ignored\n",
 			 bus->link_id);
 
+	/*
+	 * Ignore BIOS err_threshold, it's a really bad idea when dealing
+	 * with multiple hardware synchronized links
+	 */
+	sdw->cdns.bus.prop.err_threshold = 0;
+
 	return 0;
 }
 
