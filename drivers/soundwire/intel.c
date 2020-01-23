@@ -1359,6 +1359,11 @@ static int intel_master_probe(struct sdw_intel_master_dev *master_dev)
 		dev_info(dev,
 			 "SoundWire master %d is disabled, will be ignored\n",
 			 bus->link_id);
+	/*
+	 * Ignore BIOS err_threshold, it's a really bad idea when dealing
+	 * with multiple hardware synchronized links
+	 */
+	bus->prop.err_threshold = 0;
 
 	complete(&master_dev->probe_complete);
 
