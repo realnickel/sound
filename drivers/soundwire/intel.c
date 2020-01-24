@@ -1420,6 +1420,7 @@ int intel_master_startup(struct platform_device *pdev)
 	struct sdw_cdns *cdns = platform_get_drvdata(pdev);
 	struct sdw_intel *sdw = cdns_to_intel(cdns);
 	struct sdw_cdns_stream_config config;
+	struct sdw_bus *bus;
 	int link_flags;
 	bool multi_master;
 	u32 clock_stop_quirks;
@@ -1431,10 +1432,23 @@ int intel_master_startup(struct platform_device *pdev)
 		return 0;
 	}
 
+	bus = &sdw->cdns.bus;
+
 	link_flags = md_flags >> (sdw->cdns.bus.link_id * 8);
 	multi_master = !(link_flags & SDW_INTEL_MASTER_DISABLE_MULTI_MASTER);
-	if (!multi_master)
+	if (!multi_master) {
 		dev_dbg(&pdev->dev, "Multi-master is disabled\n");
+		bus->multi_link = false;
+	} else {
+		/*
+		 * hardware-based synchronization is required regardless
+		 * of the number of segments used by a stream: SSP-based
+		 * synchronization is gated by gsync when the multi-master
+		 * mode is set.
+		 */
+		bus->multi_link = true;
+		bus->hw_sync_min_links = 1;
+	}
 
 	/* Initialize shim, controller */
 	ret = intel_init(sdw);
