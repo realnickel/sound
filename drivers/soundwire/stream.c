@@ -763,6 +763,8 @@ static int sdw_ml_sync_bank_switch(struct sdw_bus *bus)
 	if (!bus->multi_link)
 		return 0;
 
+	dev_dbg(bus->dev, "%s start\n", __func__);
+
 	/* Wait for completion of transfer */
 	time_left = wait_for_completion_timeout(&bus->defer_msg.complete,
 						bus->bank_switch_timeout);

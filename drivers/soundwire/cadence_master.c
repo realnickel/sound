@@ -431,6 +431,9 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 	u32 base, i, data;
 	u16 addr;
 
+	if (defer)
+		dev_dbg(cdns->dev, "%s count %d, cdns->msg_count %d\n", __func__, count, cdns->msg_count);
+
 	/* Program the watermark level for RX FIFO */
 	if (cdns->msg_count != count) {
 		cdns_writel(cdns, CDNS_MCP_FIFOLEVEL, count);
@@ -453,9 +456,10 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 		base += CDNS_MCP_CMD_WORD_LEN;
 	}
 
-	if (defer)
+	if (defer) {
+		dev_dbg(cdns->dev, "%s message sent\n", __func__);
 		return SDW_CMD_OK;
-
+	}
 	/* wait for timeout or response */
 	time = wait_for_completion_timeout(&cdns->tx_complete,
 					   msecs_to_jiffies(CDNS_TX_TIMEOUT));
@@ -759,6 +763,9 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 		cdns_read_response(cdns);
 
 		if (cdns->defer) {
+
+			dev_dbg(cdns->dev, "irq defer handling\n");
+
 			cdns_fill_msg_resp(cdns, cdns->defer->msg,
 					   cdns->defer->length, 0);
 			complete(&cdns->defer->complete);

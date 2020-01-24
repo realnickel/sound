@@ -197,6 +197,8 @@ static inline int do_transfer_defer(struct sdw_bus *bus,
 	enum sdw_command_response resp;
 	int ret = 0, i;
 
+	dev_dbg(bus->dev, "do_transfer_defer start\n");
+
 	defer->msg = msg;
 	defer->length = msg->len;
 	init_completion(&defer->complete);
@@ -204,6 +206,9 @@ static inline int do_transfer_defer(struct sdw_bus *bus,
 	for (i = 0; i <= retry; i++) {
 		resp = bus->ops->xfer_msg_defer(bus, msg, defer);
 		ret = find_response_code(resp);
+
+		dev_dbg(bus->dev, "do_transfer_defer ret %d\n", ret);
+
 		/* if cmd is ok or ignored return */
 		if (ret == 0 || ret == -ENODATA)
 			return ret;
