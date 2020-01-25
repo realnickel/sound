@@ -14,6 +14,7 @@
 #include <linux/soundwire/sdw_registers.h>
 #include <linux/soundwire/sdw.h>
 #include "bus.h"
+#include "cadence_master.h"
 
 /*
  * Array of supported rows and columns as per MIPI SoundWire Specification 1.1
@@ -771,6 +772,9 @@ static int sdw_ml_sync_bank_switch(struct sdw_bus *bus)
 
 	if (!time_left) {
 		dev_err(bus->dev, "Controller Timed out on bank switch\n");
+
+		sdw_bus_log_status(bus);
+
 		return -ETIMEDOUT;
 	}
 

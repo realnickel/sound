@@ -1580,3 +1580,10 @@ void sdw_clear_slave_status(struct sdw_bus *bus, u32 request)
 	}
 }
 EXPORT_SYMBOL(sdw_clear_slave_status);
+
+void sdw_bus_log_status(struct sdw_bus *bus)
+{
+	if (bus->log_status)
+		bus->log_status(bus);
+}
+EXPORT_SYMBOL(sdw_bus_log_status);

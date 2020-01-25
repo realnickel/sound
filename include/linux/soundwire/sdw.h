@@ -847,6 +847,7 @@ struct sdw_bus {
 	u32 bank_switch_timeout;
 	bool multi_link;
 	int hw_sync_min_links;
+	void (*log_status)(struct sdw_bus *bus);
 };
 
 int sdw_add_bus_master(struct sdw_bus *bus);

@@ -191,4 +191,7 @@ int cdns_bus_conf(struct sdw_bus *bus, struct sdw_bus_params *params);
 
 int cdns_set_sdw_stream(struct snd_soc_dai *dai,
 			void *stream, bool pcm, int direction);
+
+void cdns_log_status(struct sdw_bus *bus);
+
 #endif /* __SDW_CADENCE_H */

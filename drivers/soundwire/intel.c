@@ -807,6 +807,8 @@ static int intel_post_bank_switch(struct sdw_bus *bus)
 	/* Read SYNC register */
 	sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
 
+	dev_err(sdw->cdns.dev, "%s sync_reg: %x\n", __func__, sync_reg);
+			
 	/*
 	 * post_bank_switch() ops is called from the bus in loop for
 	 * all the Masters in the steam with the expectation that
@@ -816,11 +818,17 @@ static int intel_post_bank_switch(struct sdw_bus *bus)
 	 * So, set the SYNCGO bit only if CMDSYNC bit is set for any Master.
 	 */
 	if (!(sync_reg & SDW_SHIM_SYNC_CMDSYNC_MASK)) {
+		dev_err(sdw->cdns.dev, "%s nothing to do\n", __func__);
 		ret = 0;
 		goto unlock;
 	}
 
 	ret = intel_shim_sync_go_unlocked(sdw);
+	
+	sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
+
+	dev_err(sdw->cdns.dev, "%s sync_reg: %x\n", __func__, sync_reg);
+
 unlock:
 	mutex_unlock(sdw->link_res->shim_lock);
 
@@ -990,6 +998,8 @@ static int intel_hw_params(struct snd_pcm_substream *substream,
 				    pconfig, 1, dma->stream);
 	if (ret)
 		dev_err(cdns->dev, "add master to stream failed:%d\n", ret);
+
+	cdns->bus.log_status = cdns_log_status;
 
 	kfree(pconfig);
 error:

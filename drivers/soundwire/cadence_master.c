@@ -21,6 +21,8 @@
 #include "bus.h"
 #include "cadence_master.h"
 
+static volatile int bank_switch = 0;
+
 static int interrupt_mask;
 module_param_named(cnds_mcp_int_mask, interrupt_mask, int, 0444);
 MODULE_PARM_DESC(cdns_mcp_int_mask, "Cadence MCP IntMask");
@@ -431,9 +433,21 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 	u32 base, i, data;
 	u16 addr;
 
-	if (defer)
-		dev_dbg(cdns->dev, "%s count %d, cdns->msg_count %d\n", __func__, count, cdns->msg_count);
+	if (defer) {
+		u32 status;
 
+		dev_dbg(cdns->dev, "%s before bank switch command\n", __func__);
+
+		status = cdns_readl(cdns, CDNS_MCP_STAT);
+		dev_dbg(cdns->dev, "%s MCP_STAT %x\n", __func__, status);
+		
+		bank_switch = 1;
+	}
+
+	if (bank_switch == 1) {
+		dev_dbg(cdns->dev, "%s tranfer %d\n", __func__, count);
+	}
+	
 	/* Program the watermark level for RX FIFO */
 	if (cdns->msg_count != count) {
 		cdns_writel(cdns, CDNS_MCP_FIFOLEVEL, count);
@@ -452,12 +466,22 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 			data |= msg->buf[i + offset];
 
 		data |= msg->ssp_sync << SDW_REG_SHIFT(CDNS_MCP_CMD_SSP_TAG);
+
+		if (defer)
+			dev_dbg(cdns->dev, "%s command %x\n", __func__, data);
+
 		cdns_writel(cdns, base, data);
 		base += CDNS_MCP_CMD_WORD_LEN;
 	}
 
 	if (defer) {
+		u32 status;
+		
 		dev_dbg(cdns->dev, "%s message sent\n", __func__);
+
+		status = cdns_readl(cdns, CDNS_MCP_STAT);
+		dev_dbg(cdns->dev, "%s MCP_STAT %x\n", __func__, status);
+
 		return SDW_CMD_OK;
 	}
 	/* wait for timeout or response */
@@ -472,6 +496,16 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 
 	return cdns_fill_msg_resp(cdns, msg, count, offset);
 }
+
+void cdns_log_status(struct sdw_bus *bus)
+{
+	struct sdw_cdns *cdns = bus_to_cdns(bus);
+	u32 status;
+
+	status = cdns_readl(cdns, CDNS_MCP_STAT);
+	dev_dbg(cdns->dev, "%s MCP_STAT %x\n", __func__, status);
+}
+EXPORT_SYMBOL(cdns_log_status);
 
 static enum sdw_command_response
 cdns_program_scp_addr(struct sdw_cdns *cdns, struct sdw_msg *msg)
@@ -746,11 +780,16 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 	u32 int_status;
 	int ret = IRQ_HANDLED;
 
+
 	/* Check if the link is up */
 	if (!cdns->link_up)
 		return IRQ_NONE;
 
 	int_status = cdns_readl(cdns, CDNS_MCP_INTSTAT);
+
+	if (bank_switch) {
+		dev_dbg(cdns->dev, "IRQ after bank switch status %x\n", int_status);
+	}
 
 	/* check for reserved values read as zero */
 	if (int_status & CDNS_MCP_INT_RESERVED)
@@ -758,8 +797,9 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 
 	if (!(int_status & CDNS_MCP_INT_IRQ))
 		return IRQ_NONE;
-
+	
 	if (int_status & CDNS_MCP_INT_RX_WL) {
+			
 		cdns_read_response(cdns);
 
 		if (cdns->defer) {
@@ -1101,11 +1141,11 @@ int sdw_cdns_init(struct sdw_cdns *cdns, bool multi_master)
 	/* flush command FIFOs */
 	cdns_updatel(cdns, CDNS_MCP_CONTROL, CDNS_MCP_CONTROL_CMD_RST,
 		     CDNS_MCP_CONTROL_CMD_RST);
-
+#if 0
 	/* Set cmd accept mode */
 	cdns_updatel(cdns, CDNS_MCP_CONTROL, CDNS_MCP_CONTROL_CMD_ACCEPT,
 		     CDNS_MCP_CONTROL_CMD_ACCEPT);
-
+#endif
 	/* Configure mcp config */
 	val = cdns_readl(cdns, CDNS_MCP_CONFIG);
 
