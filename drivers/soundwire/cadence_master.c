@@ -440,14 +440,14 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 
 		status = cdns_readl(cdns, CDNS_MCP_STAT);
 		dev_dbg(cdns->dev, "%s MCP_STAT %x\n", __func__, status);
-		
+
 		bank_switch = 1;
 	}
 
 	if (bank_switch == 1) {
 		dev_dbg(cdns->dev, "%s tranfer %d\n", __func__, count);
 	}
-	
+
 	/* Program the watermark level for RX FIFO */
 	if (cdns->msg_count != count) {
 		cdns_writel(cdns, CDNS_MCP_FIFOLEVEL, count);
@@ -476,7 +476,7 @@ _cdns_xfer_msg(struct sdw_cdns *cdns, struct sdw_msg *msg, int cmd,
 
 	if (defer) {
 		u32 status;
-		
+
 		dev_dbg(cdns->dev, "%s message sent\n", __func__);
 
 		status = cdns_readl(cdns, CDNS_MCP_STAT);
@@ -797,9 +797,9 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 
 	if (!(int_status & CDNS_MCP_INT_IRQ))
 		return IRQ_NONE;
-	
+
 	if (int_status & CDNS_MCP_INT_RX_WL) {
-			
+
 		cdns_read_response(cdns);
 
 		if (cdns->defer) {
@@ -1132,6 +1132,8 @@ static void cdns_init_clock_ctrl(struct sdw_cdns *cdns)
 int sdw_cdns_init(struct sdw_cdns *cdns, bool multi_master)
 {
 	u32 val;
+
+	dev_err(cdns->dev, "%s: multi_master %d\n", __func__, multi_master);
 
 	cdns_init_clock_ctrl(cdns);
 
