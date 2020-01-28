@@ -234,12 +234,6 @@ static struct sdw_intel_ctx
 	link = ctx->links;
 	link_mask = ctx->link_mask;
 
-	err = driver_register(&intel_sdw_driver.driver);
-	if (err) {
-		dev_err(&adev->dev, "failed to register sdw master driver\n");
-		goto register_err;
-	}
-
 	INIT_LIST_HEAD(&ctx->link_list);
 
 	/* Create SDW Master devices */
@@ -301,8 +295,6 @@ static struct sdw_intel_ctx
 err:
 	sdw_intel_cleanup(ctx);
 link_err:
-	driver_unregister(&intel_sdw_driver.driver);
-register_err:
 	kfree(ctx);
 	return NULL;
 }
@@ -455,7 +447,6 @@ EXPORT_SYMBOL_NS(sdw_intel_startup, SOUNDWIRE_INTEL_INIT);
 void sdw_intel_exit(struct sdw_intel_ctx *ctx)
 {
 	sdw_intel_cleanup(ctx);
-	driver_unregister(&intel_sdw_driver.driver);
 	kfree(ctx);
 }
 EXPORT_SYMBOL_NS(sdw_intel_exit, SOUNDWIRE_INTEL_INIT);

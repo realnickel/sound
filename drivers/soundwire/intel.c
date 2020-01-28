@@ -1428,7 +1428,7 @@ static int intel_master_startup(struct sdw_master_device *md)
 	 * Slave devices have an pm_runtime of 'Unsupported' until
 	 * they report as ATTACHED. If they don't, e.g. because there
 	 * are no Slave devices populated or if the power-on is
-	 * delayed or dependent on a power switch, the Master will
+	 * delayed or dependent  on a power switch, the Master will
 	 * remain active and prevent its parent from suspending.
 	 *
 	 * Conditionally force the pm_runtime core to re-evaluate the
