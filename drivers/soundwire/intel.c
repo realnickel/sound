@@ -808,7 +808,7 @@ static int intel_post_bank_switch(struct sdw_bus *bus)
 	sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
 
 	dev_err(sdw->cdns.dev, "%s sync_reg: %x\n", __func__, sync_reg);
-			
+
 	/*
 	 * post_bank_switch() ops is called from the bus in loop for
 	 * all the Masters in the steam with the expectation that
@@ -824,7 +824,7 @@ static int intel_post_bank_switch(struct sdw_bus *bus)
 	}
 
 	ret = intel_shim_sync_go_unlocked(sdw);
-	
+
 	sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
 
 	dev_err(sdw->cdns.dev, "%s sync_reg: %x\n", __func__, sync_reg);
@@ -1389,17 +1389,18 @@ static int intel_init(struct sdw_intel *sdw)
 {
 	bool clock_stop;
 
+	dev_err(sdw->cdns.dev, "%s: start\n", __func__);
+
 	/* Initialize shim and controller */
 	intel_link_power_up(sdw);
 
 	clock_stop = sdw_cdns_is_clock_stop(&sdw->cdns);
 
+	dev_err(sdw->cdns.dev, "%s: shim_init clock stop %d\n", __func__, clock_stop);
+
 	intel_shim_init(sdw, clock_stop);
 
-	if (clock_stop)
-		return 0;
-
-	return sdw_cdns_init(&sdw->cdns, false);
+	return 0;
 }
 
 /*
