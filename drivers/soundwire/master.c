@@ -20,26 +20,25 @@ struct device_type sdw_master_type = {
 };
 
 struct sdw_master_device
-*sdw_master_device_add(struct sdw_master_driver *driver,
+*sdw_master_device_add(const char *name,
 		       struct device *parent,
 		       struct fwnode_handle *fwnode,
-		       int link_id)
+		       int link_id,
+		       void *pdata)
 {
 	struct sdw_master_device *md;
 	int ret;
 
-	if (!driver->probe) {
-		dev_err(parent, "mandatory probe callback missing\n");
-		return ERR_PTR(-EINVAL);
-	}
+	pr_err("%s 1\n", __func__);
 
 	md = kzalloc(sizeof(*md), GFP_KERNEL);
 	if (!md)
 		return ERR_PTR(-ENOMEM);
 
-	md->link_id = link_id;
+	pr_err("%s 2\n", __func__);
 
-	md->driver = driver;
+	md->link_id = link_id;
+	md->pdata = pdata;
 
 	md->dev.parent = parent;
 	md->dev.fwnode = fwnode;
@@ -47,10 +46,12 @@ struct sdw_master_device
 	md->dev.type = &sdw_master_type;
 	md->dev.dma_mask = md->dev.parent->dma_mask;
 	dev_set_name(&md->dev, "sdw-master-%d", md->link_id);
-	md->dev.driver = &driver->driver;
+
+	pr_err("%s 3\n", __func__);
 
 	ret = device_register(&md->dev);
 	if (ret) {
+		pr_err("%s 4\n", __func__);
 		dev_err(parent, "Failed to add master: ret %d\n", ret);
 		/*
 		 * On err, don't free but drop ref as this will be freed
@@ -60,6 +61,60 @@ struct sdw_master_device
 		return ERR_PTR(-ENOMEM);
 	}
 
+	pr_err("%s end\n", __func__);
+
 	return md;
 }
 EXPORT_SYMBOL_GPL(sdw_master_device_add);
+
+int sdw_master_device_startup(struct sdw_master_device *md)
+{
+	struct sdw_master_driver *mdrv;
+	struct device *dev;
+
+	pr_err("%s: start\n", __func__);
+	if (!md)
+		return -EINVAL;
+
+	pr_err("%s: 1\n", __func__);
+
+	dev = &md->dev;
+	mdrv = drv_to_sdw_master_driver(dev->driver);
+
+	pr_err("%s: 2\n", __func__);
+
+	if (mdrv && mdrv->startup) {
+		pr_err("%s: 3\n", __func__);
+		mdrv->startup(md);
+	}
+
+	pr_err("%s: end\n", __func__);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(sdw_master_device_startup);
+
+int sdw_master_device_process_wake_event(struct sdw_master_device *md)
+{
+	struct sdw_master_driver *mdrv;
+	struct device *dev;
+
+	pr_err("%s: start\n", __func__);
+	if (!md)
+		return -EINVAL;
+
+	pr_err("%s: 1\n", __func__);
+
+	dev = &md->dev;
+	mdrv = drv_to_sdw_master_driver(dev->driver);
+
+	pr_err("%s: 2\n", __func__);
+
+	if (mdrv && mdrv->process_wake_event) {
+		pr_err("%s: 3\n", __func__);
+		mdrv->startup(md);
+	}
+
+	pr_err("%s: end\n", __func__);
+}
+EXPORT_SYMBOL_GPL(sdw_master_device_process_wake_event);

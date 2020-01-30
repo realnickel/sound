@@ -72,10 +72,6 @@ static int sdw_intel_cleanup(struct sdw_intel_ctx *ctx)
 
 		if (!link->clock_stop_quirks)
 			pm_runtime_put_noidle(link->dev);
-
-		md = link->md;
-		if (md)
-			md->driver->remove(md);
 	}
 
 	kfree(ctx->links);
@@ -234,12 +230,6 @@ static struct sdw_intel_ctx
 	link = ctx->links;
 	link_mask = ctx->link_mask;
 
-	err = driver_register(&intel_sdw_driver.driver);
-	if (err) {
-		dev_err(&adev->dev, "failed to register sdw master driver\n");
-		goto register_err;
-	}
-
 	INIT_LIST_HEAD(&ctx->link_list);
 
 	/* Create SDW Master devices */
@@ -247,16 +237,6 @@ static struct sdw_intel_ctx
 		if (link_mask && !(link_mask & BIT(i)))
 			continue;
 
-		md = sdw_master_device_add(&intel_sdw_driver,
-					   res->parent,
-					   acpi_fwnode_handle(adev),
-					   i);
-
-		if (IS_ERR(md)) {
-			dev_err(&adev->dev, "Could not create link %d\n", i);
-			goto err;
-		}
-		link->md = md;
 		link->mmio_base = res->mmio_base;
 		link->registers = res->mmio_base + SDW_LINK_BASE
 			+ (SDW_LINK_SIZE * i);
@@ -266,13 +246,22 @@ static struct sdw_intel_ctx
 		link->dev = res->dev;
 		link->clock_stop_quirks = res->clock_stop_quirks;
 
-		/* let the SoundWire master driver to its probe */
-		err = md->driver->probe(md, link);
-		if (err < 0) {
-			dev_err(&adev->dev, "Could not probe Master %d %d\n",
-				i, err);
+		dev_err(&adev->dev, "before sdw_master_device_add\n");
+
+		md = sdw_master_device_add("intel-sdw",
+					   res->parent,
+					   acpi_fwnode_handle(adev),
+					   i,
+					   link);
+
+		dev_err(&adev->dev, "after sdw_master_device_add\n");
+
+		if (IS_ERR(md)) {
+			dev_err(&adev->dev, "Could not create link %d\n", i);
 			goto err;
 		}
+
+		link->md = md;
 
 		list_add_tail(&link->list, &ctx->link_list);
 		bus = &link->cdns->bus;
@@ -301,8 +290,6 @@ static struct sdw_intel_ctx
 err:
 	sdw_intel_cleanup(ctx);
 link_err:
-	driver_unregister(&intel_sdw_driver.driver);
-register_err:
 	kfree(ctx);
 	return NULL;
 }
@@ -346,7 +333,7 @@ sdw_intel_startup_controller(struct sdw_intel_ctx *ctx)
 
 		md = link->md;
 
-		md->driver->startup(md);
+		sdw_master_device_startup(md);
 
 		if (!link->clock_stop_quirks) {
 			/*
@@ -455,7 +442,6 @@ EXPORT_SYMBOL_NS(sdw_intel_startup, SOUNDWIRE_INTEL_INIT);
 void sdw_intel_exit(struct sdw_intel_ctx *ctx)
 {
 	sdw_intel_cleanup(ctx);
-	driver_unregister(&intel_sdw_driver.driver);
 	kfree(ctx);
 }
 EXPORT_SYMBOL_NS(sdw_intel_exit, SOUNDWIRE_INTEL_INIT);
@@ -467,12 +453,11 @@ void sdw_intel_process_wakeen_event(struct sdw_intel_ctx *ctx)
 
 	if (!ctx->links)
 		return;
-
 	list_for_each_entry(link, &ctx->link_list, list) {
 
 		md = link->md;
 
-		md->driver->process_wake_event(md);
+		sdw_master_device_process_wake_event(md);
 	}
 }
 EXPORT_SYMBOL_NS(sdw_intel_process_wakeen_event, SOUNDWIRE_INTEL_INIT);

@@ -1833,6 +1833,7 @@ static const struct dev_pm_ops intel_pm = {
 };
 
 struct sdw_master_driver intel_sdw_driver = {
+	.name = "intel-sdw",
 	.driver = {
 		.name = "intel-sdw",
 		.owner = THIS_MODULE,
@@ -1844,7 +1845,7 @@ struct sdw_master_driver intel_sdw_driver = {
 	.process_wake_event = intel_master_process_wakeen_event,
 	.remove = intel_master_remove,
 };
-EXPORT_SYMBOL_NS(intel_sdw_driver, SOUNDWIRE_INTEL);
+module_sdw_master_driver(intel_sdw_driver);
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_ALIAS("platform:int-sdw");

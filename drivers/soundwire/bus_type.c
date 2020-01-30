@@ -33,10 +33,27 @@ sdw_get_device_id(struct sdw_slave *slave, struct sdw_driver *drv)
 
 static int sdw_bus_match(struct device *dev, struct device_driver *ddrv)
 {
-	struct sdw_slave *slave = dev_to_sdw_dev(dev);
-	struct sdw_driver *drv = drv_to_sdw_driver(ddrv);
+	struct sdw_slave *slave;
+	struct sdw_driver *drv;
+	struct sdw_master_device *master;
+	struct sdw_master_driver *mdrv;
 
-	return !!sdw_get_device_id(slave, drv);
+	dev_dbg(dev, "%s 1\n", __func__);
+
+	if (is_sdw_slave(dev)) {
+		dev_dbg(dev, "%s 2\n", __func__);
+		slave = dev_to_sdw_dev(dev);
+		drv = drv_to_sdw_driver(ddrv);
+
+		return !!sdw_get_device_id(slave, drv);
+	} else {
+		dev_dbg(dev, "%s 3\n", __func__);
+		master = dev_to_sdw_master_device(dev);
+		mdrv = drv_to_sdw_master_driver(ddrv);
+
+		dev_dbg(dev, "master match\n");
+		return 1;
+	}
 }
 
 int sdw_slave_modalias(const struct sdw_slave *slave, char *buf, size_t size)
@@ -52,6 +69,8 @@ int sdw_uevent(struct device *dev, struct kobj_uevent_env *env)
 	struct sdw_slave *slave;
 	char modalias[32];
 
+	dev_dbg(dev, "%s 1\n", __func__);
+
 	if (is_sdw_slave(dev)) {
 		slave = dev_to_sdw_dev(dev);
 
@@ -59,6 +78,8 @@ int sdw_uevent(struct device *dev, struct kobj_uevent_env *env)
 
 		if (add_uevent_var(env, "MODALIAS=%s", modalias))
 			return -ENOMEM;
+	} else {
+		dev_dbg(dev, "%s 2\n", __func__);
 	}
 
 	return 0;
@@ -183,6 +204,115 @@ void sdw_unregister_driver(struct sdw_driver *drv)
 	driver_unregister(&drv->driver);
 }
 EXPORT_SYMBOL_GPL(sdw_unregister_driver);
+
+static int sdw_master_drv_probe(struct device *dev)
+{
+	struct sdw_master_device *master = dev_to_sdw_master_device(dev);
+	struct sdw_master_driver *mdrv = drv_to_sdw_master_driver(dev->driver);
+	int ret;
+
+	pr_err("%s 1\n", __func__);
+
+	/*
+	 * attach to power domain but don't turn on (last arg)
+	 */
+	ret = dev_pm_domain_attach(dev, false);
+	if (ret)
+		return ret;
+
+	pr_err("%s 2\n", __func__);
+
+	ret = mdrv->probe(master, master->pdata); /* FIXME */
+	if (ret) {
+		dev_err(dev, "Probe of %s failed: %d\n", mdrv->name, ret);
+		dev_pm_domain_detach(dev, false);
+		return ret;
+	}
+
+	pr_err("master probe complete\n");
+
+	return 0;
+}
+
+static int sdw_master_drv_remove(struct device *dev)
+{
+	struct sdw_master_device *master = dev_to_sdw_master_device(dev);
+	struct sdw_master_driver *mdrv = drv_to_sdw_master_driver(dev->driver);
+	int ret = 0;
+
+	if (mdrv->remove)
+		ret = mdrv->remove(master);
+
+	dev_pm_domain_detach(dev, false);
+
+	return ret;
+}
+
+static void sdw_master_drv_shutdown(struct device *dev)
+{
+	struct sdw_master_device *master = dev_to_sdw_master_device(dev);
+	struct sdw_master_driver *mdrv = drv_to_sdw_master_driver(dev->driver);
+
+	if (mdrv->shutdown)
+		mdrv->shutdown(master);
+}
+
+/**
+ * __sdw_register_master_driver() - register a SoundWire Master driver
+ * @drv: driver to register
+ * @owner: owning module/driver
+ *
+ * Return: zero on success, else a negative error code.
+ */
+int __sdw_register_master_driver(struct sdw_master_driver *mdrv, struct module *owner)
+{
+	int ret;
+
+	pr_err("%s: start\n", __func__);
+
+	mdrv->driver.bus = &sdw_bus_type;
+
+	pr_err("%s: 2\n", __func__);
+
+	if (!mdrv->probe) {
+		pr_err("driver %s didn't provide SDW probe routine\n",
+		       mdrv->name);
+		return -EINVAL;
+	}
+
+	pr_err("%s: 3\n", __func__);
+	mdrv->driver.owner = owner;
+	mdrv->driver.probe = sdw_master_drv_probe;
+
+	pr_err("%s: 4\n", __func__);
+
+	if (mdrv->remove)
+		mdrv->driver.remove = sdw_master_drv_remove;
+
+	pr_err("%s: 5\n", __func__);
+
+	if (mdrv->shutdown)
+		mdrv->driver.shutdown = sdw_master_drv_shutdown;
+
+	pr_err("%s: 6\n", __func__);
+
+	ret = driver_register(&mdrv->driver);
+
+	pr_err("%s: 7\n", __func__);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(__sdw_register_master_driver);
+
+/**
+ * sdw_unregister_master_driver() - unregisters the SoundWire Master driver
+ * @drv: driver to unregister
+ */
+void sdw_unregister_master_driver(struct sdw_master_driver *mdrv)
+{
+	driver_unregister(&mdrv->driver);
+}
+EXPORT_SYMBOL_GPL(sdw_unregister_master_driver);
 
 static int __init sdw_bus_init(void)
 {

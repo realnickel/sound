@@ -670,6 +670,7 @@ struct sdw_driver {
  * Slave-initiated wakes
  */
 struct sdw_master_driver {
+	const char *name;
 	int (*probe)(struct sdw_master_device *md, void *link_ctx);
 	int (*startup)(struct sdw_master_device *md);
 	int (*shutdown)(struct sdw_master_device *md);
@@ -870,10 +871,15 @@ int sdw_add_bus_master(struct sdw_bus *bus);
 void sdw_delete_bus_master(struct sdw_bus *bus);
 
 struct sdw_master_device
-*sdw_master_device_add(struct sdw_master_driver *driver,
+*sdw_master_device_add(const char *name,
 		       struct device *parent,
 		       struct fwnode_handle *fwnode,
-		       int link_id);
+		       int link_id,
+		       void *pdata);
+
+int sdw_master_device_startup(struct sdw_master_device *md);
+int sdw_master_device_process_wake_event(struct sdw_master_device *md);
+
 
 /**
  * sdw_port_config: Master or Slave Port configuration
