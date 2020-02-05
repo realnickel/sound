@@ -1275,7 +1275,6 @@ static int intel_init(struct sdw_intel *sdw)
 static int intel_master_add(struct sdw_bus *bus)
 {
 	struct sdw_intel *sdw;
-	int ret;
 
 	if (!bus)
 		return -EINVAL;
@@ -1296,20 +1295,7 @@ static int intel_master_add(struct sdw_bus *bus)
 			 "SoundWire master %d is disabled, will be ignored\n",
 			 bus->link_id);
 
-	/* Acquire IRQ */
-	ret = request_threaded_irq(sdw->link_res->irq,
-				   sdw_cdns_irq, sdw_cdns_thread,
-				   IRQF_SHARED, KBUILD_MODNAME, &sdw->cdns);
-	if (ret < 0) {
-		dev_err(&bus->dev, "unable to grab IRQ %d, disabling device\n",
-			sdw->link_res->irq);
-		goto err_init;
-	}
-
 	return 0;
-
-err_init:
-	return ret;
 }
 
 static int intel_master_startup(struct sdw_bus *bus)
@@ -1370,7 +1356,6 @@ static int intel_master_startup(struct sdw_bus *bus)
 err_interrupt:
 	sdw_cdns_enable_interrupt(&sdw->cdns, false);
 err_init:
-	free_irq(sdw->link_res->irq, sdw);
 	return ret;
 }
 
@@ -1386,7 +1371,6 @@ static int intel_master_delete(struct sdw_bus *bus)
 	if (!sdw->cdns.bus.prop.hw_disabled) {
 		intel_debugfs_exit(sdw);
 		sdw_cdns_enable_interrupt(&sdw->cdns, false);
-		free_irq(sdw->link_res->irq, sdw);
 		snd_soc_unregister_component(&bus->dev);
 	}
 
