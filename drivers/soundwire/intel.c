@@ -301,6 +301,7 @@ static int intel_link_power_up(struct sdw_intel *sdw)
 {
 	unsigned int link_id = sdw->instance;
 	void __iomem *shim = sdw->link_res->shim;
+	u32 *shim_mask = sdw->link_res->shim_mask;
 	struct sdw_bus *bus = &sdw->cdns.bus;
 	struct sdw_master_prop *prop = &bus->prop;
 	int spa_mask, cpa_mask;
@@ -327,15 +328,20 @@ static int intel_link_power_up(struct sdw_intel *sdw)
 	else
 		syncprd = SDW_SHIM_SYNC_SYNCPRD_VAL_24;
 
-	/* we first need to program the SyncPRD/CPU registers */
-	/* set SyncPRD period */
-	sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
-	sync_reg |= (syncprd <<
-		     SDW_REG_SHIFT(SDW_SHIM_SYNC_SYNCPRD));
+	if (!*shim_mask) {
+		/* we first need to program the SyncPRD/CPU registers */
+		dev_dbg(sdw->cdns.dev,
+			"%s: first link up, programming SYNCPRD\n", __func__);
 
-	/* Set SyncCPU bit */
-	sync_reg |= SDW_SHIM_SYNC_SYNCCPU;
-	intel_writel(shim, SDW_SHIM_SYNC, sync_reg);
+		/* set SyncPRD period */
+		sync_reg = intel_readl(shim, SDW_SHIM_SYNC);
+		sync_reg |= (syncprd <<
+			     SDW_REG_SHIFT(SDW_SHIM_SYNC_SYNCPRD));
+
+		/* Set SyncCPU bit */
+		sync_reg |= SDW_SHIM_SYNC_SYNCCPU;
+		intel_writel(shim, SDW_SHIM_SYNC, sync_reg);
+	}
 
 	/* Link power up sequence */
 	link_control = intel_readl(shim, SDW_SHIM_LCTL);
@@ -349,12 +355,18 @@ static int intel_link_power_up(struct sdw_intel *sdw)
 		goto out;
 	}
 
-	/* SyncCPU will change once link is active */
-	ret = intel_wait_bit(shim, SDW_SHIM_SYNC, SDW_SHIM_SYNC_SYNCCPU, 0);
-	if (ret < 0) {
-		dev_err(sdw->cdns.dev, "Failed to set SHIM_SYNC: %d\n", ret);
-		goto out;
+	if (!*shim_mask) {
+		/* SyncCPU will change once link is active */
+		ret = intel_wait_bit(shim, SDW_SHIM_SYNC,
+				     SDW_SHIM_SYNC_SYNCCPU, 0);
+		if (ret < 0) {
+			dev_err(sdw->cdns.dev,
+				"Failed to set SHIM_SYNC: %d\n", ret);
+			goto out;
+		}
 	}
+
+	*shim_mask |= BIT(link_id);
 
 	sdw->cdns.link_up = true;
 out:
@@ -484,6 +496,7 @@ static int intel_link_power_down(struct sdw_intel *sdw)
 	int link_control, spa_mask, cpa_mask;
 	unsigned int link_id = sdw->instance;
 	void __iomem *shim = sdw->link_res->shim;
+	u32 *shim_mask = sdw->link_res->shim_mask;
 	int ret = 0;
 
 	mutex_lock(sdw->link_res->shim_lock);
@@ -497,6 +510,12 @@ static int intel_link_power_down(struct sdw_intel *sdw)
 	link_control &=  spa_mask;
 
 	ret = intel_clear_bit(shim, SDW_SHIM_LCTL, link_control, cpa_mask);
+
+	if (!(*shim_mask & BIT(link_id)))
+		dev_err(sdw->cdns.dev,
+			"%s: Unbalanced power-up/down calls\n", __func__);
+
+	*shim_mask &= ~BIT(link_id);
 
 	mutex_unlock(sdw->link_res->shim_lock);
 
