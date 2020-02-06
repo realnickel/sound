@@ -207,6 +207,7 @@ static struct sdw_intel_ctx
 		link->dev = res->dev;
 		link->clock_stop_quirks = res->clock_stop_quirks;
 		link->shim_lock = &ctx->shim_lock;
+		link->shim_mask = &ctx->shim_mask;
 
 		sdw = devm_kzalloc(&adev->dev, sizeof(*sdw), GFP_KERNEL);
 		if (!sdw) {
