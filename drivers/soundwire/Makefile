@@ -3,6 +3,8 @@
 # Makefile for soundwire core
 #
 
+ccflags-y += -DDEBUG
+
 #Bus Objs
 soundwire-bus-objs := bus_type.o bus.o slave.o mipi_disco.o stream.o
 obj-$(CONFIG_SOUNDWIRE) += soundwire-bus.o

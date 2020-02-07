@@ -1951,11 +1951,18 @@ static int intel_resume_runtime(struct device *dev)
 		 */
 		clock_stop0 = sdw_cdns_is_clock_stop(&sdw->cdns);
 
-		/*
-		 * make sure all Slaves are tagged as UNATTACHED and
-		 * provide reason for reinitialization
-		 */
 		if (!clock_stop0) {
+
+			/*
+			 * Re-initialize the IP since it was powered-off
+			 */
+			sdw_cdns_init(&sdw->cdns, multi_master);
+
+			/*
+			 * make sure all Slaves are tagged as UNATTACHED and
+			 * provide reason for reinitialization
+			 */
+
 			status = SDW_UNATTACH_REQUEST_MASTER_RESET;
 			sdw_clear_slave_status(&sdw->cdns.bus, status);
 		}
