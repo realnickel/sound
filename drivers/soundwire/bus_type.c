@@ -48,12 +48,14 @@ static int sdw_bus_match(struct device *dev, struct device_driver *ddrv)
 		md = dev_to_sdw_master_device(dev);
 		mdrv = drv_to_sdw_master_driver(ddrv);
 
-		/*
-		 * we don't have any hardware information so
-		 * match with a hopefully unique string
-		 */
-		ret = !strncmp(md->master_name, mdrv->driver.name,
-			       strlen(md->master_name));
+		if (md->master_name) {
+			/*
+			 * we don't have any hardware information so
+			 * match with a hopefully unique string
+			 */
+			ret = !strncmp(md->master_name, mdrv->driver.name,
+				       strlen(md->master_name));
+		}
 	}
 	return ret;
 }
@@ -71,9 +73,11 @@ static int sdw_master_modalias(const struct sdw_master_device *md,
 			       char *buf, size_t size)
 {
 	/* modalias is sdw:<string> since we don't have any hardware info */
-
-	return snprintf(buf, size, "sdw:%s\n",
-			md->master_name);
+	if (md->master_name)
+		return snprintf(buf, size, "sdw:%s\n",
+				md->master_name);
+	else
+		return snprintf(buf, size, "sdw:no_master_driver\n");
 }
 
 static int sdw_uevent(struct device *dev, struct kobj_uevent_env *env)
