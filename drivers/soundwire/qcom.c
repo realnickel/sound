@@ -89,6 +89,7 @@ struct qcom_swrm_port_config {
 struct qcom_swrm_ctrl {
 	struct sdw_bus bus;
 	struct device *dev;
+	struct sdw_master_device *md;
 	struct regmap *regmap;
 	struct completion *comp;
 	struct work_struct slave_work;
@@ -755,6 +756,21 @@ static int qcom_swrm_probe(struct platform_device *pdev)
 		return -ENOTSUPP;
 	}
 
+	/*
+	 * add sdw_master_device. For the Qualcomm implementation there is no
+	 * driver.
+	 */
+
+	ctrl->md = sdw_master_device_add(NULL, /* no driver name */
+					 dev,  /* platform device is parent */
+					 dev->fwnode, /* FIXME */
+					 0,     /* only one link supported */
+					 NULL); /* no context */
+	if (IS_ERR(ctrl->md)) {
+		dev_err(dev, "Could not create sdw_master_device\n");
+		return PTR_ERR(ctrl->md);
+	}
+
 	ctrl->irq = of_irq_get(dev->of_node, 0);
 	if (ctrl->irq < 0)
 		return ctrl->irq;
@@ -771,7 +787,9 @@ static int qcom_swrm_probe(struct platform_device *pdev)
 	mutex_init(&ctrl->port_lock);
 	INIT_WORK(&ctrl->slave_work, qcom_swrm_slave_wq);
 
-	ctrl->bus.dev = dev;
+	/* the bus uses the sdw_master_device, not the platform device */
+	ctrl->bus.dev = &ctrl->md->dev;
+
 	ctrl->bus.ops = &qcom_swrm_ops;
 	ctrl->bus.port_ops = &qcom_swrm_port_ops;
 	ctrl->bus.compute_params = &qcom_swrm_compute_params;
@@ -836,6 +854,7 @@ static int qcom_swrm_remove(struct platform_device *pdev)
 
 	sdw_delete_bus_master(&ctrl->bus);
 	clk_disable_unprepare(ctrl->hclk);
+	device_unregister(&ctrl->md->dev);
 
 	return 0;
 }
