@@ -1240,7 +1240,7 @@ static int sof_connect_dai_widget(struct snd_soc_component *scomp,
 {
 	struct snd_soc_card *card = scomp->card;
 	struct snd_soc_pcm_runtime *rtd;
-	struct snd_soc_dai *cpu_dai;
+	struct snd_soc_dai *cpu_dai = NULL;
 	int i;
 
 	list_for_each_entry(rtd, &card->rtd_list, list) {
