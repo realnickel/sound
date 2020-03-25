@@ -172,6 +172,7 @@ MODULE_PARM_DESC(cdns_mcp_int_mask, "Cadence MCP IntMask");
 #define CDNS_DPN_HCTRL_LCTRL			GENMASK(10, 8)
 
 #define CDNS_PORTCTRL				0x130
+#define CDNS_PORTCTRL_XRUN			BIT(0)
 #define CDNS_PORTCTRL_DIRN			BIT(7)
 #define CDNS_PORTCTRL_BANK_INVERT		BIT(8)
 
@@ -781,6 +782,19 @@ irqreturn_t sdw_cdns_irq(int irq, void *dev_id)
 		dev_err_ratelimited(cdns->dev, "Bus clash for data word\n");
 	}
 
+	if (int_status & CDNS_MCP_INT_DPINT) {
+		u32 p_status = cdns_readl(cdns, CDNS_MCP_PDI_STAT);
+
+		if (p_status)
+			dev_dbg_ratelimited(cdns->dev, "PDI xrun 0x%8x\n",
+					    p_status);
+
+		p_status = cdns_readl(cdns, CDNS_MCP_PORT_INTSTAT);
+		if (p_status)
+			dev_dbg_ratelimited(cdns->dev, "Port interrupt 0x%8x\n",
+					    p_status);
+	}
+
 	if (int_status & CDNS_MCP_INT_SLAVE_MASK) {
 		/* Mask the Slave interrupt and wake thread */
 		cdns_updatel(cdns, CDNS_MCP_INTMASK,
@@ -896,7 +910,8 @@ int sdw_cdns_enable_interrupt(struct sdw_cdns *cdns, bool state)
 	mask |= CDNS_MCP_INT_CTRL_CLASH | CDNS_MCP_INT_DATA_CLASH |
 		CDNS_MCP_INT_PARITY;
 
-	/* no detection of port interrupts for now */
+	/* enable detection of port and PDI interrupts */
+	mask |= CDNS_MCP_INT_DPINT;
 
 	/* enable detection of RX fifo level */
 	mask |= CDNS_MCP_INT_RX_WL;
@@ -1525,8 +1540,12 @@ void sdw_cdns_config_stream(struct sdw_cdns *cdns,
 	if (dir == SDW_DATA_DIR_RX)
 		val = CDNS_PORTCTRL_DIRN;
 
+	/* enable xrun detection for port */
+	val |= CDNS_PORTCTRL_XRUN;
+
 	offset = CDNS_PORTCTRL + pdi->num * CDNS_PORT_OFFSET;
-	cdns_updatel(cdns, offset, CDNS_PORTCTRL_DIRN, val);
+	cdns_updatel(cdns, offset,
+		     CDNS_PORTCTRL_DIRN | CDNS_PORTCTRL_XRUN, val);
 
 	val = pdi->num;
 	val |= CDNS_PDI_CONFIG_SOFT_RESET;
