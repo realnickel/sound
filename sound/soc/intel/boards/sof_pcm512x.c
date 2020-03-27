@@ -10,6 +10,7 @@
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/module.h>
+#include <linux/gpio/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
 #include <sound/core.h>
@@ -43,6 +44,8 @@ struct sof_hdmi_pcm {
 struct sof_card_private {
 	struct list_head hdmi_pcm_list;
 	bool idisp_codec;
+	struct gpio_desc *gpio_4;
+
 };
 
 static int sof_pcm512x_quirk_cb(const struct dmi_system_id *id)
@@ -97,10 +100,11 @@ static int sof_pcm512x_codec_init(struct snd_soc_pcm_runtime *rtd)
 static int aif1_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_component *codec = rtd->codec_dai->component;
+	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
 
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_CONTROL_1,
-				      0x08, 0x08);
+	/* Turn LED on */
+	if (!IS_ERR_OR_NULL(ctx->gpio_4))
+		gpiod_set_value(ctx->gpio_4, 1);
 
 	return 0;
 }
@@ -108,10 +112,11 @@ static int aif1_startup(struct snd_pcm_substream *substream)
 static void aif1_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_component *codec = rtd->codec_dai->component;
+	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
 
-	snd_soc_component_update_bits(codec, PCM512x_GPIO_CONTROL_1,
-				      0x08, 0x00);
+	/* Turn LED off */
+	if (!IS_ERR_OR_NULL(ctx->gpio_4))
+		gpiod_set_value(ctx->gpio_4, 0);
 }
 
 static const struct snd_soc_ops sof_pcm512x_ops = {
@@ -413,6 +418,19 @@ static int sof_audio_probe(struct platform_device *pdev)
 
 	snd_soc_card_set_drvdata(&sof_audio_card_pcm512x, ctx);
 
+	/*
+	 * Enable GPIO4 for LED
+	 * we cannot use devm_gpiod_get since the device is NULL
+	 */
+	ctx->gpio_4 = gpiod_get(NULL, "PCM512x-GPIO4",
+				GPIOD_OUT_LOW);
+
+	/* don't stop on errors, just log messages */
+	if (IS_ERR_OR_NULL(ctx->gpio_4))
+		dev_err(&pdev->dev, "gpio4 not found\n");
+	else if (gpiod_direction_output(ctx->gpio_4, 0))
+		dev_err(&pdev->dev, "could not set gpio4 direction\n");
+
 	return devm_snd_soc_register_card(&pdev->dev,
 					  &sof_audio_card_pcm512x);
 }
@@ -421,6 +439,7 @@ static int sof_pcm512x_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct snd_soc_component *component = NULL;
+	struct sof_card_private *ctx = snd_soc_card_get_drvdata(card);
 
 	for_each_card_components(card, component) {
 		if (!strcmp(component->name, pcm512x_component[0].name)) {
@@ -428,6 +447,9 @@ static int sof_pcm512x_remove(struct platform_device *pdev)
 			break;
 		}
 	}
+
+	if (!IS_ERR_OR_NULL(ctx->gpio_4))
+		gpiod_put(ctx->gpio_4);
 
 	return 0;
 }
