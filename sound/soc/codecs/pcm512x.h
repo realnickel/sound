@@ -261,4 +261,6 @@ extern const struct regmap_config pcm512x_regmap;
 int pcm512x_probe(struct device *dev, struct regmap *regmap);
 void pcm512x_remove(struct device *dev);
 
+int pcm512x_clk_probe(struct device *dev, struct regmap *regmap);
+
 #endif

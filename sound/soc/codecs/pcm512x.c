@@ -51,6 +51,7 @@ struct pcm512x_priv {
 	int mute;
 	struct mutex mutex;
 	unsigned int bclk_ratio;
+	struct platform_device *pdev;
 };
 
 /*
@@ -1695,7 +1696,15 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 
 	gpiod_add_lookup_table(&pcm512x_gpios_table);
 
+#if IS_ENABLED(CONFIG_SND_SOC_PCM512X_CLK)
+	ret = pcm512x_clk_probe(dev, regmap);
+	if (ret != 0)
+		dev_dbg(dev, "Could not register clock: %d\n", ret);
+	else
+		pcm512x->sclk = devm_clk_get(dev, "pcm512x-clk");
+#else
 	pcm512x->sclk = devm_clk_get(dev, NULL);
+#endif
 	if (PTR_ERR(pcm512x->sclk) == -EPROBE_DEFER) {
 		ret = -EPROBE_DEFER;
 		goto err;

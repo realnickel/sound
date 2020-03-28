@@ -969,6 +969,10 @@ config SND_SOC_PCM3168A_SPI
 config SND_SOC_PCM5102A
 	tristate
 
+config SND_SOC_PCM512X_CLK
+	tristate "Texas Instruments PCM512x CODECs - GPIO-controlled clocks"
+	depends on SND_SOC_PCM512x
+
 config SND_SOC_PCM512x
 	tristate
 
