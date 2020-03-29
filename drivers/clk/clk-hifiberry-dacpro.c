@@ -111,8 +111,10 @@ static int clk_hifiberry_dacpro_probe(struct platform_device *pdev)
 
 	clk = devm_clk_register(dev, &proclk->hw);
 	if (!IS_ERR(clk)) {
+#ifndef CONFIG_ACPI
 		ret = of_clk_add_provider(dev->of_node, of_clk_src_simple_get,
 			clk);
+#endif
 	} else {
 		dev_err(dev, "Fail to register clock driver\n");
 		ret = PTR_ERR(clk);
@@ -122,7 +124,9 @@ static int clk_hifiberry_dacpro_probe(struct platform_device *pdev)
 
 static int clk_hifiberry_dacpro_remove(struct platform_device *pdev)
 {
+#ifndef CONFIG_ACPI
 	of_clk_del_provider(pdev->dev.of_node);
+#endif
 	return 0;
 }
 
