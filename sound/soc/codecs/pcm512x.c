@@ -1603,6 +1603,7 @@ static const struct gpio_chip template_chip = {
 
 int pcm512x_probe(struct device *dev, struct regmap *regmap)
 {
+	const char * const clk_name[] = {NULL, "sclk"};
 	struct pcm512x_priv *pcm512x;
 	int i, ret;
 
@@ -1671,17 +1672,28 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 		goto err;
 	}
 
-	pcm512x->sclk = devm_clk_get(dev, NULL);
-	if (PTR_ERR(pcm512x->sclk) == -EPROBE_DEFER) {
-		ret = -EPROBE_DEFER;
-		goto err;
-	}
-	if (!IS_ERR(pcm512x->sclk)) {
-		ret = clk_prepare_enable(pcm512x->sclk);
-		if (ret != 0) {
-			dev_err(dev, "Failed to enable SCLK: %d\n", ret);
+	for (i = 0; i < ARRAY_SIZE(clk_name); i++) {
+		pcm512x->sclk = devm_clk_get(dev, clk_name[i]);
+		if (PTR_ERR(pcm512x->sclk) == -EPROBE_DEFER) {
+			ret = -EPROBE_DEFER;
 			goto err;
 		}
+		if (!IS_ERR(pcm512x->sclk)) {
+			dev_dbg(dev, "SCLK detected by devm_clk_get\n");
+			ret = clk_prepare_enable(pcm512x->sclk);
+			if (ret != 0) {
+				dev_err(dev, "Failed to enable SCLK: %d\n",
+					ret);
+				goto err;
+			}
+			break;
+		}
+
+		if (!clk_name[i])
+			dev_dbg(dev, "no SCLK detected with NULL string\n");
+		else
+			dev_dbg(dev, "no SCLK detected for %s string\n",
+				clk_name[i]);
 	}
 
 	/* Default to standby mode */
