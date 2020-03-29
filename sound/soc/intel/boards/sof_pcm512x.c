@@ -156,6 +156,55 @@ static int aif1_startup(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static int aif1_hw_params(struct snd_pcm_substream *substream,
+			  struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
+	struct device *dev = rtd->card->dev;
+	int sclk_rate;
+	int channels;
+	int width;
+	int rate;
+	int ret = 0;
+
+	if (ctx->is_dac_pro) {
+		channels = params_channels(params);
+		width = snd_pcm_format_physical_width(params_format(params));
+		rate = params_rate(params);
+		sclk_rate = channels * width * rate;
+
+		ret = clk_set_rate(ctx->sclk, sclk_rate);
+		if (ret) {
+			dev_err(dev, "Could not set SCLK rate %d\n", sclk_rate);
+			return ret;
+		}
+
+		ret = clk_prepare_enable(ctx->sclk);
+		if (ret != 0) {
+			dev_err(dev, "Failed to enable SCLK for DAC+ PRO 48 kHz: %d\n", ret);
+			return ret;
+		}
+
+		/* FIXME: is this needed? */
+		ret = snd_soc_dai_set_bclk_ratio(rtd->codec_dai,
+						 channels * width);
+	}
+
+	return ret;
+}
+
+static int aif1_hw_free(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
+
+	if (ctx->is_dac_pro)
+		clk_disable_unprepare(ctx->sclk);
+
+	return 0;
+}
+
 static void aif1_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -168,6 +217,8 @@ static void aif1_shutdown(struct snd_pcm_substream *substream)
 
 static const struct snd_soc_ops sof_pcm512x_ops = {
 	.startup = aif1_startup,
+	.hw_params = aif1_hw_params,
+	.hw_free = aif1_hw_free,
 	.shutdown = aif1_shutdown,
 };
 
