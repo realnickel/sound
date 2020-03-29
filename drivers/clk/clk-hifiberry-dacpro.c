@@ -9,6 +9,8 @@
 
 #include <linux/clk-provider.h>
 #include <linux/clkdev.h>
+#include <linux/gpio/consumer.h>
+#include <linux/gpio/driver.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -25,11 +27,19 @@
  * @hw: clk_hw for the common clk framework
  * @mode: 0 => CLK44EN, 1 => CLK48EN
  * @sclk_lookup: handle for "sclk"
+ * @gpio_48: gpiod desc for 48 kHz support
+ * @gpio_44: gpiod desc for 44.1kHz support
+ * @prepared: boolean caching clock state
+ * @gpio_initialized: boolean flag used to take gpio references.
  */
 struct clk_hifiberry_hw {
 	struct clk_hw hw;
 	u8 mode;
 	struct clk_lookup *sclk_lookup;
+	struct gpio_desc *gpio_44;
+	struct gpio_desc *gpio_48;
+	bool prepared;
+	bool gpio_initialized;
 };
 
 #define to_hifiberry_clk(_hw) container_of(_hw, struct clk_hifiberry_hw, hw)
@@ -69,6 +79,88 @@ static long clk_hifiberry_dacpro_round_rate(struct clk_hw *hw,
 	return actual_rate;
 }
 
+static int clk_hifiberry_dacpro_is_prepared(struct clk_hw *hw)
+{
+	struct clk_hifiberry_hw *clk = to_hifiberry_clk(hw);
+
+	return (clk->prepared) ? 1 : 0;
+}
+
+static int clk_hifiberry_dacpro_prepare(struct clk_hw *hw)
+{
+	struct clk_hifiberry_hw *clk = to_hifiberry_clk(hw);
+	int ret = 0;
+
+	/*
+	 * The gpios are handled here to avoid any dependencies on
+	 * probe. the gpios will be released in the .remove.
+	 *
+	 * The user of the clock should verify with the PCM512
+	 * registers that the clock are actually present and stable.
+	 * This driver only toggles the relevant GPIOs.
+	 */
+	if (!clk->gpio_initialized) {
+
+		clk->gpio_44 = gpiod_get(NULL, "PCM512x-GPIO6",
+					 GPIOD_OUT_LOW);
+		if (IS_ERR(clk->gpio_44)) {
+			pr_err("gpio44 not found\n");
+			return PTR_ERR(clk->gpio_44);
+		}
+
+		clk->gpio_48 = gpiod_get(NULL, "PCM512x-GPIO3",
+					 GPIOD_OUT_LOW);
+		if (IS_ERR(clk->gpio_48)) {
+			pr_err("gpio48 not found\n");
+			return PTR_ERR(clk->gpio_48);
+		}
+
+		clk->gpio_initialized = true;
+	}
+
+	if (clk->prepared)
+		return 0;
+
+	switch (clk->mode) {
+	case 0:
+		/* 44.1 kHz */
+		gpiod_set_value(clk->gpio_44, 1);
+		break;
+	case 1:
+		/* 48 kHz */
+		gpiod_set_value(clk->gpio_48, 1);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (ret == 0)
+		clk->prepared = 1;
+
+	return ret;
+}
+
+static void clk_hifiberry_dacpro_unprepare(struct clk_hw *hw)
+{
+	struct clk_hifiberry_hw *clk = to_hifiberry_clk(hw);
+
+	if (!clk->prepared)
+		return;
+
+	switch (clk->mode) {
+	case 0:
+		gpiod_set_value(clk->gpio_44, 0);
+		break;
+	case 1:
+		gpiod_set_value(clk->gpio_48, 0);
+		break;
+	default:
+		return;
+	}
+
+	clk->prepared = false;
+}
+
 static int clk_hifiberry_dacpro_set_rate(struct clk_hw *hw,
 					 unsigned long rate,
 					 unsigned long parent_rate)
@@ -83,6 +175,9 @@ static int clk_hifiberry_dacpro_set_rate(struct clk_hw *hw,
 }
 
 static const struct clk_ops clk_hifiberry_dacpro_rate_ops = {
+	.is_prepared = clk_hifiberry_dacpro_is_prepared,
+	.prepare = clk_hifiberry_dacpro_prepare,
+	.unprepare = clk_hifiberry_dacpro_unprepare,
 	.recalc_rate = clk_hifiberry_dacpro_recalc_rate,
 	.round_rate = clk_hifiberry_dacpro_round_rate,
 	.set_rate = clk_hifiberry_dacpro_set_rate,
@@ -146,6 +241,11 @@ static int clk_hifiberry_dacpro_remove(struct platform_device *pdev)
 	struct clk_hifiberry_hw *proclk = platform_get_drvdata(pdev);
 
 	clkdev_drop(proclk->sclk_lookup);
+
+	if (proclk->gpio_initialized) {
+		gpiod_put(proclk->gpio_44);
+		gpiod_put(proclk->gpio_48);
+	}
 
 #ifndef CONFIG_ACPI
 	of_clk_del_provider(pdev->dev.of_node);
