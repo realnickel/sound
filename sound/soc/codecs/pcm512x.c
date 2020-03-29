@@ -1621,10 +1621,13 @@ static struct gpiod_lookup_table pcm512x_gpios_table = {
 	},
 };
 
+static const char *sclk_name = "sclk";
+
 int pcm512x_probe(struct device *dev, struct regmap *regmap)
 {
 	struct pcm512x_priv *pcm512x;
 	int i, ret;
+	char *clk_name = NULL;
 
 	pcm512x = devm_kzalloc(dev, sizeof(struct pcm512x_priv), GFP_KERNEL);
 	if (!pcm512x)
@@ -1695,16 +1698,26 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 
 	gpiod_add_lookup_table(&pcm512x_gpios_table);
 
-	pcm512x->sclk = devm_clk_get(dev, NULL);
+retry_sclk_name:
+	pcm512x->sclk = devm_clk_get(dev, clk_name);
 	if (PTR_ERR(pcm512x->sclk) == -EPROBE_DEFER) {
 		ret = -EPROBE_DEFER;
 		goto err;
 	}
 	if (!IS_ERR(pcm512x->sclk)) {
+		dev_dbg(dev, "SCLK detected by devm_clk_get\n");
 		ret = clk_prepare_enable(pcm512x->sclk);
 		if (ret != 0) {
 			dev_err(dev, "Failed to enable SCLK: %d\n", ret);
 			goto err;
+		}
+	} else {
+		if (!clk_name) {
+			dev_dbg(dev, "no SCLK detected, retrying with fixed sclk ID\n");
+			clk_name = (char *)sclk_name;
+			goto retry_sclk_name;
+		} else {
+			dev_dbg(dev, "no SCLK detected by devm_clk_get, keep going\n");
 		}
 	}
 
