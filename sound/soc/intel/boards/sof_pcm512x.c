@@ -89,6 +89,7 @@ static int sof_hdmi_init(struct snd_soc_pcm_runtime *rtd)
 static int sof_pcm512x_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_component *component = rtd->codec_dai->component;
 	struct device *dev = rtd->card->dev;
 	unsigned int sck;
 	int ret;
@@ -139,6 +140,11 @@ static int sof_pcm512x_codec_init(struct snd_soc_pcm_runtime *rtd)
 
 	dev_info(dev, "DAC+ PRO detected\n");
 	ctx->is_dac_pro = true;
+
+	/* configure codec in master mode */
+	snd_soc_component_update_bits(component, PCM512x_BCLK_LRCLK_CFG, 0x31, 0x11);
+	snd_soc_component_update_bits(component, PCM512x_MASTER_MODE, 0x03, 0x03);
+	snd_soc_component_update_bits(component, PCM512x_MASTER_CLKDIV_2, 0x7f, 63);
 
 skip_dacpro:
 	return 0;
