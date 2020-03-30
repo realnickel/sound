@@ -144,6 +144,36 @@ skip_dacpro:
 	return 0;
 }
 
+static int aif1_update_rate_den(struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_ratnum *rats_no_pll;
+	unsigned int num = 0, den = 0;
+	int err;
+
+	rats_no_pll = kzalloc(sizeof(*rats_no_pll), GFP_KERNEL);
+	if (!rats_no_pll)
+		return -ENOMEM;
+
+	rats_no_pll->num = clk_get_rate(ctx->sclk) / 64;
+	rats_no_pll->den_min = 1;
+	rats_no_pll->den_max = 128;
+	rats_no_pll->den_step = 1;
+
+	err = snd_interval_ratnum(hw_param_interval(params,
+						    SNDRV_PCM_HW_PARAM_RATE),
+				  1, rats_no_pll, &num, &den);
+	if (err >= 0 && den) {
+		params->rate_num = num;
+		params->rate_den = den;
+	}
+
+	kfree(rats_no_pll);
+	return 0;
+}
+
 static int aif1_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -183,6 +213,12 @@ static int aif1_hw_params(struct snd_pcm_substream *substream,
 		ret = clk_prepare_enable(ctx->sclk);
 		if (ret != 0) {
 			dev_err(dev, "Failed to enable SCLK for DAC+ PRO 48 kHz: %d\n", ret);
+			return ret;
+		}
+
+		ret = aif1_update_rate_den(substream, params);
+		if (ret != 0) {
+			dev_err(dev, "Failed to update rate denominator: %d\n", ret);
 			return ret;
 		}
 
