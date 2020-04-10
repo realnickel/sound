@@ -77,6 +77,7 @@ static int sdw_slave_add(struct sdw_bus *bus,
 
 		return ret;
 	}
+
 	sdw_slave_debugfs_init(slave);
 
 	return ret;

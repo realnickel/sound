@@ -20,6 +20,7 @@ int sdw_of_find_slaves(struct sdw_bus *bus);
 void sdw_extract_slave_id(struct sdw_bus *bus,
 			  u64 addr, struct sdw_slave_id *id);
 
+
 #ifdef CONFIG_DEBUG_FS
 void sdw_bus_debugfs_init(struct sdw_bus *bus);
 void sdw_bus_debugfs_exit(struct sdw_bus *bus);
@@ -216,5 +217,6 @@ static inline int sdw_update(struct sdw_slave *slave, u32 addr, u8 mask, u8 val)
 void sdw_clear_slave_status(struct sdw_bus *bus, u32 request);
 
 int sdw_slave_uevent(struct device *dev, struct kobj_uevent_env *env);
+int sdw_slave_modalias(const struct sdw_slave *slave, char *buf, size_t size);
 
 #endif /* __SDW_BUS_H */
