@@ -1027,9 +1027,9 @@ static int sdw_master_read_intel_prop(struct sdw_bus *bus)
 	snprintf(name, sizeof(name),
 		 "mipi-sdw-link-%d-subproperties", bus->link_id);
 
-	link = device_get_named_child_node(bus->dev, name);
+	link = device_get_named_child_node(&bus->dev, name);
 	if (!link) {
-		dev_err(bus->dev, "Master node %s not found\n", name);
+		dev_err(&bus->dev, "Master node %s not found\n", name);
 		return -EIO;
 	}
 
@@ -1099,7 +1099,11 @@ static int intel_probe(struct platform_device *pdev)
 	sdw->cdns.registers = sdw->link_res->registers;
 	sdw->cdns.instance = sdw->instance;
 	sdw->cdns.msg_count = 0;
-	sdw->cdns.bus.dev = &pdev->dev;
+	/*
+	 * FIXME: this creates an additional layer which will be
+	 * removed later
+	 */
+	sdw->cdns.bus.parent = &pdev->dev;
 	sdw->cdns.bus.link_id = pdev->id;
 
 	sdw_cdns_probe(&sdw->cdns);

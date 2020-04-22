@@ -26,7 +26,7 @@ static int sdw_slave_add(struct sdw_bus *bus,
 
 	/* Initialize data structure */
 	memcpy(&slave->id, id, sizeof(*id));
-	slave->dev.parent = bus->dev;
+	slave->dev.parent = &bus->dev;
 	slave->dev.fwnode = fwnode;
 
 	if (id->unique_id == SDW_IGNORED_UNIQUE_ID) {
@@ -58,7 +58,7 @@ static int sdw_slave_add(struct sdw_bus *bus,
 
 	ret = device_register(&slave->dev);
 	if (ret) {
-		dev_err(bus->dev, "Failed to add slave: ret %d\n", ret);
+		dev_err(&bus->dev, "Failed to add slave: ret %d\n", ret);
 
 		/*
 		 * On err, don't free but drop ref as this will be freed
@@ -90,7 +90,7 @@ static bool find_slave(struct sdw_bus *bus,
 				       METHOD_NAME__ADR, NULL, &addr);
 
 	if (ACPI_FAILURE(status)) {
-		dev_err(bus->dev, "_ADR resolution failed: %x\n",
+		dev_err(&bus->dev, "_ADR resolution failed: %x\n",
 			status);
 		return false;
 	}
@@ -118,9 +118,9 @@ int sdw_acpi_find_slaves(struct sdw_bus *bus)
 	struct acpi_device *adev, *parent;
 	struct acpi_device *adev2, *parent2;
 
-	parent = ACPI_COMPANION(bus->dev);
+	parent = ACPI_COMPANION(&bus->dev);
 	if (!parent) {
-		dev_err(bus->dev, "Can't find parent for acpi bind\n");
+		dev_err(&bus->dev, "Can't find parent for acpi bind\n");
 		return -ENODEV;
 	}
 
@@ -149,13 +149,13 @@ int sdw_acpi_find_slaves(struct sdw_bus *bus)
 				continue;
 
 			if (id.unique_id != id2.unique_id) {
-				dev_dbg(bus->dev,
+				dev_dbg(&bus->dev,
 					"Valid unique IDs %x %x for Slave mfg %x part %d\n",
 					id.unique_id, id2.unique_id,
 					id.mfg_id, id.part_id);
 				ignore_unique_id = false;
 			} else {
-				dev_err(bus->dev,
+				dev_err(&bus->dev,
 					"Invalid unique IDs %x %x for Slave mfg %x part %d\n",
 					id.unique_id, id2.unique_id,
 					id.mfg_id, id.part_id);
@@ -186,10 +186,10 @@ int sdw_acpi_find_slaves(struct sdw_bus *bus)
  */
 int sdw_of_find_slaves(struct sdw_bus *bus)
 {
-	struct device *dev = bus->dev;
+	struct device *dev = &bus->dev;
 	struct device_node *node;
 
-	for_each_child_of_node(bus->dev->of_node, node) {
+	for_each_child_of_node(dev->of_node, node) {
 		int link_id, ret, len;
 		unsigned int sdw_version;
 		const char *compat = NULL;

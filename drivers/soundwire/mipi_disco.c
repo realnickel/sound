@@ -34,7 +34,7 @@ int sdw_master_read_prop(struct sdw_bus *bus)
 	char name[32];
 	int nval, i;
 
-	device_property_read_u32(bus->dev,
+	device_property_read_u32(&bus->dev,
 				 "mipi-sdw-sw-interface-revision",
 				 &prop->revision);
 
@@ -42,9 +42,9 @@ int sdw_master_read_prop(struct sdw_bus *bus)
 	snprintf(name, sizeof(name),
 		 "mipi-sdw-link-%d-subproperties", bus->link_id);
 
-	link = device_get_named_child_node(bus->dev, name);
+	link = device_get_named_child_node(&bus->dev, name);
 	if (!link) {
-		dev_err(bus->dev, "Master node %s not found\n", name);
+		dev_err(&bus->dev, "Master node %s not found\n", name);
 		return -EIO;
 	}
 
@@ -63,7 +63,7 @@ int sdw_master_read_prop(struct sdw_bus *bus)
 	nval = fwnode_property_count_u32(link, "mipi-sdw-clock-frequencies-supported");
 	if (nval > 0) {
 		prop->num_clk_freq = nval;
-		prop->clk_freq = devm_kcalloc(bus->dev, prop->num_clk_freq,
+		prop->clk_freq = devm_kcalloc(&bus->dev, prop->num_clk_freq,
 					      sizeof(*prop->clk_freq),
 					      GFP_KERNEL);
 		if (!prop->clk_freq)
@@ -89,7 +89,7 @@ int sdw_master_read_prop(struct sdw_bus *bus)
 	nval = fwnode_property_count_u32(link, "mipi-sdw-supported-clock-gears");
 	if (nval > 0) {
 		prop->num_clk_gears = nval;
-		prop->clk_gears = devm_kcalloc(bus->dev, prop->num_clk_gears,
+		prop->clk_gears = devm_kcalloc(&bus->dev, prop->num_clk_gears,
 					       sizeof(*prop->clk_gears),
 					       GFP_KERNEL);
 		if (!prop->clk_gears)

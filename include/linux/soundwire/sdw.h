@@ -788,6 +788,8 @@ struct sdw_master_ops {
 /**
  * struct sdw_bus - SoundWire bus
  * @dev: Master linux device
+ * @parent: parent device (e.g. platform device or PCI device)
+ * @fwnode: fwnode handle
  * @link_id: Link id number, can be 0 to N, unique for each Master
  * @slaves: list of Slaves on this bus
  * @assigned: Bitmap for Slave device numbers.
@@ -811,7 +813,9 @@ struct sdw_master_ops {
  * appropriate firmware (ACPI/DT).
  */
 struct sdw_bus {
-	struct device *dev;
+	struct device dev;
+	struct device *parent;
+	struct fwnode_handle *fwnode;
 	unsigned int link_id;
 	struct list_head slaves;
 	DECLARE_BITMAP(assigned, SDW_MAX_DEVICES);
@@ -831,6 +835,8 @@ struct sdw_bus {
 	u32 bank_switch_timeout;
 	bool multi_link;
 };
+
+#define dev_to_bus(_dev) container_of(_dev, struct sdw_bus, dev)
 
 int sdw_bus_master_add(struct sdw_bus *bus);
 void sdw_bus_master_delete(struct sdw_bus *bus);
