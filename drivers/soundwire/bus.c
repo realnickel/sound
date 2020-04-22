@@ -21,6 +21,7 @@ int sdw_bus_master_add(struct sdw_bus *bus)
 	struct sdw_master_prop *prop = NULL;
 	struct device *parent = bus->parent;
 	int ret;
+	int err;
 
 	bus->dev.parent = parent;
 	bus->dev.of_node = parent->of_node;
@@ -42,10 +43,17 @@ int sdw_bus_master_add(struct sdw_bus *bus)
 		goto err;
 	}
 
+	/* handle link specific initializations */
+	if (bus->link_ops && bus->link_ops->add) {
+		ret = bus->link_ops->add(bus);
+		if (ret < 0)
+			goto device_register_err;
+	}
+
 	if (!bus->ops) {
 		dev_err(&bus->dev, "SoundWire Bus ops are not set\n");
 		ret = -EINVAL;
-		goto device_register_err;
+		goto link_ops_add_err;
 	}
 
 	mutex_init(&bus->msg_lock);
@@ -63,7 +71,7 @@ int sdw_bus_master_add(struct sdw_bus *bus)
 		if (ret < 0) {
 			dev_err(&bus->dev,
 				"Bus read properties failed:%d\n", ret);
-			goto device_register_err;
+			goto link_ops_add_err;
 		}
 	}
 
@@ -104,7 +112,7 @@ int sdw_bus_master_add(struct sdw_bus *bus)
 
 	if (ret) {
 		dev_err(&bus->dev, "Finding slaves failed:%d\n", ret);
-		goto device_register_err;
+		goto link_ops_add_err;
 	}
 
 	/*
@@ -124,6 +132,13 @@ int sdw_bus_master_add(struct sdw_bus *bus)
 
 	return 0;
 
+link_ops_add_err:
+	if (bus->link_ops && bus->link_ops->del) {
+		err = bus->link_ops->del(bus);
+		if (err < 0)
+			dev_err(&bus->dev,
+				"link_ops delete failed*:%d\n", err);
+	}
 device_register_err:
 	device_unregister(&bus->dev);
 err:
@@ -135,6 +150,7 @@ static int sdw_delete_slave(struct device *dev, void *data)
 {
 	struct sdw_slave *slave = dev_to_sdw_dev(dev);
 	struct sdw_bus *bus = slave->bus;
+	int err;
 
 	pm_runtime_disable(dev);
 
@@ -147,6 +163,13 @@ static int sdw_delete_slave(struct device *dev, void *data)
 
 	list_del_init(&slave->node);
 	mutex_unlock(&bus->bus_lock);
+
+	if (bus->link_ops && bus->link_ops->del) {
+		err = bus->link_ops->del(bus);
+		if (err < 0)
+			dev_err(&bus->dev,
+				"link_ops delete failed*:%d\n", err);
+	}
 
 	device_unregister(dev);
 	return 0;

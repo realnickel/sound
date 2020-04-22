@@ -785,12 +785,16 @@ struct sdw_master_ops {
 
 };
 
+struct sdw_link_ops;
+
 /**
  * struct sdw_bus - SoundWire bus
  * @dev: Master linux device
  * @parent: parent device (e.g. platform device or PCI device)
  * @fwnode: fwnode handle
  * @link_id: Link id number, can be 0 to N, unique for each Master
+ * @link_ops: optional link-specific ops for extensions
+ * @pdata: optional pdata for link-specific ops
  * @slaves: list of Slaves on this bus
  * @assigned: Bitmap for Slave device numbers.
  * Bit set implies used number, bit clear implies unused number.
@@ -817,6 +821,8 @@ struct sdw_bus {
 	struct device *parent;
 	struct fwnode_handle *fwnode;
 	unsigned int link_id;
+	struct sdw_link_ops *link_ops;
+	void *pdata;
 	struct list_head slaves;
 	DECLARE_BITMAP(assigned, SDW_MAX_DEVICES);
 	struct mutex bus_lock;
@@ -838,8 +844,44 @@ struct sdw_bus {
 
 #define dev_to_bus(_dev) container_of(_dev, struct sdw_bus, dev)
 
+/**
+ * struct sdw_link_ops - SoundWire link-specific ops
+ * @add: initializations and allocation (hardware may not be enabled yet)
+ * @startup: initialization handled after the hardware is enabled, all
+ * clock/power dependencies are available
+ * @del: free all remaining resources
+ * @process_wake_event: handle external wake
+ * @driver: raw structure used for name/PM hooks.
+ *
+ * This optional structure is provided for link specific
+ * operations. All members are optional, but if .add() is supported the
+ * dual .del() function shall be used to release all resources allocated
+ * in .add().
+ */
+struct sdw_link_ops {
+	int (*add)(struct sdw_bus *bus);
+	int (*startup)(struct sdw_bus *bus);
+	int (*del)(struct sdw_bus *bus);
+	int (*process_wake_event)(struct sdw_bus *bus);
+	struct device_driver *driver;
+};
+
 int sdw_bus_master_add(struct sdw_bus *bus);
 void sdw_bus_master_delete(struct sdw_bus *bus);
+
+static inline int sdw_bus_master_startup(struct sdw_bus *bus)
+{
+	if (bus && bus->link_ops && bus->link_ops->startup)
+		return bus->link_ops->startup(bus);
+	return 0;
+}
+
+static inline int sdw_bus_master_process_wake_event(struct sdw_bus *bus)
+{
+	if (bus && bus->link_ops && bus->link_ops->process_wake_event)
+		return bus->link_ops->process_wake_event(bus);
+	return 0;
+}
 
 /**
  * sdw_port_config: Master or Slave Port configuration
