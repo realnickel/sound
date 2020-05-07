@@ -11,29 +11,122 @@
 #include "sysfs_local.h"
 
 /*
- * DP-N properties
+ * dpN tree sysfs
+ *
  */
 
-#define to_dpn_prop(a, b) (a).b
+struct dpn_attribute;
 
-#define sdw_dpn_attr(N, dir, field, format_string)			\
+struct dpn_attribute {
+	struct attribute	attr;
+	ssize_t (*show)(struct device *dev, int N, int dir,
+			struct dpn_attribute *attr, char *buf);
+};
+
+static int get_port_N_dir(struct kobject *kobj, int *N, int *dir,
+			  struct slave **slv)
+{
+	struct device *dev = kobj_to_dev(kobj->parent->parent);
+	char *filename;
+	ssize_t ret;
+
+	/* the filename is dp:<N>:<sink/src> */
+	filename = strdup(kobj->name);
+	if (!filename)
+		return -ENOMEM;
+
+	token = filename;
+	end = filename;
+
+	/* skip dp */
+	token = strsep(&filename, ":");
+	if (!token) {
+		ret = -EINVAL;
+		goto err;
+	}
+
+	/* extract N */
+	token = strsep(&filename, ":");
+	if (!token) {
+		ret = -EINVAL;
+		goto err;
+	}
+
+	ret = kstrtoint(token, 10, N);
+	if (ret < 0)
+		goto err;
+
+	/* extract direction */
+	token = strsep(&filename, ":");
+	if (!token) {
+		ret = -EINVAL;
+		goto err;
+	}
+	if (!strcmp(token, "sink"))
+		*dir = 0;
+	else
+		*dir = 1;
+
+	*slv = dev_to_sdw_dev(dev);
+
+err:
+	free(filename);
+	return ret;
+}
+
+static ssize_t dpn_attr_show(struct kobject *kobj, struct attribute *attr,
+			     char *buf)
+{
+	struct dpn_attribute *dpn_attr =
+		container_of(attr, struct dpn_attribute, attr);
+	struct slave *slave;
+	int N;
+	int dir;
+
+	if (!dpn_attr->show)
+		return -EIO;
+	ret = get_port_N_dir(kobj, &N, &dir, &codec);
+	if (ret < 0)
+		return ret;
+	return dpn_attr->show(slave, N, dir, dpn_attr, buf);
+}
+
+static const struct sysfs_ops dpn_sysfs_ops = {
+	.show	= dpn_attr_show,
+};
+
+static void dpn_release(struct kobject *kobj)
+{
+	kfree(kobj);
+}
+
+static struct kobj_type dpn_ktype = {
+	.release	= dpn_release,
+	.sysfs_ops	= &dpn_sysfs_ops,
+};
+
+#define sdw_dpn_attr(field, format_string)				\
+									\
 static ssize_t								\
-dp##N##_##dir##_##field##_show(struct device *dev,			\
-			       struct device_attribute *attr,		\
-			       char *buf)				\
+dpn_##field##_show(struct slave *slave,					\
+			int N,						\
+			int dir,					\
+			struct device_attribute *attr,			\
+			char *buf)					\
 {									\
-	struct sdw_slave *slave = dev_to_sdw_dev(dev);			\
-	struct sdw_dpn_prop *dpn =					\
-			to_dpn_prop(slave->prop, dir##_dpn_prop);	\
+	struct sdw_dpn_prop *dpn;					\
 	unsigned long mask;						\
 	int bit;							\
 	int i;								\
 									\
 	/* convert src to source */					\
-	if (dpn == slave->prop.src_dpn_prop)				\
+	if (dir) {							\
+		dpn = slave->prop.src_dpn_prop;				\
 		mask = slave->prop.source_ports;			\
-	else								\
+	} else {							\
+		dpn = slave->prop.sink_dpn_prop;			\
 		mask = slave->prop.sink_ports;				\
+	}								\
 	i = 0;								\
 	for_each_set_bit(bit, &mask, 32) {				\
 		if (bit == N) {						\
@@ -44,107 +137,40 @@ dp##N##_##dir##_##field##_show(struct device *dev,			\
 	}								\
 	return -EINVAL;							\
 }									\
-static DEVICE_ATTR_RO(dp##N##_##dir##_##field);				\
-
-#define	DPN_ATTR(N, dir)						\
-	sdw_dpn_attr(N, dir, max_word, "%d\n")				\
-	sdw_dpn_attr(N, dir, min_word, "%d\n")				\
-	sdw_dpn_attr(N, dir, max_grouping, "%d\n")			\
-	sdw_dpn_attr(N, dir, imp_def_interrupts, "%d\n")		\
-	sdw_dpn_attr(N, dir, max_ch, "%d\n")				\
-	sdw_dpn_attr(N, dir, min_ch, "%d\n")				\
-	sdw_dpn_attr(N, dir, modes, "%d\n")				\
-	sdw_dpn_attr(N, dir, max_async_buffer, "%d\n")			\
-	sdw_dpn_attr(N, dir, block_pack_mode, "%d\n")			\
-	sdw_dpn_attr(N, dir, port_encoding, "%d\n")			\
-	sdw_dpn_attr(N, dir, simple_ch_prep_sm, "%d\n")			\
-	sdw_dpn_attr(N, dir, ch_prep_timeout, "%d\n")			\
 									\
-static struct attribute							\
-* dp##N##_##dir##_attrs[] = {						\
-	&dev_attr_dp##N##_##dir##_max_word.attr,			\
-	&dev_attr_dp##N##_##dir##_min_word.attr,			\
-	&dev_attr_dp##N##_##dir##_max_grouping.attr,			\
-	&dev_attr_dp##N##_##dir##_imp_def_interrupts.attr,		\
-	&dev_attr_dp##N##_##dir##_max_ch.attr,				\
-	&dev_attr_dp##N##_##dir##_min_ch.attr,				\
-	&dev_attr_dp##N##_##dir##_modes.attr,				\
-	&dev_attr_dp##N##_##dir##_max_async_buffer.attr,		\
-	&dev_attr_dp##N##_##dir##_block_pack_mode.attr,			\
-	&dev_attr_dp##N##_##dir##_port_encoding.attr,			\
-	&dev_attr_dp##N##_##dir##_simple_ch_prep_sm.attr,		\
-	&dev_attr_dp##N##_##dir##_ch_prep_timeout.attr,			\
-	NULL,								\
-};									\
-									\
-static const struct attribute_group					\
-dp##N##_##dir##_group = {						\
-	.attrs = dp##N##_##dir##_attrs,					\
-	.name = "dp" #N "_" #dir,					\
-};									\
+static struct dpn_attribute dpn_attr_##_field = __ATTR_RO(_field);
 
-DPN_ATTR(1, src)
-DPN_ATTR(2, src)
-DPN_ATTR(3, src)
-DPN_ATTR(4, src)
-DPN_ATTR(5, src)
-DPN_ATTR(6, src)
-DPN_ATTR(7, src)
-DPN_ATTR(8, src)
-DPN_ATTR(9, src)
-DPN_ATTR(10, src)
-DPN_ATTR(11, src)
-DPN_ATTR(12, src)
-DPN_ATTR(13, src)
-DPN_ATTR(14, src)
+sdw_dpn_attr(max_word, "%d\n");
+sdw_dpn_attr(min_word, "%d\n");
+sdw_dpn_attr(max_grouping, "%d\n");
+sdw_dpn_attr(imp_def_interrupts, "%d\n");
+sdw_dpn_attr(max_ch, "%d\n");
+sdw_dpn_attr(min_ch, "%d\n");
+sdw_dpn_attr(modes, "%d\n");
+sdw_dpn_attr(max_async_buffer, "%d\n");
+sdw_dpn_attr(block_pack_mode, "%d\n");
+sdw_dpn_attr(port_encoding, "%d\n");
+sdw_dpn_attr(simple_ch_prep_sm, "%d\n");
+sdw_dpn_attr(ch_prep_timeout, "%d\n");
 
-DPN_ATTR(1, sink)
-DPN_ATTR(2, sink)
-DPN_ATTR(3, sink)
-DPN_ATTR(4, sink)
-DPN_ATTR(5, sink)
-DPN_ATTR(6, sink)
-DPN_ATTR(7, sink)
-DPN_ATTR(8, sink)
-DPN_ATTR(9, sink)
-DPN_ATTR(10, sink)
-DPN_ATTR(11, sink)
-DPN_ATTR(12, sink)
-DPN_ATTR(13, sink)
-DPN_ATTR(14, sink)
-
-static const struct attribute_group *dp_sink_group_array[] = {
-	&dp1_sink_group,
-	&dp2_sink_group,
-	&dp3_sink_group,
-	&dp4_sink_group,
-	&dp5_sink_group,
-	&dp6_sink_group,
-	&dp7_sink_group,
-	&dp8_sink_group,
-	&dp9_sink_group,
-	&dp10_sink_group,
-	&dp11_sink_group,
-	&dp12_sink_group,
-	&dp13_sink_group,
-	&dp14_sink_group,
+static struct attribute dpn_attrs[] = {
+	&dpn_attr_max_word.attr,
+	&dpn_attr_min_word.attr,
+	&dpn_attr_max_grouping.attr,
+	&dpn_attr_imp_def_interrupts.attr,
+	&dpn_attr_max_ch.attr,
+	&dpn_attr_min_ch.attr,
+	&dpn_attr_modes.attr,
+	&dpn_attr_max_async_buffer.attr,
+	&dpn_attr_block_pack_mode.attr,
+	&dpn_attr_port_encoding.attr,
+	&dpn_attr_simple_ch_prep_sm.attr,
+	&dpn_attr_ch_prep_timeout.attr,
+	NULL,
 };
 
-static const struct attribute_group *dp_src_group_array[] = {
-	&dp1_src_group,
-	&dp2_src_group,
-	&dp3_src_group,
-	&dp4_src_group,
-	&dp5_src_group,
-	&dp6_src_group,
-	&dp7_src_group,
-	&dp8_src_group,
-	&dp9_src_group,
-	&dp10_src_group,
-	&dp11_src_group,
-	&dp12_src_group,
-	&dp13_src_group,
-	&dp14_src_group,
+static const struct attribute_group dpn_group = {
+	.attrs = dpn_attrs,
 };
 
 int sdw_slave_sysfs_dpn_init(struct sdw_slave *slave,
@@ -155,13 +181,6 @@ int sdw_slave_sysfs_dpn_init(struct sdw_slave *slave,
 
 	if (!SDW_VALID_PORT_RANGE(i))
 		return -EINVAL;
-
-	if (src)
-		ret = devm_device_add_group(&slave->dev,
-					    dp_src_group_array[i - 1]);
-	else
-		ret = devm_device_add_group(&slave->dev,
-					    dp_sink_group_array[i - 1]);
 
 	return ret;
 }
