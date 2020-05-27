@@ -10,7 +10,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/clk.h>
-#include <linux/gpio/driver.h>
+#include <linux/gpio-regmap.h>
 #include <linux/kernel.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
@@ -33,7 +33,7 @@ static const char * const pcm512x_supply_names[PCM512x_NUM_SUPPLIES] = {
 struct pcm512x_priv {
 	struct regmap *regmap;
 	struct clk *sclk;
-	struct gpio_chip chip;
+	struct gpio_regmap *gpio;
 	struct regulator_bulk_data supplies[PCM512x_NUM_SUPPLIES];
 	struct notifier_block supply_nb[PCM512x_NUM_SUPPLIES];
 	int fmt;
@@ -1505,6 +1505,7 @@ const struct regmap_config pcm512x_regmap = {
 };
 EXPORT_SYMBOL_GPL(pcm512x_regmap);
 
+#if 0
 static int pcm512x_gpio_get_direction(struct gpio_chip *chip,
 				      unsigned int offset)
 {
@@ -1550,7 +1551,7 @@ static int pcm512x_gpio_direction_output(struct gpio_chip *chip,
 				 BIT(offset), BIT(offset));
 	if (ret < 0)
 		return ret;
-
+	
 	/* set value */
 	return regmap_update_bits(pcm512x->regmap, PCM512x_GPIO_CONTROL_1,
 				  BIT(offset), value << offset);
@@ -1582,12 +1583,6 @@ static void pcm512x_gpio_set(struct gpio_chip *chip, unsigned int offset,
 		pr_debug("%s: regmap_update_bits failed: %d\n", __func__, ret);
 }
 
-/* list human-readable names, makes GPIOLIB usage straightforward */
-static const char * const pcm512x_gpio_names[] = {
-	"PCM512x-GPIO1", "PCM512x-GPIO2", "PCM512x-GPIO3",
-	"PCM512x-GPIO4", "PCM512x-GPIO5", "PCM512x-GPIO6"
-};
-
 static const struct gpio_chip template_chip = {
 	.label			= "pcm512x-gpio",
 	.names			= pcm512x_gpio_names,
@@ -1601,10 +1596,38 @@ static const struct gpio_chip template_chip = {
 	.ngpio			= ARRAY_SIZE(pcm512x_gpio_names),
 };
 
+int pcm512x_gpio_regmap_xlate(struct gpio_regmap *gpio, unsigned int base,
+                              unsigned int offset, unsigned int *reg,
+                              unsigned int *mask)
+{
+	switch (base) {
+	case GPIO_EN:
+	case GPIO_CONTROL_1:
+		*reg = base;
+		*mask = (1 << offset);
+		break;
+	case GPIO_OUTPUT_1:
+		*reg = base + offset;
+		*mask = 1;
+		break;
+	default:
+		return -EINVAL;
+	}
+}
+#endif
+
+/* list human-readable names, makes GPIOLIB usage straightforward */
+static const char * const pcm512x_gpio_names[] = {
+	"PCM512x-GPIO1", "PCM512x-GPIO2", "PCM512x-GPIO3",
+	"PCM512x-GPIO4", "PCM512x-GPIO5", "PCM512x-GPIO6"
+};
+
 int pcm512x_probe(struct device *dev, struct regmap *regmap)
 {
 	const char * const clk_name[] = {NULL, "sclk"};
 	struct pcm512x_priv *pcm512x;
+	struct gpio_regmap_config *gpio_config;
+	unsigned int reg;
 	int i, ret;
 
 	pcm512x = devm_kzalloc(dev, sizeof(struct pcm512x_priv), GFP_KERNEL);
@@ -1663,13 +1686,39 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	}
 
 	/* expose 6 GPIO pins, numbered from 1 to 6 */
-	pcm512x->chip = template_chip;
-	pcm512x->chip.parent = dev;
+	gpio_config = devm_kzalloc(dev, sizeof(*gpio_config), GFP_KERNEL);
+	if (!gpio_config)
+		return -ENOMEM;
 
-	ret = devm_gpiochip_add_data(dev, &pcm512x->chip, pcm512x);
-	if (ret != 0) {
-		dev_err(dev, "Failed to register gpio chip: %d\n", ret);
+	gpio_config->parent = dev;
+	gpio_config->regmap = regmap;
+	gpio_config->label = "pcm512x-gpio";
+	gpio_config->ngpio = ARRAY_SIZE(pcm512x_gpio_names);	
+	/* reg_dat_base not defined */
+	gpio_config->reg_set_base = PCM512x_GPIO_CONTROL_1;	
+	/* reg_dir_in_base not defined */
+	gpio_config->reg_dir_out_base = PCM512x_GPIO_EN;
+	gpio_config->reg_stride = 1;
+	gpio_config->ngpio_per_reg = ARRAY_SIZE(pcm512x_gpio_names);
+	/* .reg_mask_xlate not used */
+
+	pcm512x->gpio = devm_gpio_regmap_register(dev, gpio_config);
+	if (IS_ERR_OR_NULL(pcm512x->gpio)) {
+		dev_err(dev, "Could not add gpio chip\n");	       
+		ret = -EINVAL;
 		goto err;
+	}
+
+	/*
+	 * select Register GPIOx output for OUTPUT_x (1..6). The
+	 * actual selection of input/output is done by the gpio_regmap
+	 * helpers.
+	 */
+	for (i = 0; i < ARRAY_SIZE(pcm512x_gpio_names); i++) {
+		reg = PCM512x_GPIO_OUTPUT_1 + i;
+		ret = regmap_update_bits(regmap, reg, 0x0f, 0x02);
+		if (ret < 0)
+			return ret;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(clk_name); i++) {
