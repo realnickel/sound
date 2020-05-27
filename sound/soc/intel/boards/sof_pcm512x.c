@@ -90,6 +90,7 @@ static int sof_hdmi_init(struct snd_soc_pcm_runtime *rtd)
 static int sof_pcm512x_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
 	struct device *dev = rtd->card->dev;
 	unsigned int sck;
 	int ret;
@@ -113,7 +114,7 @@ static int sof_pcm512x_codec_init(struct snd_soc_pcm_runtime *rtd)
 		goto skip_dacpro;
 	}
 
-	snd_soc_component_read(rtd->codec_dai->component,
+	snd_soc_component_read(codec_dai->component,
 			       PCM512x_RATE_DET_4, &sck);
 	clk_disable_unprepare(ctx->sclk);
 	if (sck & 0x40) {
@@ -129,7 +130,7 @@ static int sof_pcm512x_codec_init(struct snd_soc_pcm_runtime *rtd)
 		goto skip_dacpro;
 	}
 
-	snd_soc_component_read(rtd->codec_dai->component,
+	snd_soc_component_read(codec_dai->component,
 			       PCM512x_RATE_DET_4, &sck);
 	clk_disable_unprepare(ctx->sclk);
 
@@ -185,6 +186,7 @@ static int aif1_hw_params(struct snd_pcm_substream *substream,
 			  struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
 	struct sof_card_private *ctx = snd_soc_card_get_drvdata(rtd->card);
 	struct device *dev = rtd->card->dev;
 	int current_rate;
@@ -238,7 +240,7 @@ static int aif1_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 		}
 
-		ret = snd_soc_dai_set_bclk_ratio(rtd->codec_dai,
+		ret = snd_soc_dai_set_bclk_ratio(codec_dai,
 						 channels * width);
 		if (ret) {
 			dev_err(dev, "Failed to set bclk ratio : %d\n", ret);
