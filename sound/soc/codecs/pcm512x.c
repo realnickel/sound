@@ -1693,6 +1693,7 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 	gpio_config->parent = dev;
 	gpio_config->regmap = regmap;
 	gpio_config->label = "pcm512x-gpio";
+	gpio_config->names = pcm512x_gpio_names;
 	gpio_config->ngpio = ARRAY_SIZE(pcm512x_gpio_names);	
 	/* reg_dat_base not defined */
 	gpio_config->reg_set_base = PCM512x_GPIO_CONTROL_1;	
