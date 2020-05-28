@@ -251,10 +251,8 @@ struct gpio_regmap *gpio_regmap_register(const struct gpio_regmap_config *config
 	chip->ngpio = config->ngpio;
 	chip->can_sleep = true;
 
-	if (!chip->label)
-		chip->label = dev_name(config->parent);
-	else
-		chip->label = config->label;
+	chip->label = config->label;
+	chip->names = config->names;
 
 	chip->get = gpio_regmap_get;
 	if (gpio->reg_set_base && gpio->reg_clr_base)

@@ -16,6 +16,7 @@ struct gpio_regmap;
  *			given, the name of the device is used
  * @label:		(Optional) Descriptive name for GPIO controller.
  *			If not given, the name of the device is used.
+ * @names:		(Optional) Array of names for gpios
  * @ngpio:		Number of GPIOs
  * @reg_dat_base:	(Optional) (in) register base address
  * @reg_set_base:	(Optional) set register base address
@@ -43,6 +44,7 @@ struct gpio_regmap_config {
 	struct regmap *regmap;
 
 	const char *label;
+	const char *const *names;
 	int ngpio;
 
 	unsigned int reg_dat_base;
