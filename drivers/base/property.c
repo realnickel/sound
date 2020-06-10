@@ -518,15 +518,47 @@ EXPORT_SYMBOL_GPL(fwnode_find_reference);
  */
 void device_remove_properties(struct device *dev)
 {
-	struct fwnode_handle *fwnode = dev_fwnode(dev);
+	struct fwnode_handle *fwnode;
+	bool ret;
+	
+	dev_err(dev, "plb: %s start\n", __func__);
 
+	fwnode = dev_fwnode(dev);
+
+	dev_err(dev, "plb: %s 2\n", __func__);
+	
 	if (!fwnode)
 		return;
 
-	if (is_software_node(fwnode->secondary)) {
-		fwnode_remove_software_node(fwnode->secondary);
-		set_secondary_fwnode(dev, NULL);
+	dev_err(dev, "plb: %s 3 fw_node %p\n", __func__, fwnode);
+
+	//ret = is_software_node(fwnode->secondary);
+	if (IS_ERR(fwnode->secondary)) {
+		dev_err(dev, "plb: %s 4 fw_node %p\n", __func__, fwnode->secondary);
+		goto end;
 	}
+
+	if (!fwnode->secondary) {
+		dev_err(dev, "plb: %s 5 fw_node %p\n", __func__, fwnode);
+		goto end;
+	}
+
+	if (!fwnode->secondary->ops) {
+		dev_err(dev, "plb: %s 6 fw_node %p\n", __func__, fwnode);
+		goto end;
+	}
+
+	dev_err(dev, "plb: %s 7 fw_node %p\n", __func__, fwnode);
+	
+	if (ret) {
+		dev_err(dev, "plb: %s 8 fw_node %p\n", __func__, fwnode);
+		fwnode_remove_software_node(fwnode->secondary);
+		dev_err(dev, "plb: %s 9 fw_node %p\n", __func__, fwnode);
+		set_secondary_fwnode(dev, NULL);
+		dev_err(dev, "plb: %s 10 fw_node %p\n", __func__, fwnode);
+	}
+end:
+	dev_err(dev, "plb: %s end\n", __func__);
 }
 EXPORT_SYMBOL_GPL(device_remove_properties);
 

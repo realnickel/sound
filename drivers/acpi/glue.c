@@ -282,9 +282,14 @@ int acpi_unbind_one(struct device *dev)
 			acpi_physnode_link_name(physnode_name, entry->node_id);
 			sysfs_remove_link(&acpi_dev->dev.kobj, physnode_name);
 			sysfs_remove_link(&dev->kobj, "firmware_node");
+
+			dev_err(dev, "plb: %s ACPI_COMPANION_SET(dev, NULL);\n", __func__);
+			
 			ACPI_COMPANION_SET(dev, NULL);
 			/* Drop references taken by acpi_bind_one(). */
+			dev_err(dev, "plb: %s put_device\n", __func__);
 			put_device(dev);
+			dev_err(dev, "plb: %s put_device done\n", __func__);
 			put_device(&acpi_dev->dev);
 			kfree(entry);
 			break;

@@ -435,6 +435,7 @@ static int set_codec_init_func(const struct snd_soc_acpi_link_adr *link,
 			       bool playback, int group_id)
 {
 	int i;
+	int ret;
 
 	do {
 		/*
@@ -454,11 +455,16 @@ static int set_codec_init_func(const struct snd_soc_acpi_link_adr *link,
 			/* The group_id is > 0 iff the codec is aggregated */
 			if (link->adr_d[i].endpoints->group_id != group_id)
 				continue;
-			if (codec_info_list[codec_index].init)
-				codec_info_list[codec_index].init(link,
+			if (codec_info_list[codec_index].init) {
+				ret = codec_info_list[codec_index].init(link,
 						dai_links,
 						&codec_info_list[codec_index],
 						playback);
+				if (ret) {
+					pr_err("plb: init failed\n");
+					return ret;
+				}
+			}
 		}
 		link++;
 	} while (link->mask && group_id);

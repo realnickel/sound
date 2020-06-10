@@ -3878,9 +3878,13 @@ static inline bool fwnode_is_primary(struct fwnode_handle *fwnode)
  */
 void set_primary_fwnode(struct device *dev, struct fwnode_handle *fwnode)
 {
+	dev_err(dev, "plb: %s 1 fw_node %p\n", __func__, fwnode);
 	if (fwnode) {
 		struct fwnode_handle *fn = dev->fwnode;
 
+		//dev_err(dev, "plb: %s 2 dev->fwnode %p\n", __func__, dev->fwnode);
+		//dev_err(dev, "plb: %s 3 dev->fwnode->secondary %p\n", __func__, dev->fwnode->secondary);
+		
 		if (fwnode_is_primary(fn))
 			fn = fn->secondary;
 
@@ -3889,9 +3893,17 @@ void set_primary_fwnode(struct device *dev, struct fwnode_handle *fwnode)
 			fwnode->secondary = fn;
 		}
 		dev->fwnode = fwnode;
+
+		//dev_err(dev, "plb: %s 4 dev->fwnode %p\n", __func__, dev->fwnode);
+		//dev_err(dev, "plb: %s 5 dev->fwnode->secondary %p\n", __func__, dev->fwnode->secondary);
+
 	} else {
 		dev->fwnode = fwnode_is_primary(dev->fwnode) ?
 			dev->fwnode->secondary : NULL;
+
+		dev_err(dev, "plb: %s 6 dev->fwnode %p\n", __func__, dev->fwnode);
+		if (dev->fwnode)
+			dev_err(dev, "plb: %s 7 dev->fwnode->secondary %p\n", __func__, dev->fwnode->secondary);
 	}
 }
 EXPORT_SYMBOL_GPL(set_primary_fwnode);
@@ -3907,13 +3919,21 @@ EXPORT_SYMBOL_GPL(set_primary_fwnode);
  */
 void set_secondary_fwnode(struct device *dev, struct fwnode_handle *fwnode)
 {
-	if (fwnode)
+	if (fwnode) {
 		fwnode->secondary = ERR_PTR(-ENODEV);
+		dev_err(dev, "plb: %s secondary %p\n", __func__, fwnode->secondary);
+	}
 
-	if (fwnode_is_primary(dev->fwnode))
+	if (fwnode_is_primary(dev->fwnode)) {
 		dev->fwnode->secondary = fwnode;
-	else
+		dev_err(dev, "plb: %s fwnode1 %p\n", __func__, dev->fwnode);
+		dev_err(dev, "plb: %s fwnode1 secondary %p\n", __func__, fwnode);
+
+	} else {
 		dev->fwnode = fwnode;
+		dev_err(dev, "plb: %s fwnode %p\n", __func__, fwnode);
+		dev_err(dev, "plb: %s fwnode secondary %p\n", __func__, fwnode->secondary);
+	}
 }
 
 /**
