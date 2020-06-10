@@ -360,6 +360,8 @@ int snd_sof_device_remove(struct device *dev)
 		snd_sof_free_trace(sdev);
 	}
 
+	dev_err(sdev->dev, "plb: %s before machine unregister\n", __func__);
+
 	/*
 	 * Unregister machine driver. This will unbind the snd_card which
 	 * will remove the component driver and unload the topology
@@ -367,14 +369,19 @@ int snd_sof_device_remove(struct device *dev)
 	 */
 	snd_sof_machine_unregister(sdev, pdata);
 
+	dev_err(sdev->dev, "plb: %s after machine unregister\n", __func__);
+
 	/*
 	 * Unregistering the machine driver results in unloading the topology.
 	 * Some widgets, ex: scheduler, attempt to power down the core they are
 	 * scheduled on, when they are unloaded. Therefore, the DSP must be
 	 * removed only after the topology has been unloaded.
 	 */
-	if (sdev->fw_state > SOF_FW_BOOT_NOT_STARTED)
+	if (sdev->fw_state > SOF_FW_BOOT_NOT_STARTED) {
+		dev_err(sdev->dev, "plb: %s before snd_sof_remove\n", __func__);
 		snd_sof_remove(sdev);
+		dev_err(sdev->dev, "plb: %s after snd_sof_remove\n", __func__);
+	}
 
 	/* release firmware */
 	release_firmware(pdata->fw);

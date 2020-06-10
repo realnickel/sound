@@ -11,7 +11,9 @@
 
 static void devm_component_release(struct device *dev, void *res)
 {
+	dev_err(dev, "plb: %s starting\n", __func__);
 	snd_soc_unregister_component(*(struct device **)res);
+	dev_err(dev, "plb: %s done\n", __func__);
 }
 
 /**
@@ -50,6 +52,7 @@ EXPORT_SYMBOL_GPL(devm_snd_soc_register_component);
 static void devm_card_release(struct device *dev, void *res)
 {
 	snd_soc_unregister_card(*(struct snd_soc_card **)res);
+	dev_err(dev, "plb: %s done\n", __func__);
 }
 
 /**

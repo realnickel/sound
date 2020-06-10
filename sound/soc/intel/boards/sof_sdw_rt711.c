@@ -34,7 +34,8 @@ static int rt711_add_codec_device_props(const char *sdw_dev_name)
 					      SOF_RT711_JDSRC(sof_sdw_quirk));
 	}
 
-	ret = device_add_properties(sdw_dev, props);
+	//ret = device_add_properties(sdw_dev, props);
+	ret = 0;
 	put_device(sdw_dev);
 
 	return ret;
