@@ -29,7 +29,7 @@
  * sort of problem defining LOG_DEVICE will add printks for basic
  * register I/O on a specific device.
  */
-#undef LOG_DEVICE
+#define LOG_DEVICE "i2c-INT343A:00"
 
 #ifdef LOG_DEVICE
 static inline bool regmap_should_log(struct regmap *map)
