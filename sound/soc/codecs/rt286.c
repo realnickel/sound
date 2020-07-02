@@ -515,9 +515,9 @@ static int rt286_mic1_event(struct snd_soc_dapm_widget *w,
 }
 
 static const struct snd_soc_dapm_widget rt286_dapm_widgets[] = {
-	SND_SOC_DAPM_SUPPLY_S("HV", 1, RT286_POWER_CTRL1,
+	SND_SOC_DAPM_SUPPLY("HV", RT286_POWER_CTRL1,
 		12, 1, NULL, 0),
-	SND_SOC_DAPM_SUPPLY("VREF", RT286_POWER_CTRL1,
+	SND_SOC_DAPM_SUPPLY_S("VREF", 1, RT286_POWER_CTRL1,
 		0, 1, NULL, 0),
 	SND_SOC_DAPM_SUPPLY_S("LDO1", 1, RT286_POWER_CTRL2,
 		2, 0, NULL, 0),
