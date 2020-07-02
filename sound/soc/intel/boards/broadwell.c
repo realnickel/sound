@@ -35,6 +35,7 @@ static struct snd_soc_jack_pin broadwell_headset_pins[] = {
 static const struct snd_kcontrol_new broadwell_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Speaker"),
 	SOC_DAPM_PIN_SWITCH("Headphone Jack"),
+	SOC_DAPM_PIN_SWITCH("Mic Jack"),
 };
 
 static const struct snd_soc_dapm_widget broadwell_widgets[] = {
@@ -43,7 +44,6 @@ static const struct snd_soc_dapm_widget broadwell_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_MIC("DMIC1", NULL),
 	SND_SOC_DAPM_MIC("DMIC2", NULL),
-	SND_SOC_DAPM_LINE("Line Jack", NULL),
 };
 
 static const struct snd_soc_dapm_route broadwell_rt286_map[] = {
@@ -57,7 +57,6 @@ static const struct snd_soc_dapm_route broadwell_rt286_map[] = {
 
 	/* other jacks */
 	{"MIC1", NULL, "Mic Jack"},
-	{"LINE1", NULL, "Line Jack"},
 
 	/* digital mics */
 	{"DMIC1 Pin", NULL, "DMIC1"},
