@@ -231,7 +231,6 @@ static const struct sdw_device_id rt715_sdca_id[] = {
 };
 MODULE_DEVICE_TABLE(sdw, rt715_sdca_id);
 
-#ifdef CONFIG_PM
 static int __maybe_unused rt715_dev_suspend(struct device *dev)
 {
 	struct rt715_sdca_priv *rt715 = dev_get_drvdata(dev);
@@ -278,10 +277,6 @@ regmap_sync:
 
 	return 0;
 }
-#else
-#define rt715_dev_suspend NULL
-#define rt715_dev_resume NULL
-#endif
 
 static const struct dev_pm_ops rt715_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(rt715_dev_suspend, rt715_dev_resume)
