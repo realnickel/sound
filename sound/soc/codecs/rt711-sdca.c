@@ -364,6 +364,9 @@ static void rt711_sdca_jack_init(struct rt711_sdca_priv *rt711)
 			break;
 		}
 
+		rt711->slave->prop.scp_sdca_int1_mask = SDW_SCP_SDCA_INTMASK_SDCA_0;
+		rt711->slave->prop.scp_sdca_int2_mask = SDW_SCP_SDCA_INTMASK_SDCA_8;
+
 		/* set SCP_SDCA_IntMask1[0]=1 */
 		regmap_write(rt711->regmap, SDW_SCP_SDCA_INTMASK1,
 			SDW_SCP_SDCA_INTMASK_SDCA_0);
@@ -379,6 +382,9 @@ static void rt711_sdca_jack_init(struct rt711_sdca_priv *rt711)
 		/* disable HID 1/2 event */
 		rt711_sdca_index_update_bits(rt711, RT711_VENDOR_HDA_CTL,
 			RT711_GE_MODE_RELATED_CTL, 0x0c00, 0x0000);
+
+		rt711->slave->prop.scp_sdca_int1_mask = 0;
+		rt711->slave->prop.scp_sdca_int2_mask = 0;
 
 		/*  set SCP_SDCA_IntMask1[0]=0 */
 		regmap_write(rt711->regmap, SDW_SCP_SDCA_INTMASK1, 0x00);
