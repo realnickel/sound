@@ -473,7 +473,7 @@ static int da7218_tonegen_freq_get(struct snd_kcontrol *kcontrol,
 	struct da7218_priv *da7218 = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mixer_ctrl =
 		(struct soc_mixer_control *) kcontrol->private_value;
-	unsigned int reg = mixer_ctrl->reg;
+	unsigned int reg = mixer_ctrl->regs[0];
 	u16 val;
 	int ret;
 
@@ -497,7 +497,7 @@ static int da7218_tonegen_freq_put(struct snd_kcontrol *kcontrol,
 	struct da7218_priv *da7218 = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mixer_ctrl =
 		(struct soc_mixer_control *) kcontrol->private_value;
-	unsigned int reg = mixer_ctrl->reg;
+	unsigned int reg = mixer_ctrl->regs[0];
 	u16 val;
 
 	/*
@@ -533,7 +533,7 @@ static int da7218_mic_lvl_det_sw_put(struct snd_kcontrol *kcontrol,
 	 * power the path (IN_FILTER widget events). This handling avoids
 	 * unwanted level detect events.
 	 */
-	return snd_soc_component_write(component, mixer_ctrl->reg,
+	return snd_soc_component_write(component, mixer_ctrl->regs[0],
 			     (da7218->in_filt_en & da7218->mic_lvl_det_en));
 }
 

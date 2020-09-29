@@ -2200,7 +2200,7 @@ int madera_lp_mode_put(struct snd_kcontrol *kcontrol,
 
 	/* Cannot change lp mode on an active input */
 	val = snd_soc_component_read(component, MADERA_INPUT_ENABLES);
-	mask = (mc->reg - MADERA_ADC_DIGITAL_VOLUME_1L) / 4;
+	mask = (mc->regs[0] - MADERA_ADC_DIGITAL_VOLUME_1L) / 4;
 	mask ^= 0x1; /* Flip bottom bit for channel order */
 
 	if (val & (1 << mask)) {

@@ -182,8 +182,8 @@ static int hsw_stream_volume_put(struct snd_kcontrol *kcontrol,
 	u32 volume;
 	int dai, stream;
 
-	dai = mod_map[mc->reg].dai_id;
-	stream = mod_map[mc->reg].stream;
+	dai = mod_map[mc->regs[0]].dai_id;
+	stream = mod_map[mc->regs[0]].stream;
 	pcm_data = &pdata->pcm[dai][stream];
 
 	mutex_lock(&pcm_data->mutex);
@@ -231,8 +231,8 @@ static int hsw_stream_volume_get(struct snd_kcontrol *kcontrol,
 	u32 volume;
 	int dai, stream;
 
-	dai = mod_map[mc->reg].dai_id;
-	stream = mod_map[mc->reg].stream;
+	dai = mod_map[mc->regs[0]].dai_id;
+	stream = mod_map[mc->regs[0]].stream;
 	pcm_data = &pdata->pcm[dai][stream];
 
 	mutex_lock(&pcm_data->mutex);

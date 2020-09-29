@@ -432,7 +432,7 @@ static int mt6358_put_volsw(struct snd_kcontrol *kcontrol,
 	if (ret < 0)
 		return ret;
 
-	switch (mc->reg) {
+	switch (mc->regs[0]) {
 	case MT6358_ZCD_CON2:
 		regmap_read(priv->regmap, MT6358_ZCD_CON2, &reg);
 		priv->ana_gain[AUDIO_ANALOG_VOLUME_HPOUTL] =

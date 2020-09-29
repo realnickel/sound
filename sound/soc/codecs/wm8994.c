@@ -311,7 +311,7 @@ static int wm8994_put_drc_sw(struct snd_kcontrol *kcontrol,
 	else
 		mask = WM8994_AIF1DAC1_DRC_ENA_MASK;
 
-	ret = snd_soc_component_read(component, mc->reg);
+	ret = snd_soc_component_read(component, mc->regs[0]);
 	if (ret < 0)
 		return ret;
 	if (ret & mask)

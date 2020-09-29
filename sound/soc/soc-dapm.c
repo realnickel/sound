@@ -384,7 +384,7 @@ static int dapm_kcontrol_data_alloc(struct snd_soc_dapm_widget *widget,
 			}
 
 			memset(&template, 0, sizeof(template));
-			template.reg = mc->reg;
+			template.reg = mc->regs[0];
 			template.mask = (1 << fls(mc->max)) - 1;
 			template.shift = mc->shift;
 			if (mc->invert)
@@ -781,7 +781,7 @@ static void dapm_set_mixer_path_status(struct snd_soc_dapm_path *p, int i,
 {
 	struct soc_mixer_control *mc = (struct soc_mixer_control *)
 		p->sink->kcontrol_news[i].private_value;
-	unsigned int reg = mc->reg;
+	unsigned int reg = mc->regs[0];
 	unsigned int shift = mc->shift;
 	unsigned int max = mc->max;
 	unsigned int mask = (1 << fls(max)) - 1;
@@ -803,8 +803,8 @@ static void dapm_set_mixer_path_status(struct snd_soc_dapm_path *p, int i,
 		 * paths are the right channel.
 		 */
 		if (snd_soc_volsw_is_stereo(mc) && nth_path > 0) {
-			if (reg != mc->rreg)
-				val = soc_dapm_read(p->sink->dapm, mc->rreg);
+			if (reg != mc->regs[1])
+				val = soc_dapm_read(p->sink->dapm, mc->regs[1]);
 			val = (val >> mc->rshift) & mask;
 		} else {
 			val = (val >> shift) & mask;
@@ -3280,7 +3280,7 @@ int snd_soc_dapm_get_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_soc_card *card = dapm->card;
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	int reg = mc->reg;
+	int reg = mc->regs[0];
 	unsigned int shift = mc->shift;
 	int max = mc->max;
 	unsigned int width = fls(max);
@@ -3293,8 +3293,8 @@ int snd_soc_dapm_get_volsw(struct snd_kcontrol *kcontrol,
 		reg_val = soc_dapm_read(dapm, reg);
 		val = (reg_val >> shift) & mask;
 
-		if (reg != mc->rreg)
-			reg_val = soc_dapm_read(dapm, mc->rreg);
+		if (reg != mc->regs[1])
+			reg_val = soc_dapm_read(dapm, mc->regs[1]);
 
 		if (snd_soc_volsw_is_stereo(mc))
 			rval = (reg_val >> mc->rshift) & mask;
@@ -3339,7 +3339,7 @@ int snd_soc_dapm_put_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_soc_card *card = dapm->card;
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	int reg = mc->reg;
+	int reg = mc->regs[0];
 	unsigned int shift = mc->shift;
 	int max = mc->max;
 	unsigned int width = fls(max);
@@ -3379,7 +3379,7 @@ int snd_soc_dapm_put_volsw(struct snd_kcontrol *kcontrol,
 		reg_change = soc_dapm_test_bits(dapm, reg, mask << shift, val);
 
 		if (snd_soc_volsw_is_stereo(mc))
-			reg_change |= soc_dapm_test_bits(dapm, mc->rreg,
+			reg_change |= soc_dapm_test_bits(dapm, mc->regs[1],
 							 mask << mc->rshift,
 							 rval);
 	}
@@ -3388,7 +3388,7 @@ int snd_soc_dapm_put_volsw(struct snd_kcontrol *kcontrol,
 		if (reg_change) {
 			if (snd_soc_volsw_is_stereo(mc)) {
 				update.has_second_set = true;
-				update.reg2 = mc->rreg;
+				update.reg2 = mc->regs[1];
 				update.mask2 = mask << mc->rshift;
 				update.val2 = rval;
 			}

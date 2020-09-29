@@ -85,8 +85,8 @@ static int rt715_set_amp_gain_put(struct snd_kcontrol *kcontrol,
 	int i;
 
 	/* Can't use update bit function, so read the original value first */
-	addr_h = mc->reg;
-	addr_l = mc->rreg;
+	addr_h = mc->regs[0];
+	addr_l = mc->regs[1];
 	if (mc->shift == RT715_DIR_OUT_SFT) /* output */
 		val_h = 0x80;
 	else /* input */
@@ -177,8 +177,8 @@ static int rt715_set_amp_gain_get(struct snd_kcontrol *kcontrol,
 	unsigned int addr_h, addr_l, val_h;
 	unsigned int read_ll, read_rl;
 
-	addr_h = mc->reg;
-	addr_l = mc->rreg;
+	addr_h = mc->regs[0];
+	addr_l = mc->regs[1];
 	if (mc->shift == RT715_DIR_OUT_SFT) /* output */
 		val_h = 0x80;
 	else /* input */

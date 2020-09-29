@@ -353,10 +353,10 @@ static int max98090_get_enab_tlv(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int mask = (1 << fls(mc->max)) - 1;
-	unsigned int val = snd_soc_component_read(component, mc->reg);
+	unsigned int val = snd_soc_component_read(component, mc->regs[0]);
 	unsigned int *select;
 
-	switch (mc->reg) {
+	switch (mc->regs[0]) {
 	case M98090_REG_MIC1_INPUT_LEVEL:
 		select = &(max98090->pa1en);
 		break;
@@ -394,10 +394,10 @@ static int max98090_put_enab_tlv(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int mask = (1 << fls(mc->max)) - 1;
 	unsigned int sel = ucontrol->value.integer.value[0];
-	unsigned int val = snd_soc_component_read(component, mc->reg);
+	unsigned int val = snd_soc_component_read(component, mc->regs[0]);
 	unsigned int *select;
 
-	switch (mc->reg) {
+	switch (mc->regs[0]) {
 	case M98090_REG_MIC1_INPUT_LEVEL:
 		select = &(max98090->pa1en);
 		break;
@@ -423,7 +423,7 @@ static int max98090_put_enab_tlv(struct snd_kcontrol *kcontrol,
 		sel = val;
 	}
 
-	snd_soc_component_update_bits(component, mc->reg,
+	snd_soc_component_update_bits(component, mc->regs[0],
 		mask << mc->shift,
 		sel << mc->shift);
 

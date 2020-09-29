@@ -256,7 +256,7 @@ static int mt6359_put_volsw(struct snd_kcontrol *kcontrol,
 	if (ret < 0)
 		return ret;
 
-	switch (mc->reg) {
+	switch (mc->regs[0]) {
 	case MT6359_ZCD_CON2:
 		regmap_read(priv->regmap, MT6359_ZCD_CON2, &reg);
 		priv->ana_gain[AUDIO_ANALOG_VOLUME_HPOUTL] =
@@ -294,7 +294,7 @@ static int mt6359_put_volsw(struct snd_kcontrol *kcontrol,
 	}
 
 	dev_dbg(priv->dev, "%s(), name %s, reg(0x%x) = 0x%x, set index = %x\n",
-		__func__, kcontrol->id.name, mc->reg, reg, index);
+		__func__, kcontrol->id.name, mc->regs[0], reg, index);
 
 	return ret;
 }

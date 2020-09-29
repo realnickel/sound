@@ -270,8 +270,8 @@ static int snd_soc_get_volsw_2r_st(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
+	unsigned int reg = mc->regs[0];
+	unsigned int reg2 = mc->regs[1];
 	int val[2], val2[2], i;
 
 	val[0] = snd_soc_component_read(component, reg) & 0x3f;
@@ -294,8 +294,8 @@ static int snd_soc_put_volsw_2r_st(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
+	unsigned int reg = mc->regs[0];
+	unsigned int reg2 = mc->regs[1];
 	int err;
 	unsigned int val, val2;
 
@@ -327,8 +327,8 @@ static int snd_soc_get_volsw_2r_out(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
+	unsigned int reg = mc->regs[0];
+	unsigned int reg2 = mc->regs[1];
 	unsigned int shift = mc->shift;
 	int max = mc->max, val, val2;
 	unsigned int mask = (1 << fls(max)) - 1;
@@ -347,8 +347,8 @@ static int snd_soc_put_volsw_2r_out(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
+	unsigned int reg = mc->regs[0];
+	unsigned int reg2 = mc->regs[1];
 	unsigned int shift = mc->shift;
 	int max = mc->max;
 	unsigned int mask = (1 << fls(max)) - 1;

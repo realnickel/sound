@@ -781,7 +781,7 @@ static int wsa881x_get_port(struct snd_kcontrol *kcontrol,
 	struct wsa881x_priv *data = snd_soc_component_get_drvdata(comp);
 	struct soc_mixer_control *mixer =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	int portidx = mixer->reg;
+	int portidx = mixer->regs[0];
 
 	ucontrol->value.integer.value[0] = data->port_enable[portidx];
 
@@ -813,7 +813,7 @@ static int wsa881x_set_port(struct snd_kcontrol *kcontrol,
 	struct wsa881x_priv *data = snd_soc_component_get_drvdata(comp);
 	struct soc_mixer_control *mixer =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	int portidx = mixer->reg;
+	int portidx = mixer->regs[0];
 
 	if (ucontrol->value.integer.value[0])
 		data->port_enable[portidx] = true;

@@ -418,7 +418,7 @@ static int da7219_tonegen_freq_get(struct snd_kcontrol *kcontrol,
 	struct da7219_priv *da7219 = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mixer_ctrl =
 		(struct soc_mixer_control *) kcontrol->private_value;
-	unsigned int reg = mixer_ctrl->reg;
+	unsigned int reg = mixer_ctrl->regs[0];
 	__le16 val;
 	int ret;
 
@@ -445,7 +445,7 @@ static int da7219_tonegen_freq_put(struct snd_kcontrol *kcontrol,
 	struct da7219_priv *da7219 = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mixer_ctrl =
 		(struct soc_mixer_control *) kcontrol->private_value;
-	unsigned int reg = mixer_ctrl->reg;
+	unsigned int reg = mixer_ctrl->regs[0];
 	__le16 val;
 	int ret;
 

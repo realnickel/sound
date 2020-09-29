@@ -465,7 +465,7 @@ static int msm_routing_get_audio_mixer(struct snd_kcontrol *kcontrol,
 	struct msm_routing_data *priv = dev_get_drvdata(c->dev);
 	struct session_data *session = &priv->sessions[session_id];
 
-	if (session->port_id == mc->reg)
+	if (session->port_id == mc->regs[0])
 		ucontrol->value.integer.value[0] = 1;
 	else
 		ucontrol->value.integer.value[0] = 0;
@@ -483,7 +483,7 @@ static int msm_routing_put_audio_mixer(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		    (struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_dapm_update *update = NULL;
-	int be_id = mc->reg;
+	int be_id = mc->regs[0];
 	int session_id = mc->shift;
 	struct session_data *session = &data->sessions[session_id];
 

@@ -871,9 +871,9 @@ static int soc_tplg_dmixer_create(struct soc_tplg *tplg, unsigned int count,
 		kc.access = le32_to_cpu(mc->hdr.access);
 
 		/* we only support FL/FR channel mapping atm */
-		sm->reg = tplc_chan_get_reg(tplg, mc->channel,
+		sm->regs[0] = tplc_chan_get_reg(tplg, mc->channel,
 			SNDRV_CHMAP_FL);
-		sm->rreg = tplc_chan_get_reg(tplg, mc->channel,
+		sm->regs[1] = tplc_chan_get_reg(tplg, mc->channel,
 			SNDRV_CHMAP_FR);
 		sm->shift = tplc_chan_get_shift(tplg, mc->channel,
 			SNDRV_CHMAP_FL);
@@ -1347,9 +1347,9 @@ static struct snd_kcontrol_new *soc_tplg_dapm_widget_dmixer_create(
 		kc[i].access = le32_to_cpu(mc->hdr.access);
 
 		/* we only support FL/FR channel mapping atm */
-		sm->reg = tplc_chan_get_reg(tplg, mc->channel,
+		sm->regs[0] = tplc_chan_get_reg(tplg, mc->channel,
 			SNDRV_CHMAP_FL);
-		sm->rreg = tplc_chan_get_reg(tplg, mc->channel,
+		sm->regs[1] = tplc_chan_get_reg(tplg, mc->channel,
 			SNDRV_CHMAP_FR);
 		sm->shift = tplc_chan_get_shift(tplg, mc->channel,
 			SNDRV_CHMAP_FL);

@@ -302,7 +302,7 @@ static int wm8350_put_volsw_2r_vu(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	int ret;
-	unsigned int reg = mc->reg;
+	unsigned int reg = mc->regs[0];
 	u16 val;
 
 	/* For OUT1 and OUT2 we shadow the values and only actually write
@@ -345,7 +345,7 @@ static int wm8350_get_volsw_2r(struct snd_kcontrol *kcontrol,
 	struct wm8350_output *out2 = &wm8350_priv->out2;
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
+	unsigned int reg = mc->regs[0];
 
 	/* If these are cached registers use the cache */
 	switch (reg) {

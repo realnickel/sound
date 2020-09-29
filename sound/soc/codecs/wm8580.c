@@ -260,8 +260,8 @@ static int wm8580_out_vu(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	struct wm8580_priv *wm8580 = snd_soc_component_get_drvdata(component);
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
+	unsigned int reg = mc->regs[0];
+	unsigned int reg2 = mc->regs[1];
 	int ret;
 
 	/* Clear the register cache VU so we write without VU set */
