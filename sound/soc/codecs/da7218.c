@@ -450,8 +450,8 @@ static int da7218_alc_sw_put(struct snd_kcontrol *kcontrol,
 	struct da7218_priv *da7218 = snd_soc_component_get_drvdata(component);
 	unsigned int lvalue = ucontrol->value.integer.value[0];
 	unsigned int rvalue = ucontrol->value.integer.value[1];
-	unsigned int lshift = mc->shift;
-	unsigned int rshift = mc->rshift;
+	unsigned int lshift = mc->shifts[0];
+	unsigned int rshift = mc->shifts[1];
 	unsigned int mask = (mc->max << lshift) | (mc->max << rshift);
 
 	/* Force ALC offset calibration if enabling ALC */
@@ -519,8 +519,8 @@ static int da7218_mic_lvl_det_sw_put(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *) kcontrol->private_value;
 	unsigned int lvalue = ucontrol->value.integer.value[0];
 	unsigned int rvalue = ucontrol->value.integer.value[1];
-	unsigned int lshift = mixer_ctrl->shift;
-	unsigned int rshift = mixer_ctrl->rshift;
+	unsigned int lshift = mixer_ctrl->shifts[0];
+	unsigned int rshift = mixer_ctrl->shifts[1];
 	unsigned int mask = (mixer_ctrl->max << lshift) |
 			    (mixer_ctrl->max << rshift);
 	da7218->mic_lvl_det_en &= ~mask;
@@ -544,8 +544,8 @@ static int da7218_mic_lvl_det_sw_get(struct snd_kcontrol *kcontrol,
 	struct da7218_priv *da7218 = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mixer_ctrl =
 		(struct soc_mixer_control *) kcontrol->private_value;
-	unsigned int lshift = mixer_ctrl->shift;
-	unsigned int rshift = mixer_ctrl->rshift;
+	unsigned int lshift = mixer_ctrl->shifts[0];
+	unsigned int rshift = mixer_ctrl->shifts[1];
 	unsigned int lmask = (mixer_ctrl->max << lshift);
 	unsigned int rmask = (mixer_ctrl->max << rshift);
 

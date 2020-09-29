@@ -31,13 +31,13 @@
 #define SOC_DOUBLE_VALUE(xreg, shift_left, shift_right, xmax, xinvert, xautodisable) \
 	((unsigned long)&(struct soc_mixer_control) \
 	{.regs = { [0] = xreg, [1] = xreg}, \
-	.shift = shift_left, .rshift = shift_right, \
+	.shifts = { [0] = shift_left, [1] = shift_right}, \
 	.max = xmax, .platform_max = xmax, \
 	.invert = xinvert, .autodisable = xautodisable})
 #define SOC_DOUBLE_S_VALUE(xreg, shift_left, shift_right, xmin, xmax, xsign_bit, xinvert, xautodisable) \
 	((unsigned long)&(struct soc_mixer_control) \
 	{.regs = { [0] = xreg, [1] = xreg}, \
-	.shift = shift_left, .rshift = shift_right, \
+	.shifts = { [0] = shift_left, [1] = shift_right}, \
 	.min = xmin, .max = xmax, .platform_max = xmax,	\
 	.sign_bit = xsign_bit, .invert = xinvert, .autodisable = xautodisable})
 #define SOC_SINGLE_VALUE(xreg, xshift, xmax, xinvert, xautodisable) \
@@ -49,18 +49,18 @@
 #define SOC_DOUBLE_R_VALUE(xlreg, xrreg, xshift, xmax, xinvert)	\
 	((unsigned long)&(struct soc_mixer_control) \
 	{.regs = { [0] = xlreg, [1] = xrreg}, \
-	.shift = xshift, .rshift = xshift, \
+	.shifts = { [0] = xshift, [1] = xshift}, \
 	.max = xmax, .platform_max = xmax, .invert = xinvert})
 #define SOC_DOUBLE_R_S_VALUE(xlreg, xrreg, xshift, xmin, xmax, xsign_bit, xinvert) \
 	((unsigned long)&(struct soc_mixer_control) \
 	{.regs = { [0] = xlreg, [1] = xrreg}, \
-	.shift = xshift, .rshift = xshift, \
+	.shifts = { [0] = xshift, [1] = xshift}, \
 	.max = xmax, .min = xmin, .platform_max = xmax, .sign_bit = xsign_bit, \
 	.invert = xinvert})
 #define SOC_DOUBLE_R_RANGE_VALUE(xlreg, xrreg, xshift, xmin, xmax, xinvert) \
 	((unsigned long)&(struct soc_mixer_control) \
 	{.regs = { [0] = xlreg, [1] = xrreg}, \
-	.shift = xshift, .rshift = xshift, \
+	.shifts = { [0] = xshift, [1] = xshift}, \
 	.min = xmin, .max = xmax, .platform_max = xmax, .invert = xinvert})
 #define SOC_SINGLE(xname, reg, shift, max, invert) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
@@ -73,7 +73,7 @@
 	.put = snd_soc_put_volsw_range, \
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.regs = { [0] = xreg, [1] = xreg}, \
-		 .shift = xshift, .rshift = xshift, \
+		 .shifts = { [0] = xshift, [1] = xshift}, \
 		 .min = xmin, .max = xmax, \
 		 .platform_max = xmax, .invert = xinvert} }
 #define SOC_SINGLE_TLV(xname, reg, shift, max, invert, tlv_array) \
@@ -94,7 +94,7 @@
 	.put = snd_soc_put_volsw_sx, \
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.regs = { [0] = xreg, [1] = xreg}, \
-		.shift = xshift, .rshift = xshift,			\
+		 .shifts = { [0] = xshift, [1] = xshift}, \
 		.max = xmax, .min = xmin} }
 #define SOC_SINGLE_RANGE_TLV(xname, xreg, xshift, xmin, xmax, xinvert, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
@@ -105,7 +105,7 @@
 	.get = snd_soc_get_volsw_range, .put = snd_soc_put_volsw_range, \
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.regs = { [0] = xreg, [1] = xreg}, \
-		 .shift = xshift, .rshift = xshift, \
+		 .shifts = { [0] = xshift, [1] = xshift}, \
 		 .min = xmin, .max = xmax, \
 		 .platform_max = xmax, .invert = xinvert} }
 #define SOC_DOUBLE(xname, reg, shift_left, shift_right, max, invert) \
@@ -173,7 +173,7 @@
 	.put = snd_soc_put_volsw_sx, \
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.regs = { [0] = xreg, [1] = xreg}, \
-		.shift = xshift, .rshift = xshift,			\
+		 .shifts = { [0] = xshift, [1] = xshift}, \
 		.max = xmax, .min = xmin} }
 #define SOC_DOUBLE_R_S_TLV(xname, reg_left, reg_right, xshift, xmin, xmax, xsign_bit, xinvert, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
@@ -269,7 +269,7 @@
 	.get = xhandler_get, .put = xhandler_put, \
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.regs = { [0] = xreg, [1] = xreg}, \
-		 .shift = xshift, .rshift = xshift, \
+		 .shifts = { [0] = xshift, [1] = xshift}, \
 		 .min = xmin, .max = xmax, \
 		 .platform_max = xmax, .invert = xinvert} }
 #define SOC_DOUBLE_EXT_TLV(xname, xreg, shift_left, shift_right, xmax, xinvert,\
@@ -1217,7 +1217,7 @@ void snd_soc_close_delayed_work(struct snd_soc_pcm_runtime *rtd);
 struct soc_mixer_control {
 	int min, max, platform_max;
 	int regs[2];
-	unsigned int shift, rshift;
+	unsigned int shifts[2];
 	unsigned int sign_bit;
 	unsigned int invert:1;
 	unsigned int autodisable:1;
@@ -1267,10 +1267,10 @@ struct soc_enum {
 
 static inline bool snd_soc_volsw_is_stereo(struct soc_mixer_control *mc)
 {
-	if (mc->regs[0] == mc->regs[1] && mc->shift == mc->rshift)
+	if (mc->regs[0] == mc->regs[1] && mc->shifts[0] == mc->shifts[1])
 		return false;
 	/*
-	 * mc->regs[0] == mc->regs[1] && mc->shift != mc->rshift, or
+	 * mc->regs[0] == mc->regs[1] && mc->shifts[0] != mc->shifts[1], or
 	 * mc->regs[0] != mc->regs[1] means that the control is
 	 * stereo (bits in one register or in two registers)
 	 */

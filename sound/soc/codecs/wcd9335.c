@@ -1344,7 +1344,7 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kc,
 			(struct soc_mixer_control *)kc->private_value;
 	int enable = ucontrol->value.integer.value[0];
 	int dai_id = widget->shift;
-	int port_id = mixer->shift;
+	int port_id = mixer->shifts[0];
 
 	switch (dai_id) {
 	case AIF1_CAP:
@@ -2175,7 +2175,7 @@ static int wcd9335_get_compander(struct snd_kcontrol *kc,
 {
 
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kc);
-	int comp = ((struct soc_mixer_control *)kc->private_value)->shift;
+	int comp = ((struct soc_mixer_control *)kc->private_value)->shifts[0];
 	struct wcd9335_codec *wcd = dev_get_drvdata(component->dev);
 
 	ucontrol->value.integer.value[0] = wcd->comp_enabled[comp];
@@ -2187,7 +2187,7 @@ static int wcd9335_set_compander(struct snd_kcontrol *kc,
 {
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kc);
 	struct wcd9335_codec *wcd = dev_get_drvdata(component->dev);
-	int comp = ((struct soc_mixer_control *) kc->private_value)->shift;
+	int comp = ((struct soc_mixer_control *) kc->private_value)->shifts[0];
 	int value = ucontrol->value.integer.value[0];
 	int sel;
 

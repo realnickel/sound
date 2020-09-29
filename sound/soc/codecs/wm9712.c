@@ -225,8 +225,8 @@ static int wm9712_hp_mixer_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_dapm_update update = {};
 	bool change;
 
-	mixer = mc->shift >> 8;
-	shift = mc->shift & 0xff;
+	mixer = mc->shifts[0] >> 8;
+	shift = mc->shifts[0] & 0xff;
 	mask = 1 << shift;
 
 	mutex_lock(&wm9712->lock);
@@ -266,8 +266,8 @@ static int wm9712_hp_mixer_get(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int shift, mixer;
 
-	mixer = mc->shift >> 8;
-	shift = mc->shift & 0xff;
+	mixer = mc->shifts[0] >> 8;
+	shift = mc->shifts[0] & 0xff;
 
 	ucontrol->value.integer.value[0] =
 		(wm9712->hp_mixer[mixer] >> shift) & 1;

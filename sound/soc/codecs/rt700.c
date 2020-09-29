@@ -360,7 +360,7 @@ static int rt700_set_amp_gain_put(struct snd_kcontrol *kcontrol,
 	/* Can't use update bit function, so read the original value first */
 	addr_h = mc->regs[0];
 	addr_l = mc->regs[1];
-	if (mc->shift == RT700_DIR_OUT_SFT) /* output */
+	if (mc->shifts[0] == RT700_DIR_OUT_SFT) /* output */
 		val_h = 0x80;
 	else /* input */
 		val_h = 0x0;
@@ -408,24 +408,24 @@ static int rt700_set_amp_gain_put(struct snd_kcontrol *kcontrol,
 	for (i = 0; i < 3; i++) { /* retry 3 times at most */
 		if (val_ll == val_lr) {
 			/* Set both L/R channels at the same time */
-			val_h = (1 << mc->shift) | (3 << 4);
+			val_h = (1 << mc->shifts[0]) | (3 << 4);
 			regmap_write(rt700->regmap,
 				addr_h, (val_h << 8 | val_ll));
 			regmap_write(rt700->regmap,
 				addr_l, (val_h << 8 | val_ll));
 		} else {
 			/* Lch*/
-			val_h = (1 << mc->shift) | (1 << 5);
+			val_h = (1 << mc->shifts[0]) | (1 << 5);
 			regmap_write(rt700->regmap,
 				addr_h, (val_h << 8 | val_ll));
 
 			/* Rch */
-			val_h = (1 << mc->shift) | (1 << 4);
+			val_h = (1 << mc->shifts[0]) | (1 << 4);
 			regmap_write(rt700->regmap,
 				addr_l, (val_h << 8 | val_lr));
 		}
 		/* check result */
-		if (mc->shift == RT700_DIR_OUT_SFT) /* output */
+		if (mc->shifts[0] == RT700_DIR_OUT_SFT) /* output */
 			val_h = 0x80;
 		else /* input */
 			val_h = 0x0;
@@ -454,7 +454,7 @@ static int rt700_set_amp_gain_get(struct snd_kcontrol *kcontrol,
 
 	addr_h = mc->regs[0];
 	addr_l = mc->regs[1];
-	if (mc->shift == RT700_DIR_OUT_SFT) /* output */
+	if (mc->shifts[0] == RT700_DIR_OUT_SFT) /* output */
 		val_h = 0x80;
 	else /* input */
 		val_h = 0x0;

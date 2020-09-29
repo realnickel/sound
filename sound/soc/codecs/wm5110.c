@@ -408,9 +408,9 @@ static int wm5110_put_dre(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int ena, dre;
-	unsigned int mask = (0x1 << mc->shift) | (0x1 << mc->rshift);
-	unsigned int lnew = (!!ucontrol->value.integer.value[0]) << mc->shift;
-	unsigned int rnew = (!!ucontrol->value.integer.value[1]) << mc->rshift;
+	unsigned int mask = (0x1 << mc->shifts[0]) | (0x1 << mc->shifts[1]);
+	unsigned int lnew = (!!ucontrol->value.integer.value[0]) << mc->shifts[0];
+	unsigned int rnew = (!!ucontrol->value.integer.value[1]) << mc->shifts[1];
 	unsigned int lold, rold;
 	unsigned int lena, rena;
 	int ret;
@@ -428,11 +428,11 @@ static int wm5110_put_dre(struct snd_kcontrol *kcontrol,
 		goto err;
 	}
 
-	lold = dre & (1 << mc->shift);
-	rold = dre & (1 << mc->rshift);
+	lold = dre & (1 << mc->shifts[0]);
+	rold = dre & (1 << mc->shifts[1]);
 	/* Enables are channel wise swapped from the DRE enables */
-	lena = ena & (1 << mc->rshift);
-	rena = ena & (1 << mc->shift);
+	lena = ena & (1 << mc->shifts[1]);
+	rena = ena & (1 << mc->shifts[0]);
 
 	if ((lena && lnew != lold) || (rena && rnew != rold)) {
 		dev_err(arizona->dev, "Can't change DRE on active outputs\n");
@@ -449,10 +449,10 @@ static int wm5110_put_dre(struct snd_kcontrol *kcontrol,
 
 	/* Force reset of PGA volumes, if turning DRE off */
 	if (!lnew && lold)
-		wm5110_clear_pga_volume(arizona, mc->shift);
+		wm5110_clear_pga_volume(arizona, mc->shifts[0]);
 
 	if (!rnew && rold)
-		wm5110_clear_pga_volume(arizona, mc->rshift);
+		wm5110_clear_pga_volume(arizona, mc->shifts[1]);
 
 err:
 	snd_soc_dapm_mutex_unlock(dapm);

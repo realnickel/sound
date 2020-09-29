@@ -370,7 +370,7 @@ static int max98090_get_enab_tlv(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 	}
 
-	val = (val >> mc->shift) & mask;
+	val = (val >> mc->shifts[0]) & mask;
 
 	if (val >= 1) {
 		/* If on, return the volume */
@@ -411,7 +411,7 @@ static int max98090_put_enab_tlv(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 	}
 
-	val = (val >> mc->shift) & mask;
+	val = (val >> mc->shifts[0]) & mask;
 
 	*select = sel;
 
@@ -424,8 +424,8 @@ static int max98090_put_enab_tlv(struct snd_kcontrol *kcontrol,
 	}
 
 	snd_soc_component_update_bits(component, mc->regs[0],
-		mask << mc->shift,
-		sel << mc->shift);
+		mask << mc->shifts[0],
+		sel << mc->shifts[0]);
 
 	return 0;
 }

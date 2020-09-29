@@ -2448,7 +2448,7 @@ static int wcd934x_compander_get(struct snd_kcontrol *kc,
 				 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kc);
-	int comp = ((struct soc_mixer_control *)kc->private_value)->shift;
+	int comp = ((struct soc_mixer_control *)kc->private_value)->shifts[0];
 	struct wcd934x_codec *wcd = dev_get_drvdata(component->dev);
 
 	ucontrol->value.integer.value[0] = wcd->comp_enabled[comp];
@@ -2461,7 +2461,7 @@ static int wcd934x_compander_set(struct snd_kcontrol *kc,
 {
 	struct snd_soc_component *component = snd_soc_kcontrol_component(kc);
 	struct wcd934x_codec *wcd = dev_get_drvdata(component->dev);
-	int comp = ((struct soc_mixer_control *)kc->private_value)->shift;
+	int comp = ((struct soc_mixer_control *)kc->private_value)->shifts[0];
 	int value = ucontrol->value.integer.value[0];
 	int sel;
 
@@ -3008,7 +3008,7 @@ static int slim_tx_mixer_get(struct snd_kcontrol *kc,
 	struct wcd934x_codec *wcd = dev_get_drvdata(dapm->dev);
 	struct soc_mixer_control *mixer =
 			(struct soc_mixer_control *)kc->private_value;
-	int port_id = mixer->shift;
+	int port_id = mixer->shifts[0];
 
 	ucontrol->value.integer.value[0] = wcd->tx_port_value[port_id];
 
@@ -3025,7 +3025,7 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kc,
 			(struct soc_mixer_control *)kc->private_value;
 	int enable = ucontrol->value.integer.value[0];
 	int dai_id = widget->shift;
-	int port_id = mixer->shift;
+	int port_id = mixer->shifts[0];
 
 	/* only add to the list if value not set */
 	if (enable == wcd->tx_port_value[port_id])

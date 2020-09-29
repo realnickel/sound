@@ -875,9 +875,9 @@ static int soc_tplg_dmixer_create(struct soc_tplg *tplg, unsigned int count,
 			SNDRV_CHMAP_FL);
 		sm->regs[1] = tplc_chan_get_reg(tplg, mc->channel,
 			SNDRV_CHMAP_FR);
-		sm->shift = tplc_chan_get_shift(tplg, mc->channel,
+		sm->shifts[0] = tplc_chan_get_shift(tplg, mc->channel,
 			SNDRV_CHMAP_FL);
-		sm->rshift = tplc_chan_get_shift(tplg, mc->channel,
+		sm->shifts[1] = tplc_chan_get_shift(tplg, mc->channel,
 			SNDRV_CHMAP_FR);
 
 		sm->max = le32_to_cpu(mc->max);
@@ -1351,9 +1351,9 @@ static struct snd_kcontrol_new *soc_tplg_dapm_widget_dmixer_create(
 			SNDRV_CHMAP_FL);
 		sm->regs[1] = tplc_chan_get_reg(tplg, mc->channel,
 			SNDRV_CHMAP_FR);
-		sm->shift = tplc_chan_get_shift(tplg, mc->channel,
+		sm->shifts[0] = tplc_chan_get_shift(tplg, mc->channel,
 			SNDRV_CHMAP_FL);
-		sm->rshift = tplc_chan_get_shift(tplg, mc->channel,
+		sm->shifts[1] = tplc_chan_get_shift(tplg, mc->channel,
 			SNDRV_CHMAP_FR);
 
 		sm->max = le32_to_cpu(mc->max);

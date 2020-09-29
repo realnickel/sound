@@ -241,8 +241,8 @@ int snd_soc_get_volsw(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->regs[0];
 	unsigned int reg2 = mc->regs[1];
-	unsigned int shift = mc->shift;
-	unsigned int rshift = mc->rshift;
+	unsigned int shift = mc->shifts[0];
+	unsigned int rshift = mc->shifts[1];
 	int max = mc->max;
 	int min = mc->min;
 	int sign_bit = mc->sign_bit;
@@ -301,8 +301,8 @@ int snd_soc_put_volsw(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->regs[0];
 	unsigned int reg2 = mc->regs[1];
-	unsigned int shift = mc->shift;
-	unsigned int rshift = mc->rshift;
+	unsigned int shift = mc->shifts[0];
+	unsigned int rshift = mc->shifts[1];
 	int max = mc->max;
 	int min = mc->min;
 	unsigned int sign_bit = mc->sign_bit;
@@ -363,8 +363,8 @@ int snd_soc_get_volsw_sx(struct snd_kcontrol *kcontrol,
 	    (struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->regs[0];
 	unsigned int reg2 = mc->regs[1];
-	unsigned int shift = mc->shift;
-	unsigned int rshift = mc->rshift;
+	unsigned int shift = mc->shifts[0];
+	unsigned int rshift = mc->shifts[1];
 	int max = mc->max;
 	int min = mc->min;
 	unsigned int mask = (1U << (fls(min + max) - 1)) - 1;
@@ -401,8 +401,8 @@ int snd_soc_put_volsw_sx(struct snd_kcontrol *kcontrol,
 
 	unsigned int reg = mc->regs[0];
 	unsigned int reg2 = mc->regs[1];
-	unsigned int shift = mc->shift;
-	unsigned int rshift = mc->rshift;
+	unsigned int shift = mc->shifts[0];
+	unsigned int rshift = mc->shifts[1];
 	int max = mc->max;
 	int min = mc->min;
 	unsigned int mask = (1U << (fls(min + max) - 1)) - 1;
@@ -477,7 +477,7 @@ int snd_soc_put_volsw_range(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	unsigned int reg = mc->regs[0];
 	unsigned int rreg = mc->regs[1];
-	unsigned int shift = mc->shift;
+	unsigned int shift = mc->shifts[0];
 	int min = mc->min;
 	int max = mc->max;
 	unsigned int mask = (1 << fls(max)) - 1;
@@ -529,7 +529,7 @@ int snd_soc_get_volsw_range(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->regs[0];
 	unsigned int rreg = mc->regs[1];
-	unsigned int shift = mc->shift;
+	unsigned int shift = mc->shifts[0];
 	int min = mc->min;
 	int max = mc->max;
 	unsigned int mask = (1 << fls(max)) - 1;
@@ -891,7 +891,7 @@ int snd_soc_get_strobe(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->regs[0];
-	unsigned int shift = mc->shift;
+	unsigned int shift = mc->shifts[0];
 	unsigned int mask = 1 << shift;
 	unsigned int invert = mc->invert != 0;
 	unsigned int val;
@@ -924,7 +924,7 @@ int snd_soc_put_strobe(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->regs[0];
-	unsigned int shift = mc->shift;
+	unsigned int shift = mc->shifts[0];
 	unsigned int mask = 1 << shift;
 	unsigned int invert = mc->invert != 0;
 	unsigned int strobe = ucontrol->value.enumerated.item[0] != 0;

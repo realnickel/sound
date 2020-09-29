@@ -639,7 +639,7 @@ static int sst_swm_mixer_event(struct snd_soc_dapm_widget *w,
 	for (i = 0; i < w->num_kcontrols; i++) {
 		if (dapm_kcontrol_get_value(w->kcontrols[i])) {
 			mc = (struct soc_mixer_control *)(w->kcontrols[i])->private_value;
-			val |= 1 << mc->shift;
+			val |= 1 << mc->shifts[0];
 		}
 	}
 	dev_dbg(cmpnt->dev, "val = %#x\n", val);

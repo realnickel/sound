@@ -305,7 +305,7 @@ static int wm8994_put_drc_sw(struct snd_kcontrol *kcontrol,
 	int mask, ret;
 
 	/* Can't enable both ADC and DAC paths simultaneously */
-	if (mc->shift == WM8994_AIF1DAC1_DRC_ENA_SHIFT)
+	if (mc->shifts[0] == WM8994_AIF1DAC1_DRC_ENA_SHIFT)
 		mask = WM8994_AIF1ADC1L_DRC_ENA_MASK |
 			WM8994_AIF1ADC1R_DRC_ENA_MASK;
 	else
