@@ -5211,8 +5211,12 @@ int xhci_gen_setup(struct usb_hcd *hcd, xhci_get_quirks_t get_quirks)
 	xhci->hcc_params = readl(&xhci->cap_regs->hc_capbase);
 	xhci->hci_version = HC_VERSION(xhci->hcc_params);
 	xhci->hcc_params = readl(&xhci->cap_regs->hcc_params);
-	if (xhci->hci_version > 0x100)
+	if (xhci->hci_version > 0x100) {
 		xhci->hcc_params2 = readl(&xhci->cap_regs->hcc_params2);
+		if (HCC2_GSC(xhci->hcc_params2)) {
+			xhci_info(xhci, "Host supports Get/Set Extended Property Capability\n");
+		}
+	}
 
 	xhci->quirks |= quirks;
 
