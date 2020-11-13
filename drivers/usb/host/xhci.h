@@ -1336,6 +1336,43 @@ enum xhci_setup_dev {
 #define TRB_SIA			(1<<31)
 #define TRB_FRAME_ID(p)		(((p) & 0x7ff) << 20)
 
+/* Get/Set Extended Property Command TRB specific fields */
+#define TRB_TO_EXTENDED_CAPABILITY(p)	((p) & 0xffff)
+#define EXTENDED_CAPABILITY_FOR_TRB(p)	((p) & 0xffff)
+
+#define TRB_TO_EXTENDED_CAPABILITY_PARAMETER(p)		(((p) & (0xFF << 16)) >> 16)
+#define EXTENDED_CAPABILITY_PARAMETER_FOR_TRB(p)	(((p) & 0xFF) << 16)
+
+#define TRB_TO_SUBTYPE(p)	(((p) & (0x7 << 16)) >> 16)
+#define SUBTYPE_FOR_TRB(p)	(((p) & 0x7) << 16)
+
+/*
+ * Extended Capability Identifiers - Table 4.3
+ *    BIT(0) is currently the only one defined
+ *    Bits 1..11 are RsvdZ
+ *    Bits 12..15 are vendor-defined
+ *
+ *    When the Extended Capability Identifier is zero, the xHCI returns
+ *    a status with one bit set per supported capability.
+ */
+#define ANY_EXTENDED_CAPABITY (0)
+#define AUDIO_SIDEBAND_EXTENDED_CAPABITY (1 << 0)
+
+/*
+ * Subtypes for Get Extended Property Commands when Extended Capability
+ * is Audio Sideband Extended Capability.
+ * Values 0x000, 0x011-111 are reserved
+ */
+#define GET_SUPPORTED_RESOURCES_SUBTYPE 0x001 /* Section 7.9.1.1 */
+#define GET_ENDPOINT_PROPERTIES_SUBTYPE 0x010 /* Section 7.9.1.2 */
+
+/*
+ * Subtypes for Set Extended Property Commands when Extended Capability
+ * is Audio Sideband Extended Capability.
+ * Values 0x000, 0x010-1111 are reserved
+ */
+#define SET_RESOURCE_ASSIGNMENT_SUBTYPE 0x001 /* Section 7.9.2 */
+
 struct xhci_generic_trb {
 	__le32 field[4];
 };
@@ -1398,7 +1435,11 @@ union xhci_trb {
 #define TRB_FORCE_HEADER	22
 /* No-op Command - not for transfer rings */
 #define TRB_CMD_NOOP		23
-/* TRB IDs 24-31 reserved */
+/* Get Extended Property Command (opt) */
+#define TRB_CMD_GET_EXT_PROP	24
+/* Set Extended Property Command (opt) */
+#define TRB_CMD_SET_EXT_PROP	25
+/* TRB IDs 26-31 reserved */
 /* Event TRBS */
 /* Transfer Event */
 #define TRB_TRANSFER		32
@@ -2323,6 +2364,28 @@ static inline const char *xhci_decode_trb(u32 field0, u32 field1, u32 field2,
 			"%s: flags %c",
 			xhci_trb_type_string(type),
 			field3 & TRB_CYCLE ? 'C' : 'c');
+		break;
+	case TRB_CMD_GET_EXT_PROP:
+		sprintf(str,
+			"%s: ctx %08x%08x cap %d slot %d ep %d subtype %d",
+			xhci_trb_type_string(type),
+			field1, field0,
+			TRB_TO_EXTENDED_CAPABILITY(field2),
+			TRB_TO_SLOT_ID(field3),
+			/* Macro decrements 1, maybe it shouldn't?!? */
+			TRB_TO_EP_INDEX(field3) + 1,
+			TRB_TO_SUBTYPE(field3));
+		break;
+	case TRB_CMD_SET_EXT_PROP:
+		sprintf(str,
+			"%s: ctx cap param %d cap %d slot %d ep %d subtype %d",
+			xhci_trb_type_string(type),
+			TRB_TO_EXTENDED_CAPABILITY_PARAMETER(field2),
+			TRB_TO_EXTENDED_CAPABILITY(field2),
+			TRB_TO_SLOT_ID(field3),
+			/* Macro decrements 1, maybe it shouldn't?!? */
+			TRB_TO_EP_INDEX(field3) + 1,
+			TRB_TO_SUBTYPE(field3));
 		break;
 	case TRB_DISABLE_SLOT:
 	case TRB_NEG_BANDWIDTH:

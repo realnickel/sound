@@ -1490,6 +1490,14 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 		if (cmd->status == COMP_COMMAND_RING_STOPPED)
 			cmd_comp_code = COMP_COMMAND_RING_STOPPED;
 		break;
+	case TRB_CMD_GET_EXT_PROP:
+		xhci_dbg(xhci, "Get Extended Property Command\n");
+		/* FIXME: do something useful */
+		break;
+	case TRB_CMD_SET_EXT_PROP:
+		xhci_dbg(xhci, "Set Extended Property Command\n");
+		/* FIXME: do something useful */
+		break;
 	case TRB_RESET_EP:
 		WARN_ON(slot_id != TRB_TO_SLOT_ID(
 				le32_to_cpu(cmd_trb->generic.field[3])));
