@@ -17,6 +17,7 @@
 #include <sound/hda_codec.h>
 #include <sound/hdaudio_ext.h>
 #include "shim.h"
+#include "uaol.h"
 
 /* PCI registers */
 #define PCI_TCSEL			0x44
@@ -445,6 +446,9 @@ struct sof_intel_hda_dev {
 	/* ACPI information stored between scan and probe steps */
 	struct sdw_intel_acpi_info info;
 
+	/* UAOL ACPI information */
+	struct uaol_intel_acpi_info uaol_info;
+
 	/* sdw context allocated by SoundWire driver */
 	struct sdw_intel_ctx *sdw;
 
@@ -732,6 +736,18 @@ static inline bool hda_sdw_check_wakeen_irq(struct snd_sof_dev *sdev)
 static inline void hda_sdw_process_wakeen(struct snd_sof_dev *sdev)
 {
 }
+#endif
+
+/*
+ * UAOL (USB Sideband Audio) support
+ */
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL_UAOL)
+
+static inline int hda_uaol_acpi_scan(struct snd_sof_dev *sdev)
+{
+	return 0;
+}
+
 #endif
 
 /* common dai driver */

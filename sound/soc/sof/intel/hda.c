@@ -266,6 +266,28 @@ void hda_sdw_process_wakeen(struct snd_sof_dev *sdev)
 
 #endif
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL_UAOL)
+
+static int hda_uaol_acpi_scan(struct snd_sof_dev *sdev)
+{
+	struct sof_intel_hda_dev *hdev;
+	acpi_handle handle;
+	int ret;
+
+	handle = ACPI_HANDLE(sdev->dev);
+
+	/* save ACPI info for the probe step */
+	hdev = sdev->pdata->hw_pdata;
+
+	ret = uaol_intel_acpi_scan(handle, &hdev->uaol_info);
+	if (ret < 0)
+		return -EINVAL;
+
+	return 0;
+}
+
+#endif
+
 /*
  * Debug
  */
@@ -624,6 +646,11 @@ static int hda_init_caps(struct snd_sof_dev *sdev)
 			ret);
 		return ret;
 	}
+
+	/* scan UAOL capabilities exposed by DSDT */
+	ret = hda_uaol_acpi_scan(sdev);
+	if (ret < 0)
+		dev_dbg(sdev->dev, "skipping USB offload, not detected with ACPI scan\n");
 
 	/* scan SoundWire capabilities exposed by DSDT */
 	ret = hda_sdw_acpi_scan(sdev);
@@ -1242,3 +1269,4 @@ MODULE_IMPORT_NS(SND_SOC_SOF_HDA_AUDIO_CODEC);
 MODULE_IMPORT_NS(SND_SOC_SOF_HDA_AUDIO_CODEC_I915);
 MODULE_IMPORT_NS(SND_SOC_SOF_XTENSA);
 MODULE_IMPORT_NS(SOUNDWIRE_INTEL_INIT);
+MODULE_IMPORT_NS(UAOL_INTEL);
