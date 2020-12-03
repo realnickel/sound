@@ -36,10 +36,10 @@ enum {
 #define BYT_WM5102_MAP(quirk)	((quirk) & 0xff)
 #define BYT_WM5102_DMIC_EN	BIT(16)
 #define BYT_WM5102_MONO_SPEAKER BIT(17)
-#define BYT_WM5102_DIFF_MIC     BIT(18) /* default is single-ended */
-#define BYT_WM5102_SSP2_AIF2     BIT(19) /* default is using AIF1  */
-#define BYT_WM5102_SSP0_AIF1     BIT(20)
-#define BYT_WM5102_SSP0_AIF2     BIT(21)
+#define BYT_WM5102_DIFF_MIC	BIT(18) /* default is single-ended */
+#define BYT_WM5102_SSP2_AIF2	 BIT(19) /* default is using AIF1  */
+#define BYT_WM5102_SSP0_AIF1	 BIT(20)
+#define BYT_WM5102_SSP0_AIF2	 BIT(21)
 #define BYT_WM5102_MCLK_EN	BIT(22)
 #define BYT_WM5102_MCLK_25MHZ	BIT(23)
 
@@ -80,7 +80,6 @@ static void log_quirks(struct device *dev)
 		dev_info(dev, "quirk MCLK_25MHZ enabled");
 }
 
-
 #define BYT_CODEC_DAI1	"wm5102-aif1"
 #define BYT_CODEC_DAI2	"wm5102-aif2"
 
@@ -93,9 +92,8 @@ static inline struct snd_soc_dai *byt_get_codec_dai(struct snd_soc_card *card)
 			     strlen(BYT_CODEC_DAI1)))
 			return rtd->codec_dai;
 		if (!strncmp(rtd->codec_dai->name, BYT_CODEC_DAI2,
-				strlen(BYT_CODEC_DAI2)))
+			     strlen(BYT_CODEC_DAI2)))
 			return rtd->codec_dai;
-
 	}
 	return NULL;
 }
@@ -248,7 +246,7 @@ static const struct snd_kcontrol_new byt_wm5102_controls[] = {
 };
 
 static int byt_wm5102_aif1_hw_params(struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+				     struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
@@ -256,8 +254,9 @@ static int byt_wm5102_aif1_hw_params(struct snd_pcm_substream *substream,
 	int ret;
 
 	int sr = params_rate(params);
-	int sr_mult = (params_rate(params) % 4000 == 0) ? (WM5102_MAX_SYSCLK_1/params_rate(params)) : (WM5102_MAX_SYSCLK_2/params_rate(params));
-
+	int sr_mult = (params_rate(params) % 4000 == 0) ?
+		(WM5102_MAX_SYSCLK_1 / params_rate(params)) :
+		(WM5102_MAX_SYSCLK_2 / params_rate(params));
 
 	ret = snd_soc_dai_set_sysclk(codec_dai, ARIZONA_CLK_SYSCLK,
 				     params_rate(params) * 512,
@@ -270,19 +269,19 @@ static int byt_wm5102_aif1_hw_params(struct snd_pcm_substream *substream,
 
 	/*reset FLL1*/
 	snd_soc_codec_set_pll(wm5102_codec, WM5102_FLL1_REFCLK,
-				ARIZONA_FLL_SRC_NONE,
-				0,
-				0);
+			      ARIZONA_FLL_SRC_NONE,
+			      0,
+			      0);
 
 	snd_soc_codec_set_pll(wm5102_codec, WM5102_FLL1,
-				ARIZONA_FLL_SRC_NONE,
-				0,
-				0);
+			      ARIZONA_FLL_SRC_NONE,
+			      0,
+			      0);
 
 	ret = snd_soc_codec_set_pll(wm5102_codec, WM5102_FLL1,
-				ARIZONA_CLK_SRC_MCLK1,
-				25000000,
-				sr * sr_mult);
+				    ARIZONA_CLK_SRC_MCLK1,
+				    25000000,
+				    sr * sr_mult);
 
 	if (ret < 0) {
 		dev_err(rtd->dev, "can't set codec pll: %d\n", ret);
@@ -290,22 +289,23 @@ static int byt_wm5102_aif1_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	ret = snd_soc_codec_set_sysclk(wm5102_codec,
-			ARIZONA_CLK_SYSCLK,
-			ARIZONA_CLK_SRC_FLL1,
-			sr * sr_mult,
-			SND_SOC_CLOCK_IN);
+				       ARIZONA_CLK_SYSCLK,
+				       ARIZONA_CLK_SRC_FLL1,
+				       sr * sr_mult,
+				       SND_SOC_CLOCK_IN);
 	if (ret != 0) {
 		dev_err(wm5102_codec->dev, "Failed to set AYNCCLK: %d\n", ret);
 		return ret;
 	}
 
 	ret = snd_soc_codec_set_sysclk(wm5102_codec,
-					ARIZONA_CLK_SYSCLK, 0,
-					sr * sr_mult,
-					SND_SOC_CLOCK_OUT);
-        if (ret < 0) {
-                dev_err(rtd->dev, "can't set OPCLK %d\n", ret);
-        }
+				       ARIZONA_CLK_SYSCLK, 0,
+				       sr * sr_mult,
+				       SND_SOC_CLOCK_OUT);
+	if (ret < 0) {
+		dev_err(rtd->dev, "can't set OPCLK %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
@@ -333,12 +333,12 @@ static const struct dmi_system_id byt_wm5102_quirk_table[] = {
 
 static int byt_wm5102_init(struct snd_soc_pcm_runtime *runtime)
 {
-	int ret;
 	struct snd_soc_codec *codec = runtime->codec;
 	struct snd_soc_card *card = runtime->card;
 	const struct snd_soc_dapm_route *custom_map;
 	struct byt_wm5102_private *priv = snd_soc_card_get_drvdata(card);
 	int num_routes;
+	int ret;
 
 	card->dapm.idle_bias_off = true;
 
@@ -351,32 +351,32 @@ static int byt_wm5102_init(struct snd_soc_pcm_runtime *runtime)
 
 	if (byt_wm5102_quirk & BYT_WM5102_SSP2_AIF2) {
 		ret = snd_soc_dapm_add_routes(&card->dapm,
-					byt_wm5102_ssp2_aif2_map,
-					ARRAY_SIZE(byt_wm5102_ssp2_aif2_map));
+					      byt_wm5102_ssp2_aif2_map,
+					      ARRAY_SIZE(byt_wm5102_ssp2_aif2_map));
 	} else if (byt_wm5102_quirk & BYT_WM5102_SSP0_AIF1) {
 		ret = snd_soc_dapm_add_routes(&card->dapm,
-					byt_wm5102_ssp0_aif1_map,
-					ARRAY_SIZE(byt_wm5102_ssp0_aif1_map));
+					      byt_wm5102_ssp0_aif1_map,
+					      ARRAY_SIZE(byt_wm5102_ssp0_aif1_map));
 	} else if (byt_wm5102_quirk & BYT_WM5102_SSP0_AIF2) {
 		ret = snd_soc_dapm_add_routes(&card->dapm,
-					byt_wm5102_ssp0_aif2_map,
-					ARRAY_SIZE(byt_wm5102_ssp0_aif2_map));
+					      byt_wm5102_ssp0_aif2_map,
+					      ARRAY_SIZE(byt_wm5102_ssp0_aif2_map));
 	} else {
 		ret = snd_soc_dapm_add_routes(&card->dapm,
-					byt_wm5102_ssp2_aif1_map,
-					ARRAY_SIZE(byt_wm5102_ssp2_aif1_map));
+					      byt_wm5102_ssp2_aif1_map,
+					      ARRAY_SIZE(byt_wm5102_ssp2_aif1_map));
 	}
 	if (ret)
 		return ret;
 
 	if (byt_wm5102_quirk & BYT_WM5102_MONO_SPEAKER) {
 		ret = snd_soc_dapm_add_routes(&card->dapm,
-					byt_wm5102_mono_spk_map,
-					ARRAY_SIZE(byt_wm5102_mono_spk_map));
+					      byt_wm5102_mono_spk_map,
+					      ARRAY_SIZE(byt_wm5102_mono_spk_map));
 	} else {
 		ret = snd_soc_dapm_add_routes(&card->dapm,
-					byt_wm5102_stereo_spk_map,
-					ARRAY_SIZE(byt_wm5102_stereo_spk_map));
+					      byt_wm5102_stereo_spk_map,
+					      ARRAY_SIZE(byt_wm5102_stereo_spk_map));
 	}
 	if (ret)
 		return ret;
@@ -420,20 +420,22 @@ static const struct snd_soc_pcm_stream byt_wm5102_dai_params = {
 };
 
 static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
-			    struct snd_pcm_hw_params *params)
+				  struct snd_pcm_hw_params *params)
 {
 	struct snd_interval *rate = hw_param_interval(params,
-			SNDRV_PCM_HW_PARAM_RATE);
+						      SNDRV_PCM_HW_PARAM_RATE);
 	struct snd_interval *channels = hw_param_interval(params,
-						SNDRV_PCM_HW_PARAM_CHANNELS);
+							  SNDRV_PCM_HW_PARAM_CHANNELS);
 	int ret;
 
 	/* The DSP will covert the FE rate to 48k, stereo */
-	rate->min = rate->max = 48000;
-	channels->min = channels->max = 2;
+	rate->min = 48000;
+	rate->max = 48000;
+	channels->min = 2;
+	channels->max = 2;
 
 	if ((byt_wm5102_quirk & BYT_WM5102_SSP0_AIF1) ||
-		(byt_wm5102_quirk & BYT_WM5102_SSP0_AIF2)) {
+	    (byt_wm5102_quirk & BYT_WM5102_SSP0_AIF2)) {
 
 		/* set SSP0 to 16-bit */
 		params_set_format(params, SNDRV_PCM_FORMAT_S16_LE);
@@ -444,10 +446,9 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		 * dai_set_tdm_slot() since there is no other API exposed
 		 */
 		ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
-					SND_SOC_DAIFMT_I2S     |
-					SND_SOC_DAIFMT_NB_NF   |
-					SND_SOC_DAIFMT_CBS_CFS
-			);
+					  SND_SOC_DAIFMT_I2S     |
+					  SND_SOC_DAIFMT_NB_NF   |
+					  SND_SOC_DAIFMT_CBS_CFS);
 		if (ret < 0) {
 			dev_err(rtd->dev, "can't set format to I2S, err %d\n", ret);
 			return ret;
@@ -458,7 +459,6 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 			dev_err(rtd->dev, "can't set I2S config, err %d\n", ret);
 			return ret;
 		}
-
 	} else {
 
 		/* set SSP2 to 24-bit */
@@ -470,9 +470,9 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		 * dai_set_tdm_slot() since there is no other API exposed
 		 */
 		ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
-					SND_SOC_DAIFMT_I2S     |
-					SND_SOC_DAIFMT_NB_NF   |
-					SND_SOC_DAIFMT_CBS_CFS
+					  SND_SOC_DAIFMT_I2S     |
+					  SND_SOC_DAIFMT_NB_NF   |
+					  SND_SOC_DAIFMT_CBS_CFS
 			);
 		if (ret < 0) {
 			dev_err(rtd->dev, "can't set format to I2S, err %d\n", ret);
@@ -491,7 +491,7 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 static int byt_wm5102_aif1_startup(struct snd_pcm_substream *substream)
 {
 	return snd_pcm_hw_constraint_single(substream->runtime,
-			SNDRV_PCM_HW_PARAM_RATE, 48000);
+					    SNDRV_PCM_HW_PARAM_RATE, 48000);
 }
 
 static const struct snd_soc_ops byt_wm5102_aif1_ops = {
@@ -587,7 +587,7 @@ static bool is_valleyview(void)
 }
 
 struct acpi_chan_package {   /* ACPICA seems to require 64 bit integers */
-	u64 aif_value;       /* 1: AIF1, 2: AIF2 */
+	u64 aif_value;	     /* 1: AIF1, 2: AIF2 */
 	u64 mclock_value;    /* usually 25MHz (0x17d7940), ignored */
 };
 
@@ -626,9 +626,8 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 		struct sst_platform_info *p_info = mach->pdata;
 		const struct sst_res_info *res_info = p_info->res_info;
 
-		if (res_info->acpi_ipc_irq_index == 0) {
+		if (res_info->acpi_ipc_irq_index == 0)
 			is_bytcr = true;
-		}
 	}
 
 	if (is_bytcr) {
@@ -662,7 +661,7 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 			if (chan_package.aif_value == 1) {
 				dev_info(&pdev->dev, "BIOS Routing: AIF1 connected\n");
 				byt_wm5102_quirk |= BYT_WM5102_SSP0_AIF1;
-			} else  if (chan_package.aif_value == 2) {
+			} else	if (chan_package.aif_value == 2) {
 				dev_info(&pdev->dev, "BIOS Routing: AIF2 connected\n");
 				byt_wm5102_quirk |= BYT_WM5102_SSP0_AIF2;
 			} else {
@@ -693,8 +692,8 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 
 		/* fixup codec aif name */
 		snprintf(byt_wm5102_codec_aif_name,
-			sizeof(byt_wm5102_codec_aif_name),
-			"%s", "wm5102-aif2");
+			 sizeof(byt_wm5102_codec_aif_name),
+			 "%s", "wm5102-aif2");
 
 		byt_wm5102_dais[dai_index].codec_dai_name =
 			byt_wm5102_codec_aif_name;
@@ -703,10 +702,10 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 	if ((byt_wm5102_quirk & BYT_WM5102_SSP0_AIF1) ||
 	    (byt_wm5102_quirk & BYT_WM5102_SSP0_AIF2)) {
 
-		/* fixup cpu dai name name */
+		/* fixup cpu dai name */
 		snprintf(byt_wm5102_cpu_dai_name,
-			sizeof(byt_wm5102_cpu_dai_name),
-			"%s", "ssp0-port");
+			 sizeof(byt_wm5102_cpu_dai_name),
+			 "%s", "ssp0-port");
 
 		byt_wm5102_dais[dai_index].cpu_dai_name =
 			byt_wm5102_cpu_dai_name;
