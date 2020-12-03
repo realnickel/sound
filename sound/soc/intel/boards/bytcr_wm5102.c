@@ -9,22 +9,22 @@
 
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/platform_device.h>
 #include <linux/acpi.h>
+#include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/dmi.h>
+#include <linux/input.h>
 #include <linux/slab.h>
-#include <asm/cpu_device_id.h>
-#include <asm/platform_sst_audio.h>
-#include <linux/clk.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
+#include <sound/soc-acpi.h>
 #include "../../codecs/wm5102.h"
 #include "../atom/sst-atom-controls.h"
-#include "../common/sst-acpi.h"
-#include "../common/sst-dsp.h"
+#include "../common/soc-intel-quirks.h"
 
 enum {
 	BYT_WM5102_DMIC1_MAP,
@@ -83,21 +83,6 @@ static void log_quirks(struct device *dev)
 #define BYT_CODEC_DAI1	"wm5102-aif1"
 #define BYT_CODEC_DAI2	"wm5102-aif2"
 
-static inline struct snd_soc_dai *byt_get_codec_dai(struct snd_soc_card *card)
-{
-	struct snd_soc_pcm_runtime *rtd;
-
-	list_for_each_entry(rtd, &card->rtd_list, list) {
-		if (!strncmp(rtd->codec_dai->name, BYT_CODEC_DAI1,
-			     strlen(BYT_CODEC_DAI1)))
-			return rtd->codec_dai;
-		if (!strncmp(rtd->codec_dai->name, BYT_CODEC_DAI2,
-			     strlen(BYT_CODEC_DAI2)))
-			return rtd->codec_dai;
-	}
-	return NULL;
-}
-
 static int platform_clock_control(struct snd_soc_dapm_widget *w,
 				  struct snd_kcontrol *k, int  event)
 {
@@ -107,7 +92,10 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 	struct byt_wm5102_private *priv = snd_soc_card_get_drvdata(card);
 	int ret;
 
-	codec_dai = byt_get_codec_dai(card);
+	codec_dai = snd_soc_card_get_codec_dai(card, BYT_CODEC_DAI1);
+	if (!codec_dai)
+		codec_dai = snd_soc_card_get_codec_dai(card, BYT_CODEC_DAI2);
+
 	if (!codec_dai) {
 		dev_err(card->dev,
 			"Codec dai not found; Unable to set platform clock\n");
@@ -248,9 +236,8 @@ static const struct snd_kcontrol_new byt_wm5102_controls[] = {
 static int byt_wm5102_aif1_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *wm5102_codec = codec_dai->codec;
+	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
 	int ret;
 
 	int sr = params_rate(params);
@@ -268,40 +255,41 @@ static int byt_wm5102_aif1_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/*reset FLL1*/
-	snd_soc_codec_set_pll(wm5102_codec, WM5102_FLL1_REFCLK,
+	snd_soc_dai_set_pll(codec_dai, WM5102_FLL1_REFCLK,
 			      ARIZONA_FLL_SRC_NONE,
 			      0,
 			      0);
 
-	snd_soc_codec_set_pll(wm5102_codec, WM5102_FLL1,
+	snd_soc_dai_set_pll(codec_dai, WM5102_FLL1,
 			      ARIZONA_FLL_SRC_NONE,
 			      0,
 			      0);
 
-	ret = snd_soc_codec_set_pll(wm5102_codec, WM5102_FLL1,
-				    ARIZONA_CLK_SRC_MCLK1,
-				    25000000,
-				    sr * sr_mult);
+	ret = snd_soc_dai_set_pll(codec_dai, WM5102_FLL1,
+				  ARIZONA_CLK_SRC_MCLK1,
+				  25000000,
+				  sr * sr_mult);
 
 	if (ret < 0) {
 		dev_err(rtd->dev, "can't set codec pll: %d\n", ret);
 		return ret;
 	}
 
-	ret = snd_soc_codec_set_sysclk(wm5102_codec,
-				       ARIZONA_CLK_SYSCLK,
-				       ARIZONA_CLK_SRC_FLL1,
-				       sr * sr_mult,
-				       SND_SOC_CLOCK_IN);
+	ret = snd_soc_dai_set_sysclk(codec_dai,
+				     ARIZONA_CLK_SYSCLK,
+				     // FIXME: ARIZONA_CLK_SRC_FLL1,
+				     sr * sr_mult,
+				     SND_SOC_CLOCK_IN);
 	if (ret != 0) {
-		dev_err(wm5102_codec->dev, "Failed to set AYNCCLK: %d\n", ret);
+		dev_err(rtd->dev, "Failed to set AYNCCLK: %d\n", ret);
 		return ret;
 	}
 
-	ret = snd_soc_codec_set_sysclk(wm5102_codec,
-				       ARIZONA_CLK_SYSCLK, 0,
-				       sr * sr_mult,
-				       SND_SOC_CLOCK_OUT);
+	ret = snd_soc_dai_set_sysclk(codec_dai,
+				     ARIZONA_CLK_SYSCLK,
+				     // FIXME: 0,
+				     sr * sr_mult,
+				     SND_SOC_CLOCK_OUT);
 	if (ret < 0) {
 		dev_err(rtd->dev, "can't set OPCLK %d\n", ret);
 		return ret;
@@ -333,11 +321,8 @@ static const struct dmi_system_id byt_wm5102_quirk_table[] = {
 
 static int byt_wm5102_init(struct snd_soc_pcm_runtime *runtime)
 {
-	struct snd_soc_codec *codec = runtime->codec;
 	struct snd_soc_card *card = runtime->card;
-	const struct snd_soc_dapm_route *custom_map;
 	struct byt_wm5102_private *priv = snd_soc_card_get_drvdata(card);
-	int num_routes;
 	int ret;
 
 	card->dapm.idle_bias_off = true;
@@ -445,7 +430,7 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		 * with explicit setting to I2S 2ch 16-bit. The word length is set with
 		 * dai_set_tdm_slot() since there is no other API exposed
 		 */
-		ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
+		ret = snd_soc_dai_set_fmt(asoc_rtd_to_cpu(rtd, 0),
 					  SND_SOC_DAIFMT_I2S     |
 					  SND_SOC_DAIFMT_NB_NF   |
 					  SND_SOC_DAIFMT_CBS_CFS);
@@ -454,7 +439,7 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 			return ret;
 		}
 
-		ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0x3, 0x3, 2, 16);
+		ret = snd_soc_dai_set_tdm_slot(asoc_rtd_to_cpu(rtd, 0), 0x3, 0x3, 2, 16);
 		if (ret < 0) {
 			dev_err(rtd->dev, "can't set I2S config, err %d\n", ret);
 			return ret;
@@ -469,7 +454,7 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 		 * with explicit setting to I2S 2ch 24-bit. The word length is set with
 		 * dai_set_tdm_slot() since there is no other API exposed
 		 */
-		ret = snd_soc_dai_set_fmt(rtd->cpu_dai,
+		ret = snd_soc_dai_set_fmt(asoc_rtd_to_cpu(rtd, 0),
 					  SND_SOC_DAIFMT_I2S     |
 					  SND_SOC_DAIFMT_NB_NF   |
 					  SND_SOC_DAIFMT_CBS_CFS
@@ -479,7 +464,7 @@ static int byt_wm5102_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 			return ret;
 		}
 
-		ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0x3, 0x3, 2, 24);
+		ret = snd_soc_dai_set_tdm_slot(asoc_rtd_to_cpu(rtd, 0), 0x3, 0x3, 2, 24);
 		if (ret < 0) {
 			dev_err(rtd->dev, "can't set I2S config, err %d\n", ret);
 			return ret;
@@ -502,64 +487,74 @@ static const struct snd_soc_ops byt_wm5102_be_ssp2_ops = {
 	.hw_params = byt_wm5102_aif1_hw_params,
 };
 
+SND_SOC_DAILINK_DEF(dummy,
+	DAILINK_COMP_ARRAY(COMP_DUMMY()));
+
+SND_SOC_DAILINK_DEF(media,
+	DAILINK_COMP_ARRAY(COMP_CPU("media-cpu-dai")));
+
+SND_SOC_DAILINK_DEF(deepbuffer,
+	DAILINK_COMP_ARRAY(COMP_CPU("deepbuffer-cpu-dai")));
+
+SND_SOC_DAILINK_DEF(ssp2_port,
+	/* overwritten for ssp0 routing */
+	DAILINK_COMP_ARRAY(COMP_CPU("ssp2-port")));
+
+SND_SOC_DAILINK_DEF(ssp2_codec,
+	DAILINK_COMP_ARRAY(COMP_CODEC(
+	/* overwritten with HID */ "i2c-10EC5640:00", // FIXME
+	/* changed w/ quirk */	"rt5640-aif1"))); // FIXME
+
+SND_SOC_DAILINK_DEF(platform,
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("sst-mfld-platform")));
+
 static struct snd_soc_dai_link byt_wm5102_dais[] = {
 	[MERR_DPCM_AUDIO] = {
 		.name = "Baytrail Audio Port",
 		.stream_name = "Baytrail Audio",
-		.cpu_dai_name = "media-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
-		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
 		.ops = &byt_wm5102_aif1_ops,
+		SND_SOC_DAILINK_REG(media, dummy, platform),
+
 	},
 	[MERR_DPCM_DEEP_BUFFER] = {
 		.name = "Deep-Buffer Audio Port",
 		.stream_name = "Deep-Buffer Audio",
-		.cpu_dai_name = "deepbuffer-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
-		.platform_name = "sst-mfld-platform",
 		.nonatomic = true,
 		.dynamic = 1,
 		.dpcm_playback = 1,
 		.ops = &byt_wm5102_aif1_ops,
-	},
-	[MERR_DPCM_COMPR] = {
-		.name = "Baytrail Compressed Port",
-		.stream_name = "Baytrail Compress",
-		.cpu_dai_name = "compress-cpu-dai",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.codec_name = "snd-soc-dummy",
-		.platform_name = "sst-mfld-platform",
+		SND_SOC_DAILINK_REG(deepbuffer, dummy, platform),
 	},
 		/* back ends */
 	{
 		.name = "SSP2-Codec",
-		.id = 1,
-		.cpu_dai_name = "ssp2-port", /* overwritten for ssp0 routing */
-		.platform_name = "sst-mfld-platform",
+		.id = 0,
 		.no_pcm = 1,
-		.codec_dai_name = "wm5102-aif1", /* changed w/ quirk */
-		.codec_name = "wm5102-codec", /* overwritten with HID */
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
 						| SND_SOC_DAIFMT_CBS_CFS,
 		.be_hw_params_fixup = byt_wm5102_codec_fixup,
-		.ignore_suspend = 1,
 		.nonatomic = true,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
 		.init = byt_wm5102_init,
 		.ops = &byt_wm5102_be_ssp2_ops,
+		SND_SOC_DAILINK_REG(ssp2_port, ssp2_codec, platform),
 	},
 };
 
+/* use space before codec name to simplify card ID, and simplify driver name */
+#define SOF_CARD_NAME "bytcht wm5102" /* card name will be 'sof-bytcht wm5102' */
+#define SOF_DRIVER_NAME "SOF"
+
+#define CARD_NAME "bytcr-wm5102"
+#define DRIVER_NAME NULL /* card name will be used for driver name */
+
 /* SoC card */
 static struct snd_soc_card byt_wm5102_card = {
-	.name = "bytcr-wm5102",
 	.owner = THIS_MODULE,
 	.dai_link = byt_wm5102_dais,
 	.num_links = ARRAY_SIZE(byt_wm5102_dais),
@@ -574,18 +569,6 @@ static char byt_wm5102_codec_name[13]; /* wm5102-codec */
 static char byt_wm5102_codec_aif_name[12]; /*  = "wm5102-aif[1|2]" */
 static char byt_wm5102_cpu_dai_name[10]; /*  = "ssp[0|2]-port" */
 
-static bool is_valleyview(void)
-{
-	static const struct x86_cpu_id cpu_ids[] = {
-		{ X86_VENDOR_INTEL, 6, 55 }, /* Valleyview, Bay Trail */
-		{}
-	};
-
-	if (!x86_match_cpu(cpu_ids))
-		return false;
-	return true;
-}
-
 struct acpi_chan_package {   /* ACPICA seems to require 64 bit integers */
 	u64 aif_value;	     /* 1: AIF1, 2: AIF2 */
 	u64 mclock_value;    /* usually 25MHz (0x17d7940), ignored */
@@ -593,40 +576,50 @@ struct acpi_chan_package {   /* ACPICA seems to require 64 bit integers */
 
 static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 {
-	int ret_val = 0;
-	struct sst_acpi_mach *mach;
-	int i;
-	int dai_index;
+	struct device *dev = &pdev->dev;
 	struct byt_wm5102_private *priv;
+	struct snd_soc_acpi_mach *mach;
+	const char *platform_name;
+	struct acpi_device *adev;
 	bool is_bytcr = false;
+	bool sof_parent;
+	int ret_val = 0;
+	int dai_index = 0;
+	int i;
 
-	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_ATOMIC);
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_ATOMIC);
 	if (!priv)
 		return -ENOMEM;
 
 	/* register the soc card */
-	byt_wm5102_card.dev = &pdev->dev;
+	byt_wm5102_card.dev = dev;
 	mach = byt_wm5102_card.dev->platform_data;
 	snd_soc_card_set_drvdata(&byt_wm5102_card, priv);
 
 	/* fix index of codec dai */
-	dai_index = MERR_DPCM_COMPR + 1;
 	for (i = 0; i < ARRAY_SIZE(byt_wm5102_dais); i++) {
-		if (!strcmp(byt_wm5102_dais[i].codec_name, "wm5102-codec")) {
+		if (!strcmp(byt_wm5102_dais[i].codecs->name,
+			    "wm5102-codec")) { //FIXME
 			dai_index = i;
 			break;
 		}
+	}
+
+	/* fixup codec name based on HID */
+	adev = acpi_dev_get_first_match_dev(mach->id, NULL, -1);
+	if (adev) {
+		snprintf(byt_wm5102_codec_name, sizeof(byt_wm5102_codec_name),
+			 "spi-%s", acpi_dev_name(adev)); // FIXME
+		put_device(&adev->dev);
+		byt_wm5102_dais[dai_index].codecs->name = byt_wm5102_codec_name;
 	}
 
 	/*
 	 * swap SSP0 if bytcr is detected
 	 * (will be overridden if DMI quirk is detected)
 	 */
-	if (is_valleyview()) {
-		struct sst_platform_info *p_info = mach->pdata;
-		const struct sst_res_info *res_info = p_info->res_info;
-
-		if (res_info->acpi_ipc_irq_index == 0)
+	if (soc_intel_is_byt()) {
+		if (mach->mach_params.acpi_ipc_irq_index == 0)
 			is_bytcr = true;
 	}
 
@@ -644,7 +637,7 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 		/* format specified: 2 64-bit integers */
 		struct acpi_buffer format = {sizeof("NN"), "NN"};
 		struct acpi_buffer state = {0, NULL};
-		struct sst_acpi_package_context pkg_ctx;
+		struct snd_soc_acpi_package_context pkg_ctx;
 		bool pkg_found = false;
 
 		state.length = sizeof(chan_package);
@@ -656,16 +649,16 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 		pkg_ctx.state = &state;
 		pkg_ctx.data_valid = false;
 
-		pkg_found = sst_acpi_find_package_from_hid(mach->id, &pkg_ctx);
+		pkg_found = snd_soc_acpi_find_package_from_hid(mach->id, &pkg_ctx);
 		if (pkg_found) {
 			if (chan_package.aif_value == 1) {
-				dev_info(&pdev->dev, "BIOS Routing: AIF1 connected\n");
+				dev_info(dev, "BIOS Routing: AIF1 connected\n");
 				byt_wm5102_quirk |= BYT_WM5102_SSP0_AIF1;
 			} else	if (chan_package.aif_value == 2) {
-				dev_info(&pdev->dev, "BIOS Routing: AIF2 connected\n");
+				dev_info(dev, "BIOS Routing: AIF2 connected\n");
 				byt_wm5102_quirk |= BYT_WM5102_SSP0_AIF2;
 			} else {
-				dev_info(&pdev->dev, "BIOS Routing isn't valid, ignored\n");
+				dev_info(dev, "BIOS Routing isn't valid, ignored\n");
 				pkg_found = false;
 			}
 		}
@@ -685,7 +678,7 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 
 	/* check quirks before creating card */
 	dmi_check_system(byt_wm5102_quirk_table);
-	log_quirks(&pdev->dev);
+	log_quirks(dev);
 
 	if ((byt_wm5102_quirk & BYT_WM5102_SSP2_AIF2) ||
 	    (byt_wm5102_quirk & BYT_WM5102_SSP0_AIF2)) {
@@ -695,7 +688,7 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 			 sizeof(byt_wm5102_codec_aif_name),
 			 "%s", "wm5102-aif2");
 
-		byt_wm5102_dais[dai_index].codec_dai_name =
+		byt_wm5102_dais[dai_index].codecs->dai_name =
 			byt_wm5102_codec_aif_name;
 	}
 
@@ -707,16 +700,16 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 			 sizeof(byt_wm5102_cpu_dai_name),
 			 "%s", "ssp0-port");
 
-		byt_wm5102_dais[dai_index].cpu_dai_name =
+		byt_wm5102_dais[dai_index].cpus->dai_name =
 			byt_wm5102_cpu_dai_name;
 	}
 
-	if ((byt_wm5102_quirk & BYT_WM5102_MCLK_EN) && (is_valleyview())) {
-		priv->mclk = devm_clk_get(&pdev->dev, "pmc_plt_clk_3");
+	if (byt_wm5102_quirk & BYT_WM5102_MCLK_EN) {
+		priv->mclk = devm_clk_get(dev, "pmc_plt_clk_3");
 		if (IS_ERR(priv->mclk)) {
 			ret_val = PTR_ERR(priv->mclk);
 
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"Failed to get MCLK from pmc_plt_clk_3: %d\n",
 				ret_val);
 
@@ -731,10 +724,33 @@ static int snd_byt_wm5102_mc_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret_val = devm_snd_soc_register_card(&pdev->dev, &byt_wm5102_card);
+	/* override platform name, if required */
+	platform_name = mach->mach_params.platform;
+
+	ret_val = snd_soc_fixup_dai_links_platform_name(&byt_wm5102_card,
+							platform_name);
+	if (ret_val)
+		return ret_val;
+
+	sof_parent = snd_soc_acpi_sof_parent(dev);
+
+	/* set card and driver name */
+	if (sof_parent) {
+		byt_wm5102_card.name = SOF_CARD_NAME;
+		byt_wm5102_card.driver_name = SOF_DRIVER_NAME;
+	} else {
+		byt_wm5102_card.name = CARD_NAME;
+		byt_wm5102_card.driver_name = DRIVER_NAME;
+	}
+
+	/* set pm ops */
+	if (sof_parent)
+		dev->driver->pm = &snd_soc_pm_ops;
+
+	ret_val = devm_snd_soc_register_card(dev, &byt_wm5102_card);
 
 	if (ret_val) {
-		dev_err(&pdev->dev, "devm_snd_soc_register_card failed %d\n",
+		dev_err(dev, "devm_snd_soc_register_card failed %d\n",
 			ret_val);
 		return ret_val;
 	}
