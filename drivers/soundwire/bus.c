@@ -1656,6 +1656,7 @@ static int sdw_update_slave_status(struct sdw_slave *slave,
 				   enum sdw_slave_status status)
 {
 	unsigned long time;
+	int ret;
 
 	if (!slave->probed) {
 		/*
@@ -1677,7 +1678,11 @@ static int sdw_update_slave_status(struct sdw_slave *slave,
 	if (!slave->ops || !slave->ops->update_status)
 		return 0;
 
-	return slave->ops->update_status(slave, status);
+	dev_dbg(&slave->dev, "update_status starting\n");
+	ret = slave->ops->update_status(slave, status);
+	dev_dbg(&slave->dev, "update_status done\n");
+
+	return ret;
 }
 
 /**
