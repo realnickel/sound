@@ -259,11 +259,18 @@ static __maybe_unused int max98373_resume(struct device *dev)
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
 	unsigned long time;
 
-	if (!max98373->hw_init)
+	dev_dbg(dev, "%s: start\n", __func__);
+
+	if (!max98373->hw_init) {
+		dev_dbg(dev, "%s: done - hw_init not necessary\n",
+			__func__);
 		return 0;
+	}
 
 	if (!slave->unattach_request)
 		goto regmap_sync;
+
+	dev_dbg(dev, "%s: wait_for_completion start\n", __func__);
 
 	time = wait_for_completion_timeout(&slave->initialization_complete,
 					   msecs_to_jiffies(MAX98373_PROBE_TIMEOUT));
@@ -272,10 +279,17 @@ static __maybe_unused int max98373_resume(struct device *dev)
 		return -ETIMEDOUT;
 	}
 
+	dev_dbg(dev, "%s: wait_for_completion start\n", __func__);
+
 regmap_sync:
+	dev_dbg(dev, "%s: regmap_sync\n", __func__);
+
 	slave->unattach_request = 0;
+
 	regcache_cache_only(max98373->regmap, false);
 	regcache_sync(max98373->regmap);
+
+	dev_dbg(dev, "%s: done\n", __func__);
 
 	return 0;
 }
