@@ -4265,6 +4265,8 @@ void set_primary_fwnode(struct device *dev, struct fwnode_handle *fwnode)
 	struct device *parent = dev->parent;
 	struct fwnode_handle *fn = dev->fwnode;
 
+	dev_err(dev, "plb: %s: start\n", __func__);
+
 	if (fwnode) {
 		if (fwnode_is_primary(fn))
 			fn = fn->secondary;
@@ -4272,17 +4274,21 @@ void set_primary_fwnode(struct device *dev, struct fwnode_handle *fwnode)
 		if (fn) {
 			WARN_ON(fwnode->secondary);
 			fwnode->secondary = fn;
+			dev_err(dev, "plb: %s: fwnode->secondary override\n", __func__);
 		}
 		dev->fwnode = fwnode;
 	} else {
 		if (fwnode_is_primary(fn)) {
 			dev->fwnode = fn->secondary;
-			if (!(parent && fn == parent->fwnode))
+			if (!(parent && fn == parent->fwnode)) {
 				fn->secondary = ERR_PTR(-ENODEV);
+				dev_err(dev, "plb: %s: fwnode->secondary is ERR_PTR(-NODEV) 2\n", __func__);
+			}
 		} else {
 			dev->fwnode = NULL;
 		}
 	}
+	dev_err(dev, "plb: %s: end\n", __func__);
 }
 EXPORT_SYMBOL_GPL(set_primary_fwnode);
 
@@ -4297,13 +4303,17 @@ EXPORT_SYMBOL_GPL(set_primary_fwnode);
  */
 void set_secondary_fwnode(struct device *dev, struct fwnode_handle *fwnode)
 {
+	dev_err(dev, "plb: %s: start\n", __func__);
 	if (fwnode)
 		fwnode->secondary = ERR_PTR(-ENODEV);
 
 	if (fwnode_is_primary(dev->fwnode))
 		dev->fwnode->secondary = fwnode;
-	else
+	else {
+		dev_err(dev, "plb: %s: fwnode change\n", __func__);
 		dev->fwnode = fwnode;
+	}
+	dev_err(dev, "plb: %s: end\n", __func__);
 }
 EXPORT_SYMBOL_GPL(set_secondary_fwnode);
 

@@ -41,8 +41,14 @@ static inline acpi_handle acpi_device_handle(struct acpi_device *adev)
 }
 
 #define ACPI_COMPANION(dev)		to_acpi_device_node((dev)->fwnode)
-#define ACPI_COMPANION_SET(dev, adev)	set_primary_fwnode(dev, (adev) ? \
-	acpi_fwnode_handle(adev) : NULL)
+#define ACPI_COMPANION_SET(dev, adev) \
+	{if (adev) {					   \
+	set_primary_fwnode(dev, acpi_fwnode_handle(adev)); \
+	} else { \
+	dev_err(dev, "plb: %s: setting set_primary_fwnode NULL \n", __func__); \
+	set_primary_fwnode(dev, NULL);\
+	 }}
+
 #define ACPI_HANDLE(dev)		acpi_device_handle(ACPI_COMPANION(dev))
 #define ACPI_HANDLE_FWNODE(fwnode)	\
 				acpi_device_handle(to_acpi_device_node(fwnode))

@@ -144,6 +144,7 @@ int sof_sdw_rt711_exit(struct device *dev, struct snd_soc_dai_link *dai_link)
 	if (!sdw_dev)
 		return -EINVAL;
 
+	dev_err(sdw_dev, "plb: %s removing properties\n", __func__);
 	device_remove_properties(sdw_dev);
 	put_device(sdw_dev);
 
