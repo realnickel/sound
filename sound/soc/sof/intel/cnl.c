@@ -50,7 +50,7 @@ irqreturn_t cnl_ipc_irq_thread(int irq, void *context)
 		msg_ext = hipci & CNL_DSP_REG_HIPCIDR_MSG_MASK;
 		msg = hipcida & CNL_DSP_REG_HIPCIDA_MSG_MASK;
 
-		dev_vdbg(sdev->dev,
+		dev_dbg(sdev->dev,
 			 "ipc: firmware response, msg:0x%x, msg_ext:0x%x\n",
 			 msg, msg_ext);
 
@@ -77,7 +77,7 @@ irqreturn_t cnl_ipc_irq_thread(int irq, void *context)
 		msg = hipctdr & CNL_DSP_REG_HIPCTDR_MSG_MASK;
 		msg_ext = hipctdd & CNL_DSP_REG_HIPCTDD_MSG_MASK;
 
-		dev_vdbg(sdev->dev,
+		dev_dbg(sdev->dev,
 			 "ipc: firmware initiated, msg:0x%x, msg_ext:0x%x\n",
 			 msg, msg_ext);
 

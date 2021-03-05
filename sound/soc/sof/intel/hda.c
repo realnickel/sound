@@ -690,6 +690,8 @@ static irqreturn_t hda_dsp_interrupt_handler(int irq, void *context)
 {
 	struct snd_sof_dev *sdev = context;
 
+	dev_dbg_ratelimited(sdev->dev, "plb: hda_dsp_interrupt_handler\n");
+
 	/*
 	 * Get global interrupt status. It includes all hardware interrupt
 	 * sources in the Intel HD Audio controller.
@@ -714,18 +716,28 @@ static irqreturn_t hda_dsp_interrupt_thread(int irq, void *context)
 	struct snd_sof_dev *sdev = context;
 	struct sof_intel_hda_dev *hdev = sdev->pdata->hw_pdata;
 
+	dev_dbg_ratelimited(sdev->dev, "plb: hda_dsp_interrupt_thread\n");
+		
 	/* deal with streams and controller first */
-	if (hda_dsp_check_stream_irq(sdev))
+	if (hda_dsp_check_stream_irq(sdev)) {
+		dev_dbg_ratelimited(sdev->dev, "plb: stream irq\n");
 		hda_dsp_stream_threaded_handler(irq, sdev);
+	}
 
-	if (hda_dsp_check_ipc_irq(sdev))
+	if (hda_dsp_check_ipc_irq(sdev)) {
+		dev_dbg_ratelimited(sdev->dev, "plb: ipc irq\n");
 		sof_ops(sdev)->irq_thread(irq, sdev);
+	}
 
-	if (hda_dsp_check_sdw_irq(sdev))
+	if (hda_dsp_check_sdw_irq(sdev)) {
+		dev_dbg_ratelimited(sdev->dev, "plb: sdw irq\n");
 		hda_dsp_sdw_thread(irq, hdev->sdw);
+	}
 
-	if (hda_sdw_check_wakeen_irq(sdev))
+	if (hda_sdw_check_wakeen_irq(sdev)) {
+		dev_dbg_ratelimited(sdev->dev, "plb: wake irq\n");
 		hda_sdw_process_wakeen(sdev);
+	}
 
 	/* enable GIE interrupt */
 	snd_sof_dsp_update_bits(sdev, HDA_DSP_HDA_BAR,

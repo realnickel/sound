@@ -92,7 +92,7 @@ static int cl_dsp_init(struct snd_sof_dev *sdev, int stream_tag)
 	int ret;
 	int i;
 
-	/* step 1: power up corex */
+	dev_dbg(sdev->dev, "step 1: power up corex");
 	ret = snd_sof_dsp_core_power_up(sdev, chip->host_managed_cores_mask);
 	if (ret < 0) {
 		if (hda->boot_iteration == HDA_FW_BOOT_ATTEMPTS)
@@ -110,12 +110,12 @@ static int cl_dsp_init(struct snd_sof_dev *sdev, int stream_tag)
 						 SSP_SET_SLAVE);
 	}
 
-	/* step 2: purge FW request */
+	dev_dbg(sdev->dev, "step 2: purge FW request");
 	snd_sof_dsp_write(sdev, HDA_DSP_BAR, chip->ipc_req,
 			  chip->ipc_req_mask | (HDA_DSP_IPC_PURGE_FW |
 			  ((stream_tag - 1) << 9)));
 
-	/* step 3: unset core 0 reset state & unstall/run core 0 */
+	dev_dbg(sdev->dev, "step 3: unset core 0 reset state & unstall/run core 0");
 	ret = hda_dsp_core_run(sdev, BIT(0));
 	if (ret < 0) {
 		if (hda->boot_iteration == HDA_FW_BOOT_ATTEMPTS)
@@ -125,7 +125,7 @@ static int cl_dsp_init(struct snd_sof_dev *sdev, int stream_tag)
 		goto err;
 	}
 
-	/* step 4: wait for IPC DONE bit from ROM */
+	dev_dbg(sdev->dev, "step 4: wait for IPC DONE bit from ROM");
 	ret = snd_sof_dsp_read_poll_timeout(sdev, HDA_DSP_BAR,
 					    chip->ipc_ack, status,
 					    ((status & chip->ipc_ack_mask)
@@ -147,7 +147,7 @@ static int cl_dsp_init(struct snd_sof_dev *sdev, int stream_tag)
 				       chip->ipc_ack_mask,
 				       chip->ipc_ack_mask);
 
-	/* step 5: power down cores that are no longer needed */
+	dev_dbg(sdev->dev, "step 5: power down cores that are no longer needed");
 	ret = snd_sof_dsp_core_power_down(sdev, chip->host_managed_cores_mask &
 					  ~(chip->init_core_mask));
 	if (ret < 0) {
@@ -157,10 +157,10 @@ static int cl_dsp_init(struct snd_sof_dev *sdev, int stream_tag)
 		goto err;
 	}
 
-	/* step 6: enable IPC interrupts */
+	dev_dbg(sdev->dev, "step 6: enable IPC interrupts");
 	hda_dsp_ipc_int_enable(sdev);
 
-	/* step 7: wait for ROM init */
+	dev_dbg(sdev->dev, "step 7: wait for ROM init");
 	ret = snd_sof_dsp_read_poll_timeout(sdev, HDA_DSP_BAR,
 					HDA_DSP_SRAM_REG_ROM_STATUS, status,
 					((status & HDA_DSP_ROM_STS_MASK)
