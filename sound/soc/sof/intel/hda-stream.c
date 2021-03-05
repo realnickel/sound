@@ -89,12 +89,12 @@ int hda_dsp_stream_setup_bdl(struct snd_sof_dev *sdev,
 	int remain, ioc;
 
 	period_bytes = stream->period_bytes;
-	dev_dbg(sdev->dev, "period_bytes:0x%x\n", period_bytes);
 	if (!period_bytes)
 		period_bytes = stream->bufsize;
 
 	periods = stream->bufsize / period_bytes;
 
+	dev_dbg(sdev->dev, "period_bytes:0x%x\n", period_bytes);
 	dev_dbg(sdev->dev, "periods:%d\n", periods);
 
 	remain = stream->bufsize % period_bytes;
