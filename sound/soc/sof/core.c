@@ -403,8 +403,12 @@ int snd_sof_device_shutdown(struct device *dev)
 	if (IS_ENABLED(CONFIG_SND_SOC_SOF_PROBE_WORK_QUEUE))
 		cancel_work_sync(&sdev->probe_work);
 
+	dev_dbg(dev, "%s: fw state %d\n", __func__, sdev->fw_state);
+
 	if (sdev->fw_state > SOF_FW_BOOT_NOT_STARTED)
 		return snd_sof_shutdown(sdev);
+
+	dev_dbg(dev, "%s: shutdown bypassed\n", __func__);
 
 	return 0;
 }
