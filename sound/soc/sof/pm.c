@@ -89,6 +89,8 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 	u32 old_state = sdev->dsp_power_state.state;
 	int ret;
 
+	dev_warn(dev, "%s: start runtime_resume %d\n", __func__, runtime_resume);
+
 	/* do nothing if dsp resume callbacks are not set */
 	if (!runtime_resume && !sof_ops(sdev)->resume)
 		return 0;
@@ -175,6 +177,8 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 			ret);
 
 	return ret;
+
+	dev_warn(dev, "%s: done\n", __func__);
 
 restore_pipeline_err:
 fw_run_err:
@@ -319,6 +323,8 @@ int snd_sof_prepare(struct device *dev)
 	struct snd_sof_dev *sdev = dev_get_drvdata(dev);
 	const struct sof_dev_desc *desc = sdev->pdata->desc;
 
+	dev_warn(dev, "%s: start\n", __func__);
+		
 	/* will suspend to S3 by default */
 	sdev->system_suspend_target = SOF_SUSPEND_S3;
 
@@ -330,6 +336,8 @@ int snd_sof_prepare(struct device *dev)
 		sdev->system_suspend_target = SOF_SUSPEND_S0IX;
 #endif
 
+	dev_warn(dev, "%s: done\n", __func__);
+
 	return 0;
 }
 EXPORT_SYMBOL(snd_sof_prepare);
@@ -338,6 +346,10 @@ void snd_sof_complete(struct device *dev)
 {
 	struct snd_sof_dev *sdev = dev_get_drvdata(dev);
 
+	dev_warn(dev, "%s: start\n", __func__);
+
 	sdev->system_suspend_target = SOF_SUSPEND_NONE;
+
+	dev_warn(dev, "%s: done\n", __func__);
 }
 EXPORT_SYMBOL(snd_sof_complete);

@@ -672,7 +672,7 @@ static void soc_resume_deferred(struct work_struct *work)
 	 * our power state is still SNDRV_CTL_POWER_D3hot from suspend time,
 	 * so userspace apps are blocked from touching us
 	 */
-	dev_warn(dev, "%s: start\n", __func__);
+	dev_warn(card->dev, "%s: start\n", __func__);
 	dev_dbg(card->dev, "ASoC: starting resume work\n");
 
 	/* Bring us up into D2 so that DAPM starts enabling things */
@@ -701,7 +701,7 @@ static void soc_resume_deferred(struct work_struct *work)
 	/* userspace can access us now we are back as we were before */
 	snd_power_change_state(card->snd_card, SNDRV_CTL_POWER_D0);
 
-	dev_warn(dev, "%s: done\n", __func__);
+	dev_warn(card->dev, "%s: done\n", __func__);
 }
 
 /* powers up audio subsystem after a suspend */
