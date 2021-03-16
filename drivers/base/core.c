@@ -4310,6 +4310,8 @@ void device_shutdown(void)
 {
 	struct device *dev, *parent;
 
+	pr_err("%s: start\n", __func__);
+	
 	wait_for_device_probe();
 	device_block_probing();
 
@@ -4349,17 +4351,17 @@ void device_shutdown(void)
 		pm_runtime_barrier(dev);
 
 		if (dev->class && dev->class->shutdown_pre) {
-			if (initcall_debug)
+			//if (initcall_debug)
 				dev_info(dev, "shutdown_pre\n");
 			dev->class->shutdown_pre(dev);
 		}
 		if (dev->bus && dev->bus->shutdown) {
-			if (initcall_debug)
-				dev_info(dev, "shutdown\n");
+			//if (initcall_debug)
+				dev_info(dev, "shutdown1\n");
 			dev->bus->shutdown(dev);
 		} else if (dev->driver && dev->driver->shutdown) {
-			if (initcall_debug)
-				dev_info(dev, "shutdown\n");
+			//if (initcall_debug)
+				dev_info(dev, "shutdown2\n");
 			dev->driver->shutdown(dev);
 		}
 
@@ -4373,6 +4375,8 @@ void device_shutdown(void)
 		spin_lock(&devices_kset->list_lock);
 	}
 	spin_unlock(&devices_kset->list_lock);
+
+	pr_err("%s: done\n", __func__);
 }
 
 /*

@@ -983,6 +983,8 @@ static int pci_pm_freeze(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 
+	dev_warn(dev, "%s: start\n", __func__);
+
 	if (pci_has_legacy_pm_support(pci_dev))
 		return pci_legacy_suspend(dev, PMSG_FREEZE);
 
@@ -1011,6 +1013,8 @@ static int pci_pm_freeze(struct device *dev)
 			return error;
 	}
 
+	dev_warn(dev, "%s: done\n", __func__);
+
 	return 0;
 }
 
@@ -1018,6 +1022,8 @@ static int pci_pm_freeze_noirq(struct device *dev)
 {
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
+
+	dev_warn(dev, "%s: start\n", __func__);
 
 	if (pci_has_legacy_pm_support(pci_dev))
 		return pci_legacy_suspend_late(dev, PMSG_FREEZE);
@@ -1036,6 +1042,8 @@ static int pci_pm_freeze_noirq(struct device *dev)
 
 	pci_pm_set_unknown_state(pci_dev);
 
+	dev_warn(dev, "%s: done\n", __func__);
+		
 	return 0;
 }
 
@@ -1091,6 +1099,8 @@ static int pci_pm_poweroff(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 
+	dev_warn(dev, "%s: start\n", __func__);
+
 	if (pci_has_legacy_pm_support(pci_dev))
 		return pci_legacy_suspend(dev, PMSG_HIBERNATE);
 
@@ -1117,16 +1127,23 @@ static int pci_pm_poweroff(struct device *dev)
 			return error;
 	}
 
+	dev_warn(dev, "%s: done\n", __func__);
+	
 	return 0;
 }
 
 static int pci_pm_poweroff_late(struct device *dev)
 {
+	dev_warn(dev, "%s: start\n", __func__);
+		
 	if (dev_pm_skip_suspend(dev))
 		return 0;
 
 	pci_fixup_device(pci_fixup_suspend, to_pci_dev(dev));
 
+	dev_warn(dev, "%s: done\n", __func__);
+
+		
 	return pm_generic_poweroff_late(dev);
 }
 
@@ -1135,6 +1152,8 @@ static int pci_pm_poweroff_noirq(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 
+	dev_warn(dev, "%s: start\n", __func__);
+	
 	if (dev_pm_skip_suspend(dev))
 		return 0;
 
@@ -1167,6 +1186,8 @@ static int pci_pm_poweroff_noirq(struct device *dev)
 
 	pci_fixup_device(pci_fixup_suspend_late, pci_dev);
 
+	dev_warn(dev, "%s: done\n", __func__);
+		
 	return 0;
 }
 
@@ -1292,6 +1313,8 @@ static int pci_pm_runtime_resume(struct device *dev)
 	pci_power_t prev_state = pci_dev->current_state;
 	int error = 0;
 
+	dev_warn(dev, "%s: start\n", __func__);
+	
 	/*
 	 * Restoring config space is necessary even if the device is not bound
 	 * to a driver because although we left it in D0, it may have gone to
@@ -1313,6 +1336,8 @@ static int pci_pm_runtime_resume(struct device *dev)
 
 	pci_dev->runtime_d3cold = false;
 
+	dev_warn(dev, "%s: done\n", __func__);
+		
 	return error;
 }
 

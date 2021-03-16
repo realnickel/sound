@@ -22,6 +22,8 @@ static u32 snd_sof_dsp_power_target(struct snd_sof_dev *sdev)
 {
 	u32 target_dsp_state;
 
+	dev_warn(sdev->dev, "%s: start\n", __func__);
+
 	switch (sdev->system_suspend_target) {
 	case SOF_SUSPEND_S3:
 		/* DSP should be in D3 if the system is suspending to S3 */
@@ -45,6 +47,8 @@ static u32 snd_sof_dsp_power_target(struct snd_sof_dev *sdev)
 		break;
 	}
 
+	dev_warn(sdev->dev, "%s: done\n", __func__);
+	
 	return target_dsp_state;
 }
 
@@ -52,7 +56,10 @@ static int sof_send_pm_ctx_ipc(struct snd_sof_dev *sdev, int cmd)
 {
 	struct sof_ipc_pm_ctx pm_ctx;
 	struct sof_ipc_reply reply;
+	int ret;
 
+	dev_warn(sdev->dev, "%s: start\n", __func__);
+	
 	memset(&pm_ctx, 0, sizeof(pm_ctx));
 
 	/* configure ctx save ipc message */
@@ -60,8 +67,12 @@ static int sof_send_pm_ctx_ipc(struct snd_sof_dev *sdev, int cmd)
 	pm_ctx.hdr.cmd = SOF_IPC_GLB_PM_MSG | cmd;
 
 	/* send ctx save ipc to dsp */
-	return sof_ipc_tx_message(sdev->ipc, pm_ctx.hdr.cmd, &pm_ctx,
+	ret = sof_ipc_tx_message(sdev->ipc, pm_ctx.hdr.cmd, &pm_ctx,
 				 sizeof(pm_ctx), &reply, sizeof(reply));
+
+	dev_warn(sdev->dev, "%s: done\n", __func__);
+
+	return ret;
 }
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_DEBUG_ENABLE_DEBUGFS_CACHE)
@@ -176,9 +187,9 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 			"error: ctx_restore ipc error during resume %d\n",
 			ret);
 
-	return ret;
-
 	dev_warn(dev, "%s: done\n", __func__);
+	
+	return ret;
 
 restore_pipeline_err:
 fw_run_err:
@@ -197,6 +208,8 @@ static int sof_suspend(struct device *dev, bool runtime_suspend)
 	struct snd_sof_dev *sdev = dev_get_drvdata(dev);
 	u32 target_state = 0;
 	int ret;
+
+	dev_warn(dev, "%s: start runtime_suspend %d\n", __func__, runtime_suspend);
 
 	/* do nothing if dsp suspend callback is not set */
 	if (!runtime_suspend && !sof_ops(sdev)->suspend)
@@ -274,15 +287,21 @@ suspend:
 	/* reset FW state */
 	sdev->fw_state = SOF_FW_BOOT_NOT_STARTED;
 
+	dev_warn(dev, "%s: done\n", __func__);
+	
 	return ret;
 }
 
 int snd_sof_dsp_power_down_notify(struct snd_sof_dev *sdev)
 {
+	dev_warn(sdev->dev, "%s: start\n", __func__);
+
 	/* Notify DSP of upcoming power down */
 	if (sof_ops(sdev)->remove)
 		return sof_send_pm_ctx_ipc(sdev, SOF_IPC_PM_CTX_SAVE);
 
+	dev_warn(sdev->dev, "%s: done\n", __func__);
+	
 	return 0;
 }
 
@@ -295,8 +314,15 @@ EXPORT_SYMBOL(snd_sof_runtime_suspend);
 int snd_sof_runtime_idle(struct device *dev)
 {
 	struct snd_sof_dev *sdev = dev_get_drvdata(dev);
+	int ret;
 
-	return snd_sof_dsp_runtime_idle(sdev);
+	dev_warn(dev, "%s: start\n", __func__);
+	
+	ret = snd_sof_dsp_runtime_idle(sdev);
+
+	dev_warn(dev, "%s: done\n", __func__);
+
+	return ret;
 }
 EXPORT_SYMBOL(snd_sof_runtime_idle);
 
