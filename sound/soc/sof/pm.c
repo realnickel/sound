@@ -100,6 +100,8 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 	if (sdev->first_boot)
 		return 0;
 
+	sdev->fw_state = SOF_FW_BOOT_NOT_STARTED;
+
 	/*
 	 * if the runtime_resume flag is set, call the runtime_resume routine
 	 * or else call the system resume routine
@@ -130,7 +132,7 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 		dev_err(sdev->dev,
 			"error: failed to load DSP firmware after resume %d\n",
 			ret);
-		return ret;
+		goto fw_load_err;
 	}
 
 	sdev->fw_state = SOF_FW_BOOT_IN_PROGRESS;
@@ -144,7 +146,7 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 		dev_err(sdev->dev,
 			"error: failed to boot DSP firmware after resume %d\n",
 			ret);
-		return ret;
+		goto fw_run_err;
 	}
 
 	/* resume DMA trace, only need send ipc */
@@ -162,7 +164,7 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 		dev_err(sdev->dev,
 			"error: failed to restore pipeline after resume %d\n",
 			ret);
-		return ret;
+		goto restore_pipeline_err;
 	}
 
 	/* notify DSP of system resume */
@@ -171,6 +173,17 @@ static int sof_resume(struct device *dev, bool runtime_resume)
 		dev_err(sdev->dev,
 			"error: ctx_restore ipc error during resume %d\n",
 			ret);
+
+	return ret;
+
+restore_pipeline_err:
+fw_run_err:
+	snd_sof_fw_unload(sdev);
+
+fw_load_err:
+
+	/* all update state to match */
+	sdev->fw_state = SOF_FW_BOOT_NOT_STARTED;
 
 	return ret;
 }
