@@ -484,10 +484,17 @@ static void pci_device_shutdown(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct pci_driver *drv = pci_dev->driver;
 
+	dev_warn(dev, "%s: pm_runtime_resume: start\n", __func__);
+
 	pm_runtime_resume(dev);
 
-	if (drv && drv->shutdown)
+	dev_warn(dev, "%s: pm_runtime_resume: done\n", __func__);
+
+	if (drv && drv->shutdown) {
+		dev_warn(dev, "%s: shutdown start\n", __func__);
 		drv->shutdown(pci_dev);
+		dev_warn(dev, "%s: shutdown done\n", __func__);
+	}
 
 	/*
 	 * If this is a kexec reboot, turn off Bus Master bit on the
