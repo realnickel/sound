@@ -445,6 +445,8 @@ static int pci_device_remove(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct pci_driver *drv = pci_dev->driver;
 
+	dev_warn(dev, "%s: start\n", __func__);
+	
 	if (drv) {
 		if (drv->remove) {
 			pm_runtime_get_sync(dev);
@@ -476,6 +478,9 @@ static int pci_device_remove(struct device *dev)
 	 */
 
 	pci_dev_put(pci_dev);
+
+	dev_warn(dev, "%s: done\n", __func__);
+
 	return 0;
 }
 
@@ -484,6 +489,8 @@ static void pci_device_shutdown(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct pci_driver *drv = pci_dev->driver;
 
+	dev_warn(dev, "%s: start\n", __func__);
+		
 	dev_warn(dev, "%s: pm_runtime_resume: start\n", __func__);
 
 	pm_runtime_resume(dev);
@@ -505,6 +512,8 @@ static void pci_device_shutdown(struct device *dev)
 	 */
 	if (kexec_in_progress && (pci_dev->current_state <= PCI_D3hot))
 		pci_clear_master(pci_dev);
+
+	dev_warn(dev, "%s: done\n", __func__);
 }
 
 #ifdef CONFIG_PM
@@ -1312,8 +1321,6 @@ static int pci_pm_runtime_resume(struct device *dev)
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 	pci_power_t prev_state = pci_dev->current_state;
 	int error = 0;
-
-	dev_warn(dev, "%s: start\n", __func__);
 	
 	/*
 	 * Restoring config space is necessary even if the device is not bound
@@ -1335,8 +1342,6 @@ static int pci_pm_runtime_resume(struct device *dev)
 		error = pm->runtime_resume(dev);
 
 	pci_dev->runtime_d3cold = false;
-
-	dev_warn(dev, "%s: done\n", __func__);
 		
 	return error;
 }

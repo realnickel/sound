@@ -4311,6 +4311,16 @@ void device_shutdown(void)
 	struct device *dev, *parent;
 
 	pr_err("%s: start\n", __func__);
+
+	spin_lock(&devices_kset->list_lock);
+	{
+		struct device *dev;
+
+		list_for_each_entry_reverse(dev, &devices_kset->list, kobj.entry) {
+			dev_warn(dev, "%s: pre shutdown loop\n", __func__);
+		}
+	}
+	spin_unlock(&devices_kset->list_lock);
 	
 	wait_for_device_probe();
 	device_block_probing();
@@ -4326,6 +4336,8 @@ void device_shutdown(void)
 	while (!list_empty(&devices_kset->list)) {
 		dev = list_entry(devices_kset->list.prev, struct device,
 				kobj.entry);
+
+		dev_warn(dev, "%s: actual shutdown loop\n", __func__);
 
 		/*
 		 * hold reference count of device's parent to
