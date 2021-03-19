@@ -124,6 +124,7 @@ config SND_SOC_SOF_CANNONLAKE
 	tristate "SOF support for Cannonlake"
 	default SND_SOC_SOF_PCI
 	select SND_SOC_SOF_INTEL_CNL
+	select SND_SOC_SOF_PROBE_WORK_QUEUE
 	help
 	  This adds support for Sound Open Firmware for Intel(R) platforms
 	  using the Cannonlake processors.

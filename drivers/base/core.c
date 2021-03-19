@@ -4313,20 +4313,35 @@ void device_shutdown(void)
 	pr_err("%s: start\n", __func__);
 
 	spin_lock(&devices_kset->list_lock);
-	{
-		struct device *dev;
-
-		list_for_each_entry_reverse(dev, &devices_kset->list, kobj.entry) {
-			dev_warn(dev, "%s: pre shutdown loop\n", __func__);
-		}
+	list_for_each_entry_reverse(dev, &devices_kset->list, kobj.entry) {
+		dev_warn(dev, "%s: %s scan \n", __func__, dev_name(dev));
 	}
 	spin_unlock(&devices_kset->list_lock);
 	
-	wait_for_device_probe();
+	wait_for_device_probe();	
 	device_block_probing();
 
 	cpufreq_suspend();
 
+	spin_lock(&devices_kset->list_lock);
+	{
+		bool found = false;
+		
+		list_for_each_entry_reverse(dev, &devices_kset->list, kobj.entry) {
+			if (!strcmp(dev_name(dev), "0000:00:1f.3")) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			dev_warn(dev, "%s: plb4 0000:00:1f.3 no longer found\n", __func__);
+		} else {
+			dev_warn(dev, "%s: plb4 0000:00:1f.3 found\n", __func__);
+		}
+	}
+	spin_unlock(&devices_kset->list_lock);
+
+	
 	spin_lock(&devices_kset->list_lock);
 	/*
 	 * Walk the devices list backward, shutting down each in turn.
@@ -4334,10 +4349,28 @@ void device_shutdown(void)
 	 * devices offline, even as the system is shutting down.
 	 */
 	while (!list_empty(&devices_kset->list)) {
-		dev = list_entry(devices_kset->list.prev, struct device,
-				kobj.entry);
 
+		{
+			bool found = false;
+			
+			list_for_each_entry_reverse(dev, &devices_kset->list, kobj.entry) {
+				if (!strcmp(dev_name(dev), "0000:00:1f.3")) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				dev_warn(dev, "%s: plb5 0000:00:1f.3 no longer found\n", __func__);
+			} else {
+				dev_warn(dev, "%s: plb5 0000:00:1f.3 found\n", __func__);
+			}
+		}
+		
+		dev = list_entry(devices_kset->list.prev, struct device,
+				 kobj.entry);
+		
 		dev_warn(dev, "%s: actual shutdown loop\n", __func__);
+
 
 		/*
 		 * hold reference count of device's parent to
