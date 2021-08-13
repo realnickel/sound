@@ -1890,13 +1890,25 @@ int sdw_startup_stream(void *sdw_substream)
 	struct snd_pcm_substream *substream = sdw_substream;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct sdw_stream_runtime *sdw_stream;
+	struct snd_soc_dai *dai;
 	char *name;
 	int ret;
 
+	/* Find stream from first CPU DAI */
+	dai = asoc_rtd_to_cpu(rtd, 0);
+
+#if 0
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		name = kasprintf(GFP_KERNEL, "%s-Playback", substream->name);
 	else
 		name = kasprintf(GFP_KERNEL, "%s-Capture", substream->name);
+#else
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		name = kasprintf(GFP_KERNEL, "%s-Playback", dai->name);
+	else
+		name = kasprintf(GFP_KERNEL, "%s-Capture", dai->name);
+
+#endif
 
 	if (!name)
 		return -ENOMEM;
