@@ -2030,6 +2030,7 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			if (be->dpcm[stream].be_start == 0)
 				do_trigger = true;
 			be->dpcm[stream].be_start++;
+			WARN_ON(be->dpcm[stream].be_start>1);
 			be->dpcm[stream].state = SND_SOC_DPCM_STATE_START;
 			spin_unlock_irqrestore(&fe->card->dpcm_lock, flags);
 
@@ -2057,6 +2058,7 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			if (be->dpcm[stream].be_start == 0)
 				do_trigger = true;
 			be->dpcm[stream].be_start++;
+			WARN_ON(be->dpcm[stream].be_start>1);
 			be->dpcm[stream].state = SND_SOC_DPCM_STATE_START;
 			spin_unlock_irqrestore(&fe->card->dpcm_lock, flags);
 
@@ -2084,6 +2086,7 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			if (be->dpcm[stream].be_start == 0)
 				do_trigger = true;
 			be->dpcm[stream].be_start++;
+			WARN_ON(be->dpcm[stream].be_start>1);
 			be->dpcm[stream].state = SND_SOC_DPCM_STATE_START;
 			spin_unlock_irqrestore(&fe->card->dpcm_lock, flags);
 
@@ -2113,6 +2116,7 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			     be->dpcm[stream].be_start == 0))
 				do_trigger = true;
 			be->dpcm[stream].be_start--;
+			WARN_ON(be->dpcm[stream].be_start<0);
 			spin_unlock_irqrestore(&fe->card->dpcm_lock, flags);
 
 			if (!do_trigger)
@@ -2142,6 +2146,7 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			if (be->dpcm[stream].be_start == 1)
 				do_trigger = true;
 			be->dpcm[stream].be_start--;
+			WARN_ON(be->dpcm[stream].be_start<0);
 			spin_unlock_irqrestore(&fe->card->dpcm_lock, flags);
 
 			if (!do_trigger)
@@ -2171,6 +2176,7 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			if (be->dpcm[stream].be_start == 1)
 				do_trigger = true;
 			be->dpcm[stream].be_start--;
+			WARN_ON(be->dpcm[stream].be_start<0);
 			spin_unlock_irqrestore(&fe->card->dpcm_lock, flags);
 
 			if (!do_trigger)
