@@ -964,7 +964,7 @@ stream_config:
 }
 
 /**
- * sdw_alloc_slave_rt() - Allocate and initialize Slave runtime handle.
+ * sdw_alloc_slave_rt() - Allocate Slave runtime handle.
  *
  * @slave: Slave handle
  * @stream_config: Stream configuration
@@ -972,8 +972,7 @@ stream_config:
  * This function is to be called with bus_lock held.
  */
 static struct sdw_slave_runtime
-*sdw_alloc_slave_rt(struct sdw_slave *slave,
-		    struct sdw_stream_config *stream_config)
+*sdw_alloc_slave_rt(struct sdw_slave *slave)
 {
 	struct sdw_slave_runtime *s_rt;
 
@@ -982,11 +981,24 @@ static struct sdw_slave_runtime
 		return NULL;
 
 	INIT_LIST_HEAD(&s_rt->port_list);
-	s_rt->ch_count = stream_config->ch_count;
-	s_rt->direction = stream_config->direction;
 	s_rt->slave = slave;
 
 	return s_rt;
+}
+
+/**
+ * sdw_configure_slave_rt() - configure Slave runtime handle.
+ *
+ * @s_rt: Slave runtime handle
+ * @stream_config: Stream configuration
+ *
+ * This function is to be called with bus_lock held.
+ */
+static void sdw_configure_slave_rt(struct sdw_slave_runtime *s_rt,
+				   struct sdw_stream_config *stream_config)
+{
+	s_rt->ch_count = stream_config->ch_count;
+	s_rt->direction = stream_config->direction;
 }
 
 static void sdw_master_port_release(struct sdw_bus *bus,
@@ -1365,14 +1377,16 @@ int sdw_stream_add_slave(struct sdw_slave *slave,
 		goto error;
 	}
 
-	s_rt = sdw_alloc_slave_rt(slave, stream_config);
+	s_rt = sdw_alloc_slave_rt(slave);
 	if (!s_rt) {
 		dev_err(&slave->dev,
-			"Slave runtime config failed for stream:%s\n",
+			"Slave runtime allocation failed for stream:%s\n",
 			stream->name);
 		ret = -ENOMEM;
 		goto stream_error;
 	}
+
+	sdw_configure_slave_rt(s_rt, stream_config);
 
 	ret = sdw_config_stream(&slave->dev, stream, stream_config, true);
 	if (ret) {
