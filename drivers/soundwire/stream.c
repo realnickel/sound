@@ -905,7 +905,7 @@ struct sdw_stream_runtime *sdw_alloc_stream(const char *stream_name)
 EXPORT_SYMBOL(sdw_alloc_stream);
 
 static struct sdw_master_runtime
-*sdw_find_master_rt(struct sdw_bus *bus,
+*sdw_master_rt_find(struct sdw_bus *bus,
 		    struct sdw_stream_runtime *stream)
 {
 	struct sdw_master_runtime *m_rt;
@@ -919,131 +919,37 @@ static struct sdw_master_runtime
 	return NULL;
 }
 
-/**
- * sdw_alloc_master_rt() - Allocates and initialize Master runtime handle
- *
- * @bus: SDW bus instance
- * @stream_config: Stream configuration
- * @stream: Stream runtime handle.
- *
- * This function is to be called with bus_lock held.
- */
-static struct sdw_master_runtime
-*sdw_alloc_master_rt(struct sdw_bus *bus,
-		     struct sdw_stream_config *stream_config,
-		     struct sdw_stream_runtime *stream)
+static struct sdw_slave_runtime *sdw_slave_rt_find(struct sdw_slave *slave,
+						   struct sdw_stream_runtime *stream)
 {
-	struct sdw_master_runtime *m_rt;
-
-	/*
-	 * check if Master is already allocated (as a result of Slave adding
-	 * it first), if so skip allocation and go to configure
-	 */
-	m_rt = sdw_find_master_rt(bus, stream);
-	if (m_rt)
-		goto stream_config;
-
-	m_rt = kzalloc(sizeof(*m_rt), GFP_KERNEL);
-	if (!m_rt)
-		return NULL;
-
-	/* Initialization of Master runtime handle */
-	INIT_LIST_HEAD(&m_rt->port_list);
-	INIT_LIST_HEAD(&m_rt->slave_rt_list);
-	list_add_tail(&m_rt->stream_node, &stream->master_list);
-
-	list_add_tail(&m_rt->bus_node, &bus->m_rt_list);
-
-stream_config:
-	m_rt->ch_count = stream_config->ch_count;
-	m_rt->bus = bus;
-	m_rt->stream = stream;
-	m_rt->direction = stream_config->direction;
-
-	return m_rt;
-}
-
-/**
- * sdw_alloc_slave_rt() - Allocate Slave runtime handle.
- *
- * @slave: Slave handle
- * @stream_config: Stream configuration
- *
- * This function is to be called with bus_lock held.
- */
-static struct sdw_slave_runtime
-*sdw_alloc_slave_rt(struct sdw_slave *slave)
-{
-	struct sdw_slave_runtime *s_rt;
-
-	s_rt = kzalloc(sizeof(*s_rt), GFP_KERNEL);
-	if (!s_rt)
-		return NULL;
-
-	INIT_LIST_HEAD(&s_rt->port_list);
-	s_rt->slave = slave;
-
-	return s_rt;
-}
-
-/**
- * sdw_configure_slave_rt() - configure Slave runtime handle.
- *
- * @s_rt: Slave runtime handle
- * @stream_config: Stream configuration
- *
- * This function is to be called with bus_lock held.
- */
-static void sdw_configure_slave_rt(struct sdw_slave_runtime *s_rt,
-				   struct sdw_stream_config *stream_config)
-{
-	s_rt->ch_count = stream_config->ch_count;
-	s_rt->direction = stream_config->direction;
-}
-
-static void sdw_master_port_release(struct sdw_bus *bus,
-				    struct sdw_master_runtime *m_rt)
-{
-	struct sdw_port_runtime *p_rt, *_p_rt;
-
-	list_for_each_entry_safe(p_rt, _p_rt, &m_rt->port_list, port_node) {
-		list_del(&p_rt->port_node);
-		kfree(p_rt);
-	}
-}
-
-static void sdw_slave_port_release(struct sdw_bus *bus,
-				   struct sdw_slave *slave,
-				   struct sdw_stream_runtime *stream)
-{
-	struct sdw_port_runtime *p_rt, *_p_rt;
 	struct sdw_master_runtime *m_rt;
 	struct sdw_slave_runtime *s_rt;
 
 	list_for_each_entry(m_rt, &stream->master_list, stream_node) {
-		list_for_each_entry(s_rt, &m_rt->slave_rt_list, m_rt_node) {
-			if (s_rt->slave != slave)
-				continue;
-
-			list_for_each_entry_safe(p_rt, _p_rt,
-						 &s_rt->port_list, port_node) {
-				list_del(&p_rt->port_node);
-				kfree(p_rt);
-			}
-		}
+		if (m_rt->bus == slave->bus)
+			break;
 	}
+
+	if (!m_rt)
+		return NULL;
+
+	list_for_each_entry(s_rt, &m_rt->slave_rt_list, m_rt_node) {
+		if (s_rt->slave == slave)
+			return s_rt;
+	}
+	return NULL;
 }
 
 /**
- * sdw_release_slave_stream() - Free Slave(s) runtime handle
+ * sdw_slave_rt_free() - Free Slave(s) runtime handle
  *
  * @slave: Slave handle.
  * @stream: Stream runtime handle.
  *
  * This function is to be called with bus_lock held.
  */
-static void sdw_release_slave_stream(struct sdw_slave *slave,
-				     struct sdw_stream_runtime *stream)
+static void sdw_slave_rt_free(struct sdw_slave *slave,
+			      struct sdw_stream_runtime *stream)
 {
 	struct sdw_slave_runtime *s_rt, *_s_rt;
 	struct sdw_master_runtime *m_rt;
@@ -1062,25 +968,224 @@ static void sdw_release_slave_stream(struct sdw_slave *slave,
 }
 
 /**
- * sdw_release_master_stream() - Free Master runtime handle
+ * sdw_slave_rt_alloc() - Allocate Slave runtime handle.
+ *
+ * @slave: Slave handle
+ *
+ * This function is to be called with bus_lock held.
+ */
+static struct sdw_slave_runtime
+	*sdw_slave_rt_alloc(struct sdw_slave *slave)
+{
+	struct sdw_slave_runtime *s_rt;
+
+	s_rt = kzalloc(sizeof(*s_rt), GFP_KERNEL);
+	if (!s_rt)
+		return NULL;
+
+	INIT_LIST_HEAD(&s_rt->port_list);
+	s_rt->slave = slave;
+
+	return s_rt;
+}
+
+/**
+ * sdw_slave_rt_config() - configure Slave runtime handle.
+ *
+ * @s_rt: Slave runtime handle
+ * @stream_config: Stream configuration
+ *
+ * This function is to be called with bus_lock held.
+ */
+static void sdw_slave_rt_config(struct sdw_slave_runtime *s_rt,
+				struct sdw_stream_config *stream_config)
+{
+	s_rt->ch_count = stream_config->ch_count;
+	s_rt->direction = stream_config->direction;
+}
+
+static int sdw_is_valid_port_range(struct device *dev,
+				   struct sdw_port_runtime *p_rt)
+{
+	if (!SDW_VALID_PORT_RANGE(p_rt->num)) {
+		dev_err(dev,
+			"SoundWire: Invalid port number :%d\n", p_rt->num);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static void sdw_slave_rt_port_free(struct sdw_slave_runtime *s_rt)
+{
+	struct sdw_port_runtime *p_rt, *_p_rt;
+
+	list_for_each_entry_safe(p_rt, _p_rt, &s_rt->port_list, port_node) {
+		list_del(&p_rt->port_node);
+		kfree(p_rt);
+	}
+}
+
+static int sdw_slave_rt_port_alloc(struct sdw_slave_runtime *s_rt,
+				   unsigned int num_ports)
+{
+	struct sdw_port_runtime *p_rt;
+	int ret;
+	int i;
+
+	/*
+	 * release previously allocated ports to simplify handling of
+	 * multiple hw_params calls
+	 */
+	if (!list_empty(&s_rt->port_list))
+		sdw_slave_rt_port_free(s_rt);
+
+	/* Iterate for number of ports to perform initialization */
+	for (i = 0; i < num_ports; i++) {
+		p_rt = kzalloc(sizeof(*p_rt), GFP_KERNEL);
+		if (!p_rt) {
+			ret = -ENOMEM;
+			goto unwind;
+		}
+		list_add_tail(&p_rt->port_node, &s_rt->port_list);
+	}
+	return 0;
+
+unwind:
+	sdw_slave_rt_port_free(s_rt);
+	return ret;
+}
+
+static int sdw_slave_rt_port_config(struct device *dev,
+				    struct sdw_slave_runtime *s_rt,
+				    struct sdw_port_config *port_config,
+				    unsigned int num_ports)
+{
+	struct sdw_port_runtime *p_rt;
+	int port_index = 0;
+	int ret;
+
+	ret = sdw_slave_rt_port_alloc(s_rt, num_ports);
+	if (ret < 0)
+		return ret;
+
+	list_for_each_entry(p_rt, &s_rt->port_list, port_node) {
+		p_rt->ch_mask = port_config[port_index].ch_mask;
+		p_rt->num = port_config[port_index].num;
+
+		ret = sdw_is_valid_port_range(dev, p_rt);
+		if (ret < 0)
+			goto unwind;
+		port_index++;
+	}
+
+	return 0;
+
+unwind:
+	sdw_slave_rt_port_free(s_rt);
+	return ret;
+}
+
+static void sdw_slave_port_free(struct sdw_bus *bus,
+				struct sdw_slave *slave,
+				struct sdw_stream_runtime *stream)
+{
+	struct sdw_master_runtime *m_rt;
+	struct sdw_slave_runtime *s_rt;
+
+	list_for_each_entry(m_rt, &stream->master_list, stream_node) {
+		list_for_each_entry(s_rt, &m_rt->slave_rt_list, m_rt_node) {
+			if (s_rt->slave != slave)
+				continue;
+
+			sdw_slave_rt_port_free(s_rt);
+		}
+	}
+}
+
+static void sdw_master_rt_port_free(struct sdw_master_runtime *m_rt)
+{
+	struct sdw_port_runtime *p_rt, *_p_rt;
+
+	list_for_each_entry_safe(p_rt, _p_rt, &m_rt->port_list, port_node) {
+		list_del(&p_rt->port_node);
+		kfree(p_rt);
+	}
+}
+
+static int sdw_master_rt_port_alloc(struct sdw_master_runtime *m_rt,
+				    unsigned int num_ports)
+{
+	struct sdw_port_runtime *p_rt;
+	int ret;
+	int i;
+
+	/*
+	 * release previously allocated ports to simplify handling of
+	 * multiple hw_params calls
+	 */
+	if (!list_empty(&m_rt->port_list))
+		sdw_master_rt_port_free(m_rt);
+
+	/* Iterate for number of ports to perform initialization */
+	for (i = 0; i < num_ports; i++) {
+		p_rt = kzalloc(sizeof(*p_rt), GFP_KERNEL);
+		if (!p_rt) {
+			ret = -ENOMEM;
+			goto unwind;
+		}
+		list_add_tail(&p_rt->port_node, &m_rt->port_list);
+	}
+	return 0;
+
+unwind:
+	sdw_master_rt_port_free(m_rt);
+	return ret;
+}
+
+static int sdw_master_rt_port_config(struct sdw_master_runtime *m_rt,
+				     struct sdw_port_config *port_config,
+				     unsigned int num_ports)
+{
+	struct sdw_port_runtime *p_rt;
+	int port_index = 0;
+	int ret;
+
+	ret = sdw_master_rt_port_alloc(m_rt, num_ports);
+	if (ret < 0)
+		return ret;
+
+	list_for_each_entry(p_rt, &m_rt->port_list, port_node) {
+		p_rt->ch_mask = port_config[port_index].ch_mask;
+		p_rt->num = port_config[port_index].num;
+		port_index++;
+	}
+
+	return 0;
+}
+
+/**
+ * sdw_master_rt_free() - Free Master runtime handle
  *
  * @m_rt: Master runtime node
  * @stream: Stream runtime handle.
  *
  * This function is to be called with bus_lock held
  * It frees the Master runtime handle and associated Slave(s) runtime
- * handle. If this is called first then sdw_release_slave_stream() will have
+ * handle. If this is called first then sdw_slave_rt_free() will have
  * no effect as Slave(s) runtime handle would already be freed up.
  */
-static void sdw_release_master_stream(struct sdw_master_runtime *m_rt,
-				      struct sdw_stream_runtime *stream)
+static void sdw_master_rt_free(struct sdw_master_runtime *m_rt,
+			       struct sdw_stream_runtime *stream)
 {
 	struct sdw_slave_runtime *s_rt, *_s_rt;
 
 	list_for_each_entry_safe(s_rt, _s_rt, &m_rt->slave_rt_list, m_rt_node) {
-		sdw_slave_port_release(s_rt->slave->bus, s_rt->slave, stream);
-		sdw_release_slave_stream(s_rt->slave, stream);
+		sdw_slave_port_free(s_rt->slave->bus, s_rt->slave, stream);
+		sdw_slave_rt_free(s_rt->slave, stream);
 	}
+
+	sdw_master_rt_port_free(m_rt);
 
 	list_del(&m_rt->stream_node);
 	list_del(&m_rt->bus_node);
@@ -1088,60 +1193,53 @@ static void sdw_release_master_stream(struct sdw_master_runtime *m_rt,
 }
 
 /**
- * sdw_stream_remove_master() - Remove master from sdw_stream
+ * sdw_master_rt_alloc() - Allocates a Master runtime handle
  *
- * @bus: SDW Bus instance
- * @stream: SoundWire stream
+ * @bus: SDW bus instance
+ * @stream: Stream runtime handle.
  *
- * This removes and frees port_rt and master_rt from a stream
+ * This function is to be called with bus_lock held.
  */
-int sdw_stream_remove_master(struct sdw_bus *bus,
-			     struct sdw_stream_runtime *stream)
+static int sdw_master_rt_alloc(struct sdw_bus *bus,
+			       struct sdw_stream_runtime *stream)
 {
-	struct sdw_master_runtime *m_rt, *_m_rt;
+	struct sdw_master_runtime *m_rt;
 
-	mutex_lock(&bus->bus_lock);
+	m_rt = kzalloc(sizeof(*m_rt), GFP_KERNEL);
+	if (!m_rt)
+		return -ENOMEM;
 
-	list_for_each_entry_safe(m_rt, _m_rt,
-				 &stream->master_list, stream_node) {
-		if (m_rt->bus != bus)
-			continue;
+	/* Initialization of Master runtime handle */
+	INIT_LIST_HEAD(&m_rt->port_list);
+	INIT_LIST_HEAD(&m_rt->slave_rt_list);
+	list_add_tail(&m_rt->stream_node, &stream->master_list);
 
-		sdw_master_port_release(bus, m_rt);
-		sdw_release_master_stream(m_rt, stream);
-		stream->m_rt_count--;
-	}
+	list_add_tail(&m_rt->bus_node, &bus->m_rt_list);
 
-	if (list_empty(&stream->master_list))
-		stream->state = SDW_STREAM_RELEASED;
-
-	mutex_unlock(&bus->bus_lock);
+	m_rt->bus = bus;
+	m_rt->stream = stream;
 
 	return 0;
 }
-EXPORT_SYMBOL(sdw_stream_remove_master);
 
 /**
- * sdw_stream_remove_slave() - Remove slave from sdw_stream
+ * sdw_master_rt_config() - Configure a Master runtime handle
  *
- * @slave: SDW Slave instance
- * @stream: SoundWire stream
+ * @bus: SDW bus instance
+ * @m_rt: Master runtime handle
+ * @stream_config: Stream configuration
+ * @stream: Stream runtime handle.
  *
- * This removes and frees port_rt and slave_rt from a stream
+ * This function is to be called with bus_lock held.
  */
-int sdw_stream_remove_slave(struct sdw_slave *slave,
-			    struct sdw_stream_runtime *stream)
+static void sdw_master_rt_config(struct sdw_bus *bus,
+				 struct sdw_master_runtime *m_rt,
+				 struct sdw_stream_config *stream_config,
+				 struct sdw_stream_runtime *stream)
 {
-	mutex_lock(&slave->bus->bus_lock);
-
-	sdw_slave_port_release(slave->bus, slave, stream);
-	sdw_release_slave_stream(slave, stream);
-
-	mutex_unlock(&slave->bus->bus_lock);
-
-	return 0;
+	m_rt->ch_count = stream_config->ch_count;
+	m_rt->direction = stream_config->direction;
 }
-EXPORT_SYMBOL(sdw_stream_remove_slave);
 
 /**
  * sdw_config_stream() - Configure the allocated stream
@@ -1189,155 +1287,140 @@ static int sdw_config_stream(struct device *dev,
 	return 0;
 }
 
-static int sdw_is_valid_port_range(struct device *dev,
-				   struct sdw_port_runtime *p_rt)
+/**
+ * sdw_stream_remove_slave() - Remove slave from sdw_stream
+ *
+ * @slave: SDW Slave instance
+ * @stream: SoundWire stream
+ *
+ * This removes and frees port_rt and slave_rt from a stream
+ */
+void sdw_stream_remove_slave(struct sdw_slave *slave,
+			     struct sdw_stream_runtime *stream)
 {
-	if (!SDW_VALID_PORT_RANGE(p_rt->num)) {
-		dev_err(dev,
-			"SoundWire: Invalid port number :%d\n", p_rt->num);
-		return -EINVAL;
-	}
+	mutex_lock(&slave->bus->bus_lock);
 
-	return 0;
+	sdw_slave_port_free(slave->bus, slave, stream);
+	sdw_slave_rt_free(slave, stream);
+
+	mutex_unlock(&slave->bus->bus_lock);
 }
-
-static struct sdw_port_runtime
-*sdw_port_alloc(struct device *dev,
-		struct sdw_port_config *port_config,
-		int port_index)
-{
-	struct sdw_port_runtime *p_rt;
-
-	p_rt = kzalloc(sizeof(*p_rt), GFP_KERNEL);
-	if (!p_rt)
-		return NULL;
-
-	p_rt->ch_mask = port_config[port_index].ch_mask;
-	p_rt->num = port_config[port_index].num;
-
-	return p_rt;
-}
-
-static int sdw_master_port_config(struct sdw_bus *bus,
-				  struct sdw_master_runtime *m_rt,
-				  struct sdw_port_config *port_config,
-				  unsigned int num_ports)
-{
-	struct sdw_port_runtime *p_rt;
-	int i;
-
-	/* Iterate for number of ports to perform initialization */
-	for (i = 0; i < num_ports; i++) {
-		p_rt = sdw_port_alloc(bus->dev, port_config, i);
-		if (!p_rt)
-			return -ENOMEM;
-
-		/*
-		 * TODO: Check port capabilities for requested
-		 * configuration (audio mode support)
-		 */
-
-		list_add_tail(&p_rt->port_node, &m_rt->port_list);
-	}
-
-	return 0;
-}
-
-static int sdw_slave_port_config(struct sdw_slave *slave,
-				 struct sdw_slave_runtime *s_rt,
-				 struct sdw_port_config *port_config,
-				 unsigned int num_config)
-{
-	struct sdw_port_runtime *p_rt;
-	int i, ret;
-
-	/* Iterate for number of ports to perform initialization */
-	for (i = 0; i < num_config; i++) {
-		p_rt = sdw_port_alloc(&slave->dev, port_config, i);
-		if (!p_rt)
-			return -ENOMEM;
-
-		/*
-		 * TODO: Check valid port range as defined by DisCo/
-		 * slave
-		 */
-		ret = sdw_is_valid_port_range(&slave->dev, p_rt);
-		if (ret < 0) {
-			kfree(p_rt);
-			return ret;
-		}
-
-		/*
-		 * TODO: Check port capabilities for requested
-		 * configuration (audio mode support)
-		 */
-
-		list_add_tail(&p_rt->port_node, &s_rt->port_list);
-	}
-
-	return 0;
-}
+EXPORT_SYMBOL(sdw_stream_remove_slave);
 
 /**
- * sdw_stream_add_master() - Allocate and add master runtime to a stream
+ * sdw_stream_alloc_slave() - Allocate a master/slave runtime to a stream
  *
- * @bus: SDW Bus instance
- * @stream_config: Stream configuration for audio stream
- * @port_config: Port configuration for audio stream
- * @num_ports: Number of ports
+ * @slave: SDW Slave instance
  * @stream: SoundWire stream
+ *
+ * It is expected that Slave is added before adding Master
+ * to the Stream.
+ *
  */
-int sdw_stream_add_master(struct sdw_bus *bus,
-			  struct sdw_stream_config *stream_config,
-			  struct sdw_port_config *port_config,
-			  unsigned int num_ports,
-			  struct sdw_stream_runtime *stream)
+int sdw_stream_alloc_slave(struct sdw_slave *slave,
+			   struct sdw_stream_runtime *stream)
 {
+	struct sdw_slave_runtime *s_rt;
 	struct sdw_master_runtime *m_rt;
-	int ret;
+	bool alloc_master_rt = false;
+	int ret = 0;
 
-	mutex_lock(&bus->bus_lock);
+	mutex_lock(&slave->bus->bus_lock);
 
 	/*
-	 * For multi link streams, add the second master only if
-	 * the bus supports it.
-	 * Check if bus->multi_link is set
+	 * check if Master is already allocated (as a result of Slave adding
+	 * it first), if so skip allocation
 	 */
-	if (!bus->multi_link && stream->m_rt_count > 0) {
-		dev_err(bus->dev,
-			"Multilink not supported, link %d\n", bus->link_id);
-		ret = -EINVAL;
-		goto unlock;
+	m_rt = sdw_master_rt_find(slave->bus, stream);
+	if (!m_rt) {
+		/*
+		 * If this API is invoked by Slave first then m_rt is not valid.
+		 * So, allocate m_rt and add Slave to it.
+		 */
+		ret = sdw_master_rt_alloc(slave->bus, stream);
+		if (ret < 0) {
+			dev_err(&slave->dev,
+				"alloc master runtime failed for stream:%s\n",
+				stream->name);
+			goto unlock;
+		}
+		alloc_master_rt = true;
 	}
 
-	m_rt = sdw_alloc_master_rt(bus, stream_config, stream);
-	if (!m_rt) {
-		dev_err(bus->dev,
-			"Master runtime config failed for stream:%s\n",
+	s_rt = sdw_slave_rt_alloc(slave);
+	if (!s_rt) {
+		dev_err(&slave->dev,
+			"Slave runtime allocation failed for stream:%s\n",
 			stream->name);
 		ret = -ENOMEM;
-		goto unlock;
+		goto err_slave_alloc;
 	}
-
-	ret = sdw_config_stream(bus->dev, stream, stream_config, false);
-	if (ret)
-		goto stream_error;
-
-	ret = sdw_master_port_config(bus, m_rt, port_config, num_ports);
-	if (ret)
-		goto stream_error;
-
-	stream->m_rt_count++;
-
+	list_add_tail(&s_rt->m_rt_node, &m_rt->slave_rt_list);
 	goto unlock;
 
-stream_error:
-	sdw_release_master_stream(m_rt, stream);
+err_slave_alloc:
+	if (alloc_master_rt) {
+		m_rt = sdw_master_rt_find(slave->bus, stream);
+		if (m_rt)
+			sdw_master_rt_free(m_rt, stream);
+	}
 unlock:
-	mutex_unlock(&bus->bus_lock);
+	mutex_unlock(&slave->bus->bus_lock);
 	return ret;
 }
-EXPORT_SYMBOL(sdw_stream_add_master);
+EXPORT_SYMBOL(sdw_stream_alloc_slave);
+
+/**
+ * sdw_stream_config_slave() - Allocate and add master/slave runtime to a stream
+ *
+ * @slave: SDW Slave instance
+ * @stream_config: Stream configuration for audio stream
+ * @stream: SoundWire stream
+ * @port_config: Port configuration for audio stream
+ * @num_ports: Number of ports
+ *
+ * It is expected that Slave is added before adding Master
+ * to the Stream.
+ *
+ */
+int sdw_stream_config_slave(struct sdw_slave *slave,
+			    struct sdw_stream_config *stream_config,
+			    struct sdw_port_config *port_config,
+			    unsigned int num_ports,
+			    struct sdw_stream_runtime *stream)
+{
+	struct sdw_slave_runtime *s_rt;
+	int ret;
+
+	mutex_lock(&slave->bus->bus_lock);
+
+	s_rt = sdw_slave_rt_find(slave, stream);
+	if (!s_rt)
+		return -EINVAL;
+
+	sdw_slave_rt_config(s_rt, stream_config);
+
+	ret = sdw_config_stream(&slave->dev, stream, stream_config, true);
+	if (ret)
+		goto error;
+
+	ret = sdw_slave_rt_port_config(&slave->dev, s_rt, port_config, num_ports);
+	if (ret)
+		goto error;
+
+	/*
+	 * Change stream state to CONFIGURED on first Slave add.
+	 * Bus is not aware of number of Slave(s) in a stream at this
+	 * point so cannot depend on all Slave(s) to be added in order to
+	 * change stream state to CONFIGURED.
+	 */
+	stream->state = SDW_STREAM_CONFIGURED;
+
+error:
+	mutex_unlock(&slave->bus->bus_lock);
+	return ret;
+}
+EXPORT_SYMBOL(sdw_stream_config_slave);
 
 /**
  * sdw_stream_add_slave() - Allocate and add master/slave runtime to a stream
@@ -1358,65 +1441,194 @@ int sdw_stream_add_slave(struct sdw_slave *slave,
 			 unsigned int num_ports,
 			 struct sdw_stream_runtime *stream)
 {
-	struct sdw_slave_runtime *s_rt;
-	struct sdw_master_runtime *m_rt;
 	int ret;
 
-	mutex_lock(&slave->bus->bus_lock);
-
-	/*
-	 * If this API is invoked by Slave first then m_rt is not valid.
-	 * So, allocate m_rt and add Slave to it.
-	 */
-	m_rt = sdw_alloc_master_rt(slave->bus, stream_config, stream);
-	if (!m_rt) {
+	ret = sdw_stream_alloc_slave(slave, stream);
+	if (ret < 0) {
 		dev_err(&slave->dev,
-			"alloc master runtime failed for stream:%s\n",
+			"stream alloc slave failed for stream:%s\n",
 			stream->name);
-		ret = -ENOMEM;
-		goto error;
+		goto error_alloc;
 	}
 
-	s_rt = sdw_alloc_slave_rt(slave);
-	if (!s_rt) {
+
+	ret = sdw_stream_config_slave(slave, stream_config,
+				      port_config, num_ports,
+				      stream);
+	if (ret < 0) {
 		dev_err(&slave->dev,
-			"Slave runtime allocation failed for stream:%s\n",
+			"stream alloc slave failed for stream:%s\n",
 			stream->name);
-		ret = -ENOMEM;
-		goto stream_error;
+		goto error_config;
+
 	}
-	list_add_tail(&s_rt->m_rt_node, &m_rt->slave_rt_list);
 
-	sdw_configure_slave_rt(s_rt, stream_config);
+	return 0;
 
-	ret = sdw_config_stream(&slave->dev, stream, stream_config, true);
-	if (ret)
-		goto stream_error;
+error_config:
+	sdw_stream_remove_slave(slave, stream);
 
-	ret = sdw_slave_port_config(slave, s_rt, port_config, num_ports);
-	if (ret)
-		goto stream_error;
+error_alloc:
+	sdw_stream_remove_master(slave->bus, stream);
 
-	/*
-	 * Change stream state to CONFIGURED on first Slave add.
-	 * Bus is not aware of number of Slave(s) in a stream at this
-	 * point so cannot depend on all Slave(s) to be added in order to
-	 * change stream state to CONFIGURED.
-	 */
-	stream->state = SDW_STREAM_CONFIGURED;
-	goto error;
-
-stream_error:
-	/*
-	 * we hit error so cleanup the stream, release all Slave(s) and
-	 * Master runtime
-	 */
-	sdw_release_master_stream(m_rt, stream);
-error:
-	mutex_unlock(&slave->bus->bus_lock);
 	return ret;
 }
 EXPORT_SYMBOL(sdw_stream_add_slave);
+
+/**
+ * sdw_stream_remove_master - Remove master from sdw_stream
+ *
+ * @bus: SDW Bus instance
+ * @stream: SoundWire stream
+ *
+ * This removes and frees port_rt and master_rt from a stream
+ */
+void sdw_stream_remove_master(struct sdw_bus *bus,
+			      struct sdw_stream_runtime *stream)
+{
+	struct sdw_master_runtime *m_rt, *_m_rt;
+
+	mutex_lock(&bus->bus_lock);
+
+	list_for_each_entry_safe(m_rt, _m_rt,
+				 &stream->master_list, stream_node) {
+		if (m_rt->bus != bus)
+			continue;
+
+		sdw_master_rt_port_free(m_rt);
+		sdw_master_rt_free(m_rt, stream);
+		stream->m_rt_count--;
+	}
+
+	if (list_empty(&stream->master_list))
+		stream->state = SDW_STREAM_RELEASED;
+
+	mutex_unlock(&bus->bus_lock);
+}
+EXPORT_SYMBOL(sdw_stream_remove_master);
+
+/**
+ * sdw_stream_alloc_master() - Allocate and add master runtime to a stream
+ *
+ * @bus: SDW Bus instance
+ * @stream: SoundWire stream
+ */
+int sdw_stream_alloc_master(struct sdw_bus *bus,
+			    struct sdw_stream_runtime *stream)
+{
+	struct sdw_master_runtime *m_rt;
+	int ret = 0;
+
+	mutex_lock(&bus->bus_lock);
+
+	/*
+	 * For multi link streams, add the second master only if
+	 * the bus supports it.
+	 * Check if bus->multi_link is set
+	 */
+	if (!bus->multi_link && stream->m_rt_count > 0) {
+		dev_err(bus->dev,
+			"Multilink not supported, link %d\n", bus->link_id);
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	/*
+	 * check if Master is already allocated (as a result of Slave adding
+	 * it first), if so skip allocation
+	 */
+	m_rt = sdw_master_rt_find(bus, stream);
+	if (m_rt)
+		goto unlock;
+
+	ret = sdw_master_rt_alloc(bus, stream);
+	if (ret < 0) {
+		dev_err(bus->dev,
+			"Master runtime allocation failed for stream:%s\n",
+			stream->name);
+		goto unlock;
+	}
+	stream->m_rt_count++;
+
+unlock:
+	mutex_unlock(&bus->bus_lock);
+	return ret;
+}
+EXPORT_SYMBOL(sdw_stream_alloc_master);
+
+/**
+ * sdw_stream_config_master() - Configure master runtime for a stream
+ *
+ * @bus: SDW Bus instance
+ * @stream_config: Stream configuration for audio stream
+ * @port_config: Port configuration for audio stream
+ * @num_ports: Number of ports
+ * @stream: SoundWire stream
+ */
+int sdw_stream_config_master(struct sdw_bus *bus,
+			     struct sdw_stream_config *stream_config,
+			     struct sdw_port_config *port_config,
+			     unsigned int num_ports,
+			     struct sdw_stream_runtime *stream)
+{
+	struct sdw_master_runtime *m_rt;
+	int ret;
+
+	mutex_lock(&bus->bus_lock);
+
+	m_rt = sdw_master_rt_find(bus, stream);
+	if (!m_rt) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	sdw_master_rt_config(bus, m_rt, stream_config, stream);
+
+	ret = sdw_config_stream(bus->dev, stream, stream_config, false);
+	if (ret)
+		goto unlock;
+
+	ret = sdw_master_rt_port_config(m_rt, port_config, num_ports);
+
+unlock:
+	mutex_unlock(&bus->bus_lock);
+	return ret;
+}
+EXPORT_SYMBOL(sdw_stream_config_master);
+
+/**
+ * sdw_stream_add_master() - Allocate and add master runtime to a stream
+ *
+ * @bus: SDW Bus instance
+ * @stream_config: Stream configuration for audio stream
+ * @port_config: Port configuration for audio stream
+ * @num_ports: Number of ports
+ * @stream: SoundWire stream
+ */
+int sdw_stream_add_master(struct sdw_bus *bus,
+			  struct sdw_stream_config *stream_config,
+			  struct sdw_port_config *port_config,
+			  unsigned int num_ports,
+			  struct sdw_stream_runtime *stream)
+{
+	int ret;
+
+	mutex_lock(&bus->bus_lock);
+
+	ret = sdw_stream_alloc_master(bus, stream);
+	if (ret < 0)
+		return ret;
+
+	ret = sdw_stream_config_master(bus, stream_config,
+				       port_config, num_ports,
+				       stream);
+
+	if (ret < 0)
+		sdw_stream_remove_master(bus, stream);
+
+	return ret;
+}
+EXPORT_SYMBOL(sdw_stream_add_master);
 
 /**
  * sdw_get_slave_dpn_prop() - Get Slave port capabilities
