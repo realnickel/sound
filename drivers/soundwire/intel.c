@@ -980,12 +980,7 @@ intel_hw_free(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 	 * DEPREPARED for the first cpu-dai and to RELEASED for the last
 	 * cpu-dai.
 	 */
-	ret = sdw_stream_remove_master(&cdns->bus, dma->stream);
-	if (ret < 0) {
-		dev_err(dai->dev, "remove master from stream %s failed: %d\n",
-			dma->stream->name, ret);
-		return ret;
-	}
+	sdw_stream_remove_master(&cdns->bus, dma->stream);
 
 	ret = intel_free_stream(sdw, substream, dai, sdw->instance);
 	if (ret < 0) {

@@ -1011,7 +1011,23 @@ void sdw_release_stream(struct sdw_stream_runtime *stream);
 
 int sdw_compute_params(struct sdw_bus *bus);
 
+int sdw_stream_alloc_master(struct sdw_bus *bus,
+		struct sdw_stream_runtime *stream);
+int sdw_stream_config_master(struct sdw_bus *bus,
+		struct sdw_stream_config *stream_config,
+		struct sdw_port_config *port_config,
+		unsigned int num_ports,
+		struct sdw_stream_runtime *stream);
 int sdw_stream_add_master(struct sdw_bus *bus,
+		struct sdw_stream_config *stream_config,
+		struct sdw_port_config *port_config,
+		unsigned int num_ports,
+		struct sdw_stream_runtime *stream);
+void sdw_stream_remove_master(struct sdw_bus *bus,
+		struct sdw_stream_runtime *stream);
+int sdw_stream_alloc_slave(struct sdw_slave *slave,
+		struct sdw_stream_runtime *stream);
+int sdw_stream_config_slave(struct sdw_slave *slave,
 		struct sdw_stream_config *stream_config,
 		struct sdw_port_config *port_config,
 		unsigned int num_ports,
@@ -1021,9 +1037,7 @@ int sdw_stream_add_slave(struct sdw_slave *slave,
 		struct sdw_port_config *port_config,
 		unsigned int num_ports,
 		struct sdw_stream_runtime *stream);
-int sdw_stream_remove_master(struct sdw_bus *bus,
-		struct sdw_stream_runtime *stream);
-int sdw_stream_remove_slave(struct sdw_slave *slave,
+void sdw_stream_remove_slave(struct sdw_slave *slave,
 		struct sdw_stream_runtime *stream);
 int sdw_startup_stream(void *sdw_substream);
 int sdw_prepare_stream(struct sdw_stream_runtime *stream);
