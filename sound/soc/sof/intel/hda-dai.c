@@ -281,13 +281,28 @@ static int hda_link_pcm_prepare(struct snd_pcm_substream *substream,
 				  dai);
 }
 
+static int hda_dai_hw_free_ipc(int stream, /* direction */
+			       struct snd_soc_dai *dai)
+{
+	struct snd_soc_dapm_widget *w;
+	int ret;
+
+	w = snd_soc_dai_get_widget(dai, stream);
+
+	/* free the link DMA channel in the FW and the DAI widget */
+	ret = hda_link_dai_widget_update(dai->dev, w, DMA_CHAN_INVALID, false);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 				int cmd, struct snd_soc_dai *dai)
 {
 	struct hdac_ext_stream *link_dev =
 				snd_soc_dai_get_dma_data(dai, substream);
 	struct snd_soc_pcm_runtime *rtd;
-	struct snd_soc_dapm_widget *w;
 	struct hdac_ext_link *link;
 	struct hdac_stream *hstream;
 	struct hdac_bus *bus;
@@ -320,12 +335,7 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_STOP:
-		w = snd_soc_dai_get_widget(dai, substream->stream);
-
-		/*
-		 * free DAI widget during stop/suspend to keep widget use_count's balanced.
-		 */
-		ret = hda_link_dai_widget_update(dai->dev, w, DMA_CHAN_INVALID, false);
+		ret = hda_dai_hw_free_ipc(substream->stream, dai);
 		if (ret < 0)
 			return ret;
 
@@ -356,7 +366,6 @@ static int hda_link_hw_free(struct snd_pcm_substream *substream,
 	struct hdac_stream *hstream;
 	struct snd_soc_pcm_runtime *rtd;
 	struct hdac_ext_stream *link_dev;
-	struct snd_soc_dapm_widget *w;
 	int ret;
 
 	hstream = substream->runtime->private_data;
@@ -372,10 +381,7 @@ static int hda_link_hw_free(struct snd_pcm_substream *substream,
 
 	hda_stream = hstream_to_sof_hda_stream(link_dev);
 
-	w = snd_soc_dai_get_widget(dai, substream->stream);
-
-	/* free the link DMA channel in the FW and the DAI widget */
-	ret = hda_link_dai_widget_update(dai->dev, w, DMA_CHAN_INVALID, false);
+	ret = hda_dai_hw_free_ipc(substream->stream, dai);
 	if (ret < 0)
 		return ret;
 
