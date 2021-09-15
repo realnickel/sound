@@ -302,10 +302,12 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 {
 	struct hdac_ext_stream *link_dev =
 				snd_soc_dai_get_dma_data(dai, substream);
+	struct sof_intel_hda_stream *hda_stream;
 	struct snd_soc_pcm_runtime *rtd;
 	struct hdac_ext_link *link;
 	struct hdac_stream *hstream;
 	struct hdac_bus *bus;
+
 	int stream_tag;
 	int ret;
 
@@ -333,12 +335,11 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		snd_hdac_ext_link_stream_start(link_dev);
 		break;
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		snd_hdac_ext_link_stream_clear(link_dev);
+		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_STOP:
-		ret = hda_dai_hw_free_ipc(substream->stream, dai);
-		if (ret < 0)
-			return ret;
-
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			stream_tag = hdac_stream(link_dev)->stream_tag;
 			snd_hdac_ext_link_clear_stream_id(link, stream_tag);
@@ -346,9 +347,16 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 
 		link_dev->link_prepared = 0;
 
-		fallthrough;
-	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		snd_hdac_ext_link_stream_clear(link_dev);
+
+		ret = hda_dai_hw_free_ipc(substream->stream, dai);
+		if (ret < 0)
+			return ret;
+
+		/* free the host DMA channel reserved by hostless streams */
+		hda_stream = hstream_to_sof_hda_stream(link_dev);
+		hda_stream->host_reserved = 0;
+
 		break;
 	default:
 		return -EINVAL;
@@ -395,8 +403,10 @@ static int hda_link_hw_free(struct snd_pcm_substream *substream,
 	}
 
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
-	snd_hdac_ext_stream_release(link_dev, HDAC_EXT_STREAM_TYPE_LINK);
+
 	link_dev->link_prepared = 0;
+
+	snd_hdac_ext_stream_release(link_dev, HDAC_EXT_STREAM_TYPE_LINK);
 
 	/* free the host DMA channel reserved by hostless streams */
 	hda_stream->host_reserved = 0;
@@ -419,11 +429,16 @@ static int hda_dai_suspend(struct hdac_bus *bus)
 	struct hdac_stream *s;
 	const char *name;
 	int stream_tag;
+	int ret;
 
 	/* set internal flag for BE */
 	list_for_each_entry(s, &bus->stream_list, list) {
+		struct sof_intel_hda_stream *hda_stream;
+
 		stream = stream_to_hdac_ext_stream(s);
 
+		if (!stream)
+			return -EINVAL;
 		/*
 		 * clear stream. This should already be taken care for running
 		 * streams when the SUSPEND trigger is called. But paused
@@ -431,21 +446,39 @@ static int hda_dai_suspend(struct hdac_bus *bus)
 		 * explicitly during suspend.
 		 */
 		if (stream->link_substream) {
+			struct snd_soc_dai *cpu_dai;
+			struct snd_soc_dai *codec_dai;
+
 			rtd = asoc_substream_to_rtd(stream->link_substream);
-			name = asoc_rtd_to_codec(rtd, 0)->component->name;
+			cpu_dai = asoc_rtd_to_cpu(rtd, 0);
+			codec_dai = asoc_rtd_to_codec(rtd, 0);
+			name = codec_dai->component->name;
 			link = snd_hdac_ext_bus_get_link(bus, name);
 			if (!link)
 				return -EINVAL;
 
+			if (hdac_stream(stream)->direction == SNDRV_PCM_STREAM_PLAYBACK) {
+				stream_tag = hdac_stream(stream)->stream_tag;
+				snd_hdac_ext_link_clear_stream_id(link, stream_tag);
+			}
+
 			stream->link_prepared = 0;
 
-			if (hdac_stream(stream)->direction ==
-				SNDRV_PCM_STREAM_CAPTURE)
-				continue;
+			/*
+			 * we don't need to call snd_hdac_ext_link_stream_clear()
+			 * since we can only reach this case in the pause_push state, and
+			 * the TRIGGER_PAUSE_PUSH already stops the DMA
+			 */
 
-			stream_tag = hdac_stream(stream)->stream_tag;
-			snd_hdac_ext_link_clear_stream_id(link, stream_tag);
+			/* for consistency with TRIGGER_SUSPEND we free DAI resources */
+			ret = hda_dai_hw_free_ipc(hdac_stream(stream)->direction, cpu_dai);
+			if (ret < 0)
+				return ret;
+
 		}
+		/* free the host DMA channel reserved by hostless streams */
+		hda_stream = hstream_to_sof_hda_stream(stream);
+		hda_stream->host_reserved = 0;
 	}
 
 	return 0;
