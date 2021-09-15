@@ -183,16 +183,15 @@ static struct sof_ipc_dai_config *hda_dai_update_config(struct snd_soc_dapm_widg
 	return config;
 }
 
-static int hda_link_dai_widget_update(struct sof_intel_hda_stream *hda_stream,
+static int hda_link_dai_widget_update(struct device *dev,
 				      struct snd_soc_dapm_widget *w,
 				      int channel, bool widget_setup)
 {
-	struct snd_sof_dev *sdev = hda_stream->sdev;
 	struct sof_ipc_dai_config *config;
 
 	config = hda_dai_update_config(w, channel);
 	if (!config) {
-		dev_err(sdev->dev, "error: no config for DAI %s\n", w->name);
+		dev_err(dev, "no config for DAI %s\n", w->name);
 		return -ENOENT;
 	}
 
@@ -212,7 +211,6 @@ static int hda_link_hw_params(struct snd_pcm_substream *substream,
 	struct hdac_ext_stream *link_dev;
 	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
 	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
-	struct sof_intel_hda_stream *hda_stream;
 	struct hda_pipe_params p_params = {0};
 	struct snd_soc_dapm_widget *w;
 	struct hdac_ext_link *link;
@@ -231,12 +229,10 @@ static int hda_link_hw_params(struct snd_pcm_substream *substream,
 
 	stream_tag = hdac_stream(link_dev)->stream_tag;
 
-	hda_stream = hstream_to_sof_hda_stream(link_dev);
-
 	w = snd_soc_dai_get_widget(dai, substream->stream);
 
 	/* set up the DAI widget and send the DAI_CONFIG with the new tag */
-	ret = hda_link_dai_widget_update(hda_stream, w, stream_tag - 1, true);
+	ret = hda_link_dai_widget_update(dai->dev, w, stream_tag - 1, true);
 	if (ret < 0)
 		return ret;
 
@@ -290,7 +286,6 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 {
 	struct hdac_ext_stream *link_dev =
 				snd_soc_dai_get_dma_data(dai, substream);
-	struct sof_intel_hda_stream *hda_stream;
 	struct snd_soc_pcm_runtime *rtd;
 	struct snd_soc_dapm_widget *w;
 	struct hdac_ext_link *link;
@@ -306,8 +301,6 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 	link = snd_hdac_ext_bus_get_link(bus, asoc_rtd_to_codec(rtd, 0)->component->name);
 	if (!link)
 		return -EINVAL;
-
-	hda_stream = hstream_to_sof_hda_stream(link_dev);
 
 	dev_dbg(dai->dev, "In %s cmd=%d\n", __func__, cmd);
 	switch (cmd) {
@@ -332,7 +325,7 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 		/*
 		 * free DAI widget during stop/suspend to keep widget use_count's balanced.
 		 */
-		ret = hda_link_dai_widget_update(hda_stream, w, DMA_CHAN_INVALID, false);
+		ret = hda_link_dai_widget_update(dai->dev, w, DMA_CHAN_INVALID, false);
 		if (ret < 0)
 			return ret;
 
@@ -382,7 +375,7 @@ static int hda_link_hw_free(struct snd_pcm_substream *substream,
 	w = snd_soc_dai_get_widget(dai, substream->stream);
 
 	/* free the link DMA channel in the FW and the DAI widget */
-	ret = hda_link_dai_widget_update(hda_stream, w, DMA_CHAN_INVALID, false);
+	ret = hda_link_dai_widget_update(dai->dev, w, DMA_CHAN_INVALID, false);
 	if (ret < 0)
 		return ret;
 
