@@ -272,7 +272,7 @@ static int hda_link_pcm_prepare(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
 	int stream = substream->stream;
 
-	if (link_dev->link_prepared)
+	if (link_dev && link_dev->link_prepared)
 		return 0;
 
 	dev_dbg(sdev->dev, "hda: prepare stream dir %d\n", substream->stream);
@@ -319,6 +319,9 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 	if (!link)
 		return -EINVAL;
 
+	if (!link_dev)
+		return 0;
+
 	dev_dbg(dai->dev, "In %s cmd=%d\n", __func__, cmd);
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_RESUME:
@@ -344,6 +347,8 @@ static int hda_link_pcm_trigger(struct snd_pcm_substream *substream,
 			stream_tag = hdac_stream(link_dev)->stream_tag;
 			snd_hdac_ext_link_clear_stream_id(link, stream_tag);
 		}
+
+		snd_soc_dai_set_dma_data(dai, substream, NULL);
 
 		link_dev->link_prepared = 0;
 
@@ -461,6 +466,8 @@ static int hda_dai_suspend(struct hdac_bus *bus)
 				stream_tag = hdac_stream(stream)->stream_tag;
 				snd_hdac_ext_link_clear_stream_id(link, stream_tag);
 			}
+
+			snd_soc_dai_set_dma_data(cpu_dai, stream->link_substream, NULL);
 
 			stream->link_prepared = 0;
 
