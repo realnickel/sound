@@ -211,7 +211,8 @@ static int hda_dai_link_prepare(struct snd_pcm_substream *substream)
 	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(cpu_dai->component);
 	int stream = substream->stream;
 
-	if (hext_stream && hext_stream->link_prepared)
+	//if (hext_stream && hext_stream->link_prepared)
+	if (hext_stream)
 		return 0;
 
 	dev_dbg(sdev->dev, "%s: prepare stream dir %d\n", __func__, substream->stream);
@@ -235,8 +236,8 @@ static int hda_dai_link_trigger(struct snd_pcm_substream *substream, int cmd)
 	if (!link)
 		return -EINVAL;
 
-	if (!hext_stream)
-		return 0;
+	//if (!hext_stream)
+	//	return 0;
 
 	hda_stream = hstream_to_sof_hda_stream(hext_stream);
 
@@ -256,7 +257,7 @@ static int hda_dai_link_trigger(struct snd_pcm_substream *substream, int cmd)
 			snd_hdac_ext_link_clear_stream_id(link, stream_tag);
 		}
 
-		snd_soc_dai_set_dma_data(cpu_dai, substream, NULL);
+		//snd_soc_dai_set_dma_data(cpu_dai, substream, NULL);
 
 		hext_stream->link_prepared = 0;
 
@@ -485,7 +486,7 @@ static int hda_dai_suspend(struct hdac_bus *bus)
 
 	/* set internal flag for BE */
 	list_for_each_entry(s, &bus->stream_list, list) {
-		struct sof_intel_hda_stream *hda_stream;
+		//struct sof_intel_hda_stream *hda_stream;
 
 		hext_stream = stream_to_hdac_ext_stream(s);
 
@@ -515,7 +516,7 @@ static int hda_dai_suspend(struct hdac_bus *bus)
 				snd_hdac_ext_link_clear_stream_id(link, stream_tag);
 			}
 
-			snd_soc_dai_set_dma_data(cpu_dai, hext_stream->link_substream, NULL);
+			//snd_soc_dai_set_dma_data(cpu_dai, hext_stream->link_substream, NULL);
 
 			hext_stream->link_prepared = 0;
 
@@ -532,8 +533,8 @@ static int hda_dai_suspend(struct hdac_bus *bus)
 
 		}
 		/* free the host DMA channel reserved by hostless streams */
-		hda_stream = hstream_to_sof_hda_stream(hext_stream);
-		hda_stream->host_reserved = 0;
+		//hda_stream = hstream_to_sof_hda_stream(hext_stream);
+		//hda_stream->host_reserved = 0;
 	}
 
 	return 0;
