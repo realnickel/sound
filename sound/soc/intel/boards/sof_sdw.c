@@ -689,13 +689,15 @@ static int create_codec_dai_name(struct device *dev,
 				     class_id, i)) {
 			codec_str = "sdw:%01x:%04x:%04x:%02x";
 			codec[comp_index].name =
-				devm_kasprintf(dev, GFP_KERNEL, codec_str,
+				//devm_kasprintf(dev, GFP_KERNEL, codec_str,
+				kasprintf(GFP_KERNEL, codec_str,
 					       link_id, mfg_id, part_id,
 					       class_id);
 		} else {
 			codec_str = "sdw:%01x:%04x:%04x:%02x:%01x";
 			codec[comp_index].name =
-				devm_kasprintf(dev, GFP_KERNEL, codec_str,
+				//devm_kasprintf(dev, GFP_KERNEL, codec_str,
+				kasprintf(GFP_KERNEL, codec_str,
 					       link_id, mfg_id, part_id,
 					       class_id, unique_id);
 		}
@@ -859,7 +861,8 @@ static int create_sdw_dailink(struct snd_soc_card *card,
 	if (ret)
 		return ret;
 
-	codecs = devm_kcalloc(dev, codec_num, sizeof(*codecs), GFP_KERNEL);
+	//codecs = devm_kcalloc(dev, codec_num, sizeof(*codecs), GFP_KERNEL);
+	codecs = kcalloc(codec_num, sizeof(*codecs), GFP_KERNEL);
 	if (!codecs)
 		return -ENOMEM;
 
@@ -908,7 +911,8 @@ static int create_sdw_dailink(struct snd_soc_card *card,
 			continue;
 
 		/* create stream name according to first link id */
-		name = devm_kasprintf(dev, GFP_KERNEL,
+		//name = devm_kasprintf(dev, GFP_KERNEL,
+		name = kasprintf(GFP_KERNEL,
 				      sdw_stream_name[stream], cpu_dai_id[0]);
 		if (!name)
 			return -ENOMEM;
@@ -918,7 +922,8 @@ static int create_sdw_dailink(struct snd_soc_card *card,
 		 * PIN ID with offset of 2 according to sdw dai driver.
 		 */
 		for (k = 0; k < cpu_dai_num; k++) {
-			cpu_name = devm_kasprintf(dev, GFP_KERNEL,
+			//cpu_name = devm_kasprintf(dev, GFP_KERNEL,
+			cpu_name = kasprintf(GFP_KERNEL,
 						  "SDW%d Pin%d", cpu_dai_id[k],
 						  j + SDW_INTEL_BIDIR_PDI_BASE);
 			if (!cpu_name)
@@ -1009,7 +1014,8 @@ static int sof_card_codec_conf_alloc(struct device *dev,
 		num_codecs += adr_link->num_adr;
 	}
 
-	c_conf = devm_kzalloc(dev, num_codecs * sizeof(*c_conf), GFP_KERNEL);
+	//c_conf = devm_kzalloc(dev, num_codecs * sizeof(*c_conf), GFP_KERNEL);
+	c_conf = kzalloc(num_codecs * sizeof(*c_conf), GFP_KERNEL);
 	if (!c_conf)
 		return -ENOMEM;
 
@@ -1095,11 +1101,13 @@ static int sof_card_dai_links_create(struct device *dev,
 
 	/* allocate BE dailinks */
 	num_links = comp_num + sdw_be_num;
-	links = devm_kcalloc(dev, num_links, sizeof(*links), GFP_KERNEL);
+	//links = devm_kcalloc(dev, num_links, sizeof(*links), GFP_KERNEL);
+	links = kcalloc(num_links, sizeof(*links), GFP_KERNEL);
 
 	/* allocated CPU DAIs */
 	total_cpu_dai_num = comp_num + sdw_cpu_dai_num;
-	cpus = devm_kcalloc(dev, total_cpu_dai_num, sizeof(*cpus),
+	//cpus = devm_kcalloc(dev, total_cpu_dai_num, sizeof(*cpus),
+	cpus = kcalloc(total_cpu_dai_num, sizeof(*cpus),
 			    GFP_KERNEL);
 
 	if (!links || !cpus)
@@ -1168,22 +1176,26 @@ SSP:
 		if (!(ssp_mask & 0x1))
 			continue;
 
-		name = devm_kasprintf(dev, GFP_KERNEL,
+		//name = devm_kasprintf(dev, GFP_KERNEL,
+		name = kasprintf(GFP_KERNEL,
 				      "SSP%d-Codec", i);
 		if (!name)
 			return -ENOMEM;
 
-		cpu_name = devm_kasprintf(dev, GFP_KERNEL, "SSP%d Pin", i);
+		//cpu_name = devm_kasprintf(dev, GFP_KERNEL, "SSP%d Pin", i);
+		cpu_name = kasprintf(GFP_KERNEL, "SSP%d Pin", i);
 		if (!cpu_name)
 			return -ENOMEM;
 
-		ssp_components = devm_kzalloc(dev, sizeof(*ssp_components),
+		//ssp_components = devm_kzalloc(dev, sizeof(*ssp_components),
+		ssp_components = kzalloc(sizeof(*ssp_components),
 					      GFP_KERNEL);
 		if (!ssp_components)
 			return -ENOMEM;
 
 		info = &codec_info_list[ssp_codec_index];
-		codec_name = devm_kasprintf(dev, GFP_KERNEL, "i2c-%s:0%d",
+		//codec_name = devm_kasprintf(dev, GFP_KERNEL, "i2c-%s:0%d",
+		codec_name = kasprintf(GFP_KERNEL, "i2c-%s:0%d",
 					    info->acpi_id, j++);
 		if (!codec_name)
 			return -ENOMEM;
@@ -1235,7 +1247,8 @@ DMIC:
 HDMI:
 	/* HDMI */
 	if (hdmi_num > 0) {
-		idisp_components = devm_kcalloc(dev, hdmi_num,
+		//idisp_components = devm_kcalloc(dev, hdmi_num,
+		idisp_components = kcalloc(hdmi_num,
 						sizeof(*idisp_components),
 						GFP_KERNEL);
 		if (!idisp_components)
@@ -1243,14 +1256,16 @@ HDMI:
 	}
 
 	for (i = 0; i < hdmi_num; i++) {
-		name = devm_kasprintf(dev, GFP_KERNEL,
+		//name = devm_kasprintf(dev, GFP_KERNEL,
+		name = kasprintf(GFP_KERNEL,
 				      "iDisp%d", i + 1);
 		if (!name)
 			return -ENOMEM;
 
 		if (ctx->idisp_codec) {
 			idisp_components[i].name = "ehdaudio0D2";
-			idisp_components[i].dai_name = devm_kasprintf(dev,
+			//idisp_components[i].dai_name = devm_kasprintf(dev,
+			idisp_components[i].dai_name = kasprintf(
 								      GFP_KERNEL,
 								      "intel-hdmi-hifi%d",
 								      i + 1);
@@ -1261,7 +1276,8 @@ HDMI:
 			idisp_components[i].dai_name = "snd-soc-dummy-dai";
 		}
 
-		cpu_name = devm_kasprintf(dev, GFP_KERNEL,
+		//cpu_name = devm_kasprintf(dev, GFP_KERNEL,
+		cpu_name = kasprintf(GFP_KERNEL,
 					  "iDisp%d Pin", i + 1);
 		if (!cpu_name)
 			return -ENOMEM;
@@ -1279,11 +1295,13 @@ HDMI:
 		int port = (sof_sdw_quirk & SOF_BT_OFFLOAD_SSP_MASK) >>
 				SOF_BT_OFFLOAD_SSP_SHIFT;
 
-		name = devm_kasprintf(dev, GFP_KERNEL, "SSP%d-BT", port);
+		//name = devm_kasprintf(dev, GFP_KERNEL, "SSP%d-BT", port);
+		name = kasprintf(GFP_KERNEL, "SSP%d-BT", port);
 		if (!name)
 			return -ENOMEM;
 
-		ssp_components = devm_kzalloc(dev, sizeof(*ssp_components),
+		//ssp_components = devm_kzalloc(dev, sizeof(*ssp_components),
+		ssp_components = kzalloc(sizeof(*ssp_components),
 						GFP_KERNEL);
 		if (!ssp_components)
 			return -ENOMEM;
@@ -1291,7 +1309,8 @@ HDMI:
 		ssp_components->name = "snd-soc-dummy";
 		ssp_components->dai_name = "snd-soc-dummy-dai";
 
-		cpu_name = devm_kasprintf(dev, GFP_KERNEL, "SSP%d Pin", port);
+		//cpu_name = devm_kasprintf(dev, GFP_KERNEL, "SSP%d Pin", port);
+		cpu_name = kasprintf(GFP_KERNEL, "SSP%d Pin", port);
 		if (!cpu_name)
 			return -ENOMEM;
 
@@ -1344,7 +1363,8 @@ static int mc_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "Entry %s\n", __func__);
 
-	ctx = devm_kzalloc(&pdev->dev, sizeof(*ctx), GFP_KERNEL);
+	//ctx = devm_kzalloc(&pdev->dev, sizeof(*ctx), GFP_KERNEL);
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return -ENOMEM;
 
@@ -1376,7 +1396,8 @@ static int mc_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(codec_info_list); i++)
 		amp_num += codec_info_list[i].amp_num;
 
-	card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	//card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	card->components = kasprintf(GFP_KERNEL,
 					  "cfg-spk:%d cfg-amp:%d",
 					  (sof_sdw_quirk & SOF_SDW_FOUR_SPK)
 					  ? 4 : 2, amp_num);
@@ -1384,7 +1405,8 @@ static int mc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	if (mach->mach_params.dmic_num) {
-		card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+		//card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+		card->components = kasprintf(GFP_KERNEL,
 						  "%s mic:dmic cfg-mics:%d",
 						  card->components,
 						  mach->mach_params.dmic_num);
@@ -1395,7 +1417,8 @@ static int mc_probe(struct platform_device *pdev)
 	card->long_name = sdw_card_long_name;
 
 	/* Register the card */
-	ret = devm_snd_soc_register_card(&pdev->dev, card);
+	//ret = devm_snd_soc_register_card(&pdev->dev, card);
+	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(card->dev, "snd_soc_register_card failed %d\n", ret);
 		return ret;
@@ -1413,25 +1436,46 @@ static int mc_remove(struct platform_device *pdev)
 	int ret;
 	int i, j;
 
+	dev_info(&pdev->dev, "%s: plb start\n", __func__);
+
 	for (i = 0; i < ARRAY_SIZE(codec_info_list); i++) {
-		if (!codec_info_list[i].exit)
+		if (!codec_info_list[i].exit) {
+			dev_info(&pdev->dev, "%s: plb skipping codec %x %s\n", __func__,
+				 codec_info_list[i].part_id, codec_info_list[i].dai_name );
+
 			continue;
+		}
+
+		
 		/*
 		 * We don't need to call .exit function if there is no matched
 		 * dai link found.
 		 */
 		for_each_card_prelinks(card, j, link) {
+			
+			dev_info(&pdev->dev, "%s: plb iteration %d codec dai_name %s\n", __func__, j, link->codecs[0].dai_name);
+
 			if (!strcmp(link->codecs[0].dai_name,
 				    codec_info_list[i].dai_name)) {
+
+				dev_info(&pdev->dev, "%s: plb before exit codec %x %s\n", __func__,
+					 codec_info_list[i].part_id, codec_info_list[i].dai_name );
+
 				ret = codec_info_list[i].exit(card, link);
 				if (ret)
 					dev_warn(&pdev->dev,
 						 "codec exit failed %d\n",
 						 ret);
+
+				dev_info(&pdev->dev, "%s: plb after exit codec %x %s\n", __func__,
+					 codec_info_list[i].part_id, codec_info_list[i].dai_name );
+
 				break;
 			}
 		}
 	}
+
+	dev_info(&pdev->dev, "%s: plb end\n", __func__);
 
 	return 0;
 }

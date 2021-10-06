@@ -15,7 +15,8 @@ static int rt715_sdca_rtd_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
 
-	card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	//card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	card->components = kasprintf(GFP_KERNEL,
 					  "%s mic:rt715-sdca",
 					  card->components);
 	if (!card->components)

@@ -78,7 +78,8 @@ static int rt711_rtd_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_jack *jack;
 	int ret;
 
-	card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	//card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	card->components = kasprintf(GFP_KERNEL,
 					  "%s hs:rt711",
 					  card->components);
 	if (!card->components)

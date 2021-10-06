@@ -1427,13 +1427,21 @@ static void platform_remove(struct device *_dev)
 	struct platform_driver *drv = to_platform_driver(_dev->driver);
 	struct platform_device *dev = to_platform_device(_dev);
 
+	dev_info(_dev, "%s: start\n", __func__);
 	if (drv->remove) {
 		int ret = drv->remove(dev);
+
+		dev_info(_dev, "%s: after remove\n", __func__);
 
 		if (ret)
 			dev_warn(_dev, "remove callback returned a non-zero value. This will be ignored.\n");
 	}
+
+	dev_info(_dev, "%s: before dev_pm_domain_detach\n", __func__);
+
 	dev_pm_domain_detach(_dev, true);
+
+	dev_info(_dev, "%s: end\n", __func__);		
 }
 
 static void platform_shutdown(struct device *_dev)

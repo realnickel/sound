@@ -204,16 +204,25 @@ EXPORT_SYMBOL_NS(sof_pci_probe, SND_SOC_SOF_PCI_DEV);
 
 void sof_pci_remove(struct pci_dev *pci)
 {
+	dev_info(&pci->dev, "%s: plb start\n", __func__);
+	
 	/* call sof helper for DSP hardware remove */
 	snd_sof_device_remove(&pci->dev);
+
+	dev_info(&pci->dev, "%s: plb 1\n", __func__);
 
 	/* follow recommendation in pci-driver.c to increment usage counter */
 	if (snd_sof_device_probe_completed(&pci->dev) &&
 	    !(sof_pci_debug & SOF_PCI_DISABLE_PM_RUNTIME))
 		pm_runtime_get_noresume(&pci->dev);
 
+	dev_info(&pci->dev, "%s: plb 2\n", __func__);
+
 	/* release pci regions and disable device */
 	pci_release_regions(pci);
+
+	dev_info(&pci->dev, "%s: plb end\n", __func__);
+
 }
 EXPORT_SYMBOL_NS(sof_pci_remove, SND_SOC_SOF_PCI_DEV);
 

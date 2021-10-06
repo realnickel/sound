@@ -1036,51 +1036,85 @@ int hda_dsp_remove(struct snd_sof_dev *sdev)
 	struct hdac_bus *bus = sof_to_bus(sdev);
 	struct pci_dev *pci = to_pci_dev(sdev->dev);
 
+	dev_info(sdev->dev, "%s: start\n", __func__);
+	
 	/* cancel any attempt for DSP D0I3 */
 	cancel_delayed_work_sync(&hda->d0i3_work);
 
+	dev_info(sdev->dev, "%s: 1\n", __func__);
+		
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
 	/* codec removal, invoke bus_device_remove */
 	snd_hdac_ext_bus_device_remove(bus);
 #endif
 
+	dev_info(sdev->dev, "%s: 2\n", __func__);
+
 	hda_sdw_exit(sdev);
+
+	dev_info(sdev->dev, "%s: 3\n", __func__);
 
 	if (!IS_ERR_OR_NULL(hda->dmic_dev))
 		platform_device_unregister(hda->dmic_dev);
+	
+	dev_info(sdev->dev, "%s: 4\n", __func__);
 
 	/* disable DSP IRQ */
 	snd_sof_dsp_update_bits(sdev, HDA_DSP_PP_BAR, SOF_HDA_REG_PP_PPCTL,
 				SOF_HDA_PPCTL_PIE, 0);
 
+	dev_info(sdev->dev, "%s: 5\n", __func__);
+
 	/* disable CIE and GIE interrupts */
 	snd_sof_dsp_update_bits(sdev, HDA_DSP_HDA_BAR, SOF_HDA_INTCTL,
 				SOF_HDA_INT_CTRL_EN | SOF_HDA_INT_GLOBAL_EN, 0);
+
+	dev_info(sdev->dev, "%s: 6\n", __func__);
 
 	/* disable cores */
 	if (chip)
 		hda_dsp_core_reset_power_down(sdev, chip->host_managed_cores_mask);
 
+	dev_info(sdev->dev, "%s: 6\n", __func__);
+
 	/* disable DSP */
 	snd_sof_dsp_update_bits(sdev, HDA_DSP_PP_BAR, SOF_HDA_REG_PP_PPCTL,
 				SOF_HDA_PPCTL_GPROCEN, 0);
+
+	dev_info(sdev->dev, "%s: 7\n", __func__);
 
 	free_irq(sdev->ipc_irq, sdev);
 	if (sdev->msi_enabled)
 		pci_free_irq_vectors(pci);
 
+	dev_info(sdev->dev, "%s: 8\n", __func__);
+		
 	hda_dsp_stream_free(sdev);
+
+	dev_info(sdev->dev, "%s: 9\n", __func__);
+
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
 	snd_hdac_link_free_all(bus);
 #endif
 
+	dev_info(sdev->dev, "%s: 10\n", __func__);
+		
 	iounmap(sdev->bar[HDA_DSP_BAR]);
+
+	dev_info(sdev->dev, "%s: 11\n", __func__);
+	
 	iounmap(bus->remap_addr);
+
+	dev_info(sdev->dev, "%s: 12\n", __func__);
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
 	snd_hdac_ext_bus_exit(bus);
 #endif
+	dev_info(sdev->dev, "%s: 13\n", __func__);
+
 	hda_codec_i915_exit(sdev);
+
+	dev_info(sdev->dev, "%s: end\n", __func__);
 
 	return 0;
 }

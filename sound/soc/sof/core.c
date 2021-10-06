@@ -359,19 +359,35 @@ int snd_sof_device_remove(struct device *dev)
 	struct snd_sof_pdata *pdata = sdev->pdata;
 	int ret;
 
+	dev_info(sdev->dev, "%s: plb start\n", __func__);
+	
 	if (IS_ENABLED(CONFIG_SND_SOC_SOF_PROBE_WORK_QUEUE))
 		cancel_work_sync(&sdev->probe_work);
 
+	dev_info(sdev->dev, "%s: plb 1\n", __func__);
+	
 	if (sdev->fw_state > SOF_FW_BOOT_NOT_STARTED) {
 		ret = snd_sof_dsp_power_down_notify(sdev);
 		if (ret < 0)
 			dev_warn(dev, "error: %d failed to prepare DSP for device removal",
 				 ret);
 
+		dev_info(sdev->dev, "%s: plb 2\n", __func__);
+		
 		snd_sof_ipc_free(sdev);
+
+		dev_info(sdev->dev, "%s: plb 3\n", __func__);
+
 		snd_sof_free_debug(sdev);
+
+		dev_info(sdev->dev, "%s: plb 4\n", __func__);
+
 		snd_sof_free_trace(sdev);
+
+		dev_info(sdev->dev, "%s: plb 5\n", __func__);
 	}
+
+	dev_info(sdev->dev, "%s: plb 6\n", __func__);
 
 	/*
 	 * Unregister machine driver. This will unbind the snd_card which
@@ -380,17 +396,25 @@ int snd_sof_device_remove(struct device *dev)
 	 */
 	snd_sof_machine_unregister(sdev, pdata);
 
+	dev_info(sdev->dev, "%s: plb 7\n", __func__);
+
 	/*
 	 * Unregistering the machine driver results in unloading the topology.
 	 * Some widgets, ex: scheduler, attempt to power down the core they are
 	 * scheduled on, when they are unloaded. Therefore, the DSP must be
 	 * removed only after the topology has been unloaded.
 	 */
-	if (sdev->fw_state > SOF_FW_BOOT_NOT_STARTED)
+	if (sdev->fw_state > SOF_FW_BOOT_NOT_STARTED) {
+		dev_info(sdev->dev, "%s: plb 8\n", __func__);
 		snd_sof_remove(sdev);
+	}
+
+	dev_info(sdev->dev, "%s: plb 9\n", __func__);
 
 	/* release firmware */
 	snd_sof_fw_unload(sdev);
+
+	dev_info(sdev->dev, "%s: plb end\n", __func__);
 
 	return 0;
 }

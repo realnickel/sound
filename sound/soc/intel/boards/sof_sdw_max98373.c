@@ -28,7 +28,8 @@ static int spk_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	int ret;
 
-	card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	//card->components = devm_kasprintf(card->dev, GFP_KERNEL,
+	card->components = kasprintf(GFP_KERNEL,
 					  "%s spk:mx8373",
 					  card->components);
 	if (!card->components)

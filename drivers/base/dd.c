@@ -1199,30 +1199,63 @@ static void __device_release_driver(struct device *dev, struct device *parent)
 		device_remove_file(dev, &dev_attr_state_synced);
 		device_remove_groups(dev, drv->dev_groups);
 
-		if (dev->bus && dev->bus->remove)
+		dev_info(dev, "%s: plb before remove\n", __func__);
+		if (dev->bus && dev->bus->remove) {
 			dev->bus->remove(dev);
-		else if (drv->remove)
+			dev_info(dev, "%s: plb bus remove done\n", __func__);
+		}
+		else if (drv->remove) {
 			drv->remove(dev);
+			dev_info(dev, "%s: plb driver remove done\n", __func__);
+		}
 
+		dev_info(dev, "%s: plb 1 \n", __func__);
 		device_links_driver_cleanup(dev);
+		dev_info(dev, "%s: plb 2 \n", __func__);
 
 		devres_release_all(dev);
+
+		dev_info(dev, "%s: plb 3 \n", __func__);
 		arch_teardown_dma_ops(dev);
-		dev->driver = NULL;
+		dev->driver = NULL;		
 		dev_set_drvdata(dev, NULL);
+
+		dev_info(dev, "%s: plb 4 \n", __func__);
+		
 		if (dev->pm_domain && dev->pm_domain->dismiss)
 			dev->pm_domain->dismiss(dev);
+
+		dev_info(dev, "%s: plb 5 \n", __func__);
+				
 		pm_runtime_reinit(dev);
+		
+		dev_info(dev, "%s: plb 6 \n", __func__);
+		
 		dev_pm_set_driver_flags(dev, 0);
 
 		klist_remove(&dev->p->knode_driver);
+
+		dev_info(dev, "%s: plb 6 \n", __func__);
+				
 		device_pm_check_callbacks(dev);
-		if (dev->bus)
+
+		dev_info(dev, "%s: plb 7 \n", __func__);
+				
+		if (dev->bus) {
+			dev_info(dev, "%s: plb 8 \n", __func__);
+					
 			blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
 						     BUS_NOTIFY_UNBOUND_DRIVER,
 						     dev);
 
+			dev_info(dev, "%s: plb 8 \n", __func__);
+		}
+
+		dev_info(dev, "%s: plb 10 \n", __func__);
+		
 		kobject_uevent(&dev->kobj, KOBJ_UNBIND);
+
+		dev_info(dev, "%s: plb done \n", __func__);
 	}
 }
 
@@ -1256,7 +1289,9 @@ void device_release_driver(struct device *dev)
 	 * within their ->remove callback for the same device, they
 	 * will deadlock right here.
 	 */
+	dev_info(dev, "%s: plb start \n", __func__);
 	device_release_driver_internal(dev, NULL, NULL);
+	dev_info(dev, "%s: plb end \n", __func__);
 }
 EXPORT_SYMBOL_GPL(device_release_driver);
 
