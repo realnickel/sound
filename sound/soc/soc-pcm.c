@@ -31,13 +31,13 @@
 
 void snd_soc_dpcm_fe_lock_irq(struct snd_soc_pcm_runtime *fe, int stream)
 {
-	spin_lock_irq(&fe->card->dpcm_lock);
+	snd_pcm_stream_lock_irq(snd_soc_dpcm_get_substream(fe, stream));
 }
 EXPORT_SYMBOL_GPL(snd_soc_dpcm_fe_lock_irq);
 
 void snd_soc_dpcm_fe_unlock_irq(struct snd_soc_pcm_runtime *fe, int stream)
 {
-	spin_unlock_irq(&fe->card->dpcm_lock);
+	snd_pcm_stream_unlock_irq(snd_soc_dpcm_get_substream(fe, stream));
 }
 EXPORT_SYMBOL_GPL(snd_soc_dpcm_fe_unlock_irq);
 
