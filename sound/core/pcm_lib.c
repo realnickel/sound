@@ -182,25 +182,38 @@ int snd_pcm_update_state(struct snd_pcm_substream *substream,
 {
 	snd_pcm_uframes_t avail;
 
+	pcm_warn(substream->pcm, "%s: start\n", __func__);
 	avail = snd_pcm_avail(substream);
 	if (avail > runtime->avail_max)
 		runtime->avail_max = avail;
+	pcm_warn(substream->pcm, "%s: before draining\n", __func__);
+
 	if (runtime->status->state == SNDRV_PCM_STATE_DRAINING) {
+		pcm_warn(substream->pcm, "%s: before draining2\n", __func__);
+
 		if (avail >= runtime->buffer_size) {
+			pcm_warn(substream->pcm, "%s: before snd_pcm_drain_done\n", __func__);
 			snd_pcm_drain_done(substream);
+			pcm_warn(substream->pcm, "%s: after snd_pcm_drain_done\n", __func__);
 			return -EPIPE;
 		}
+		pcm_warn(substream->pcm, "%s: draining done\n", __func__);
+
 	} else {
 		if (avail >= runtime->stop_threshold) {
 			__snd_pcm_xrun(substream);
 			return -EPIPE;
 		}
 	}
+	pcm_warn(substream->pcm, "%s: before twake\n", __func__);
+
 	if (runtime->twake) {
 		if (avail >= runtime->twake)
 			wake_up(&runtime->tsleep);
 	} else if (avail >= runtime->control->avail_min)
 		wake_up(&runtime->sleep);
+	pcm_warn(substream->pcm, "%s: done\n", __func__);
+
 	return 0;
 }
 
@@ -267,6 +280,7 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 	struct timespec64 audio_tstamp;
 	int crossed_boundary = 0;
 
+	pcm_warn(substream->pcm, "%s: start\n", __func__);
 	old_hw_ptr = runtime->status->hw_ptr;
 
 	/*
@@ -339,6 +353,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 		}
 		new_hw_ptr = hw_base + pos;
 	}
+	pcm_warn(substream->pcm, "%s: delta\n", __func__);
+
       __delta:
 	delta = new_hw_ptr - old_hw_ptr;
 	if (delta < 0)
@@ -368,6 +384,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 		goto no_delta_check;
 	}
 
+	pcm_warn(substream->pcm, "%s: check1\n", __func__);
+
 	/* something must be really wrong */
 	if (delta >= runtime->buffer_size + runtime->period_size) {
 		hw_ptr_error(substream, in_interrupt, "Unexpected hw_ptr",
@@ -390,6 +408,9 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 	hdelta = delta;
 	if (hdelta < runtime->delay)
 		goto no_jiffies_check;
+
+	pcm_warn(substream->pcm, "%s: checks 2\n", __func__);
+
 	hdelta -= runtime->delay;
 	jdelta = curr_jiffies - runtime->hw_ptr_jiffies;
 	if (((hdelta * HZ) / runtime->rate) > jdelta + HZ/100) {
@@ -401,6 +422,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 		hw_base = delta;
 		/* use loop to avoid checks for delta overflows */
 		/* the delta value is small or zero in most cases */
+		pcm_warn(substream->pcm, "%s: start while\n", __func__);
+
 		while (delta > 0) {
 			new_hw_ptr += runtime->period_size;
 			if (new_hw_ptr >= runtime->boundary) {
@@ -409,6 +432,9 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 			}
 			delta--;
 		}
+
+		pcm_warn(substream->pcm, "%s: end while\n", __func__);
+
 		/* align hw_base to buffer_size */
 		hw_ptr_error(substream, in_interrupt, "hw_ptr skipping",
 			     "(pos=%ld, delta=%ld, period=%ld, jdelta=%lu/%lu/%lu, hw_ptr=%ld/%ld)\n",
@@ -421,6 +447,9 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 		delta = 0;
 		hw_base = new_hw_ptr - (new_hw_ptr % runtime->buffer_size);
 	}
+
+	pcm_warn(substream->pcm, "%s: no_jiffies_check\n", __func__);
+
  no_jiffies_check:
 	if (delta > runtime->period_size + runtime->period_size / 2) {
 		hw_ptr_error(substream, in_interrupt,
@@ -431,16 +460,22 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 			     (long)old_hw_ptr);
 	}
 
- no_delta_check:
+	pcm_warn(substream->pcm, "%s: no_delta_check\n", __func__);
+
+no_delta_check:
 	if (runtime->status->hw_ptr == new_hw_ptr) {
 		runtime->hw_ptr_jiffies = curr_jiffies;
 		update_audio_tstamp(substream, &curr_tstamp, &audio_tstamp);
 		return 0;
 	}
 
+	pcm_warn(substream->pcm, "%s: playback silence\n", __func__);
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK &&
 	    runtime->silence_size > 0)
 		snd_pcm_playback_silence(substream, new_hw_ptr);
+
+	pcm_warn(substream->pcm, "%s: checks 3\n", __func__);
 
 	if (in_interrupt) {
 		delta = new_hw_ptr - runtime->hw_ptr_interrupt;
@@ -460,6 +495,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
 	}
 
 	update_audio_tstamp(substream, &curr_tstamp, &audio_tstamp);
+
+	pcm_warn(substream->pcm, "%s: done\n", __func__);
 
 	return snd_pcm_update_state(substream, runtime);
 }
@@ -1808,13 +1845,20 @@ void snd_pcm_period_elapsed_under_stream_lock(struct snd_pcm_substream *substrea
 {
 	struct snd_pcm_runtime *runtime;
 
+	pcm_warn(substream->pcm, "%s: start\n", __func__);
 	if (PCM_RUNTIME_CHECK(substream))
 		return;
 	runtime = substream->runtime;
 
-	if (!snd_pcm_running(substream) ||
-	    snd_pcm_update_hw_ptr0(substream, 1) < 0)
+	pcm_warn(substream->pcm, "%s: check running \n", __func__);
+	if (!snd_pcm_running(substream))
 		goto _end;
+
+	pcm_warn(substream->pcm, "%s: check update_hw_ptr0 \n", __func__);
+	if (snd_pcm_update_hw_ptr0(substream, 1) < 0)
+		goto _end;
+
+	pcm_warn(substream->pcm, "%s: checks done\n", __func__);
 
 #ifdef CONFIG_SND_PCM_TIMER
 	if (substream->timer_running)
@@ -1822,6 +1866,8 @@ void snd_pcm_period_elapsed_under_stream_lock(struct snd_pcm_substream *substrea
 #endif
  _end:
 	kill_fasync(&runtime->fasync, SIGIO, POLL_IN);
+
+	pcm_warn(substream->pcm, "%s: done\n", __func__);
 }
 EXPORT_SYMBOL(snd_pcm_period_elapsed_under_stream_lock);
 
@@ -1844,9 +1890,14 @@ void snd_pcm_period_elapsed(struct snd_pcm_substream *substream)
 	if (snd_BUG_ON(!substream))
 		return;
 
+	pcm_warn(substream->pcm, "%s: plb taking lock\n", __func__);
 	snd_pcm_stream_lock_irqsave(substream, flags);
+	pcm_warn(substream->pcm, "%s: plb taking lock - done\n", __func__);
 	snd_pcm_period_elapsed_under_stream_lock(substream);
+	pcm_warn(substream->pcm, "%s: plb releasing lock\n", __func__);
 	snd_pcm_stream_unlock_irqrestore(substream, flags);
+	pcm_warn(substream->pcm, "%s: plb releasing lock - done\n", __func__);
+
 }
 EXPORT_SYMBOL(snd_pcm_period_elapsed);
 

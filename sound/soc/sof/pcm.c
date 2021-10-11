@@ -63,7 +63,13 @@ static void snd_sof_pcm_period_elapsed_work(struct work_struct *work)
 		container_of(work, struct snd_sof_pcm_stream,
 			     period_elapsed_work);
 
-	snd_pcm_period_elapsed(sps->substream);
+	pcm_warn(sps->substream->pcm, "%s: plb taking lock\n", __func__);
+	snd_pcm_stream_lock_irq(sps->substream);
+	pcm_warn(sps->substream->pcm, "%s: plb taking lock - done\n", __func__);
+	snd_pcm_period_elapsed_under_stream_lock(sps->substream);
+	pcm_warn(sps->substream->pcm, "%s: plb releasing lock\n", __func__);		
+	snd_pcm_stream_unlock_irq(sps->substream);
+	pcm_warn(sps->substream->pcm, "%s: plb releasing lock - done\n", __func__);
 }
 
 void snd_sof_pcm_init_elapsed_work(struct work_struct *work)

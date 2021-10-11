@@ -29,17 +29,31 @@
 
 #define DPCM_MAX_BE_USERS	8
 
-void snd_soc_dpcm_fe_lock_irq(struct snd_soc_pcm_runtime *fe, int stream)
+void snd_soc_dpcm_fe_lock_irq(struct snd_soc_pcm_runtime *fe, int stream, const char *from)
 {
+	dev_warn(fe->dev, "%s: plb: taking fe lock from %s\n", __func__, from);
 	snd_pcm_stream_lock_irq(snd_soc_dpcm_get_substream(fe, stream));
+	dev_warn(fe->dev, "%s: plb: taking fe lock from %s- done\n", __func__, from);
 }
 EXPORT_SYMBOL_GPL(snd_soc_dpcm_fe_lock_irq);
 
-void snd_soc_dpcm_fe_unlock_irq(struct snd_soc_pcm_runtime *fe, int stream)
+#define snd_soc_dpcm_fe_lock_irqsave(fe, stream, flags, from) \
+	dev_warn(fe->dev, "%s: plb: taking fe lock_irqsave from %s\n", __func__, from);\
+	snd_pcm_stream_lock_irqsave(snd_soc_dpcm_get_substream(fe, stream), flags);\
+	dev_warn(fe->dev, "%s: plb: taking fe lock_irqsave from %s- done\n", __func__, from);\
+
+void snd_soc_dpcm_fe_unlock_irq(struct snd_soc_pcm_runtime *fe, int stream, const char *from)
 {
+	dev_warn(fe->dev, "%s: plb: releasing fe lock from %s\n", __func__, from);
 	snd_pcm_stream_unlock_irq(snd_soc_dpcm_get_substream(fe, stream));
+	dev_warn(fe->dev, "%s: plb: releasing fe lock from %s - done\n", __func__, from);
 }
 EXPORT_SYMBOL_GPL(snd_soc_dpcm_fe_unlock_irq);
+
+#define snd_soc_dpcm_fe_unlock_irqrestore(fe, stream, flags, from) \
+	dev_warn(fe->dev, "%s: plb: taking fe lock_irqrestore from %s\n", __func__, from); \
+	snd_pcm_stream_unlock_irqrestore(snd_soc_dpcm_get_substream(fe, stream), flags); \
+	dev_warn(fe->dev, "%s: plb: taking fe lock_irqrestore from %s- done\n", __func__, from); \
 
 /* can this BE stop and free */
 static int snd_soc_dpcm_can_be_free_stop(struct snd_soc_pcm_runtime *fe,
@@ -124,7 +138,7 @@ static ssize_t dpcm_show_state(struct snd_soc_pcm_runtime *fe,
 		goto out;
 	}
 
-	snd_soc_dpcm_fe_lock_irq(fe, stream);
+	snd_soc_dpcm_fe_lock_irq(fe, stream, __func__);
 	for_each_dpcm_be(fe, stream, dpcm) {
 		struct snd_soc_pcm_runtime *be = dpcm->be;
 		params = &dpcm->hw_params;
@@ -145,7 +159,7 @@ static ssize_t dpcm_show_state(struct snd_soc_pcm_runtime *fe,
 					   params_channels(params),
 					   params_rate(params));
 	}
-	snd_soc_dpcm_fe_unlock_irq(fe, stream);
+	snd_soc_dpcm_fe_unlock_irq(fe, stream, __func__);
 out:
 	return offset;
 }
@@ -244,14 +258,19 @@ static void dpcm_set_fe_update_state(struct snd_soc_pcm_runtime *fe,
 	struct snd_pcm_substream *substream =
 		snd_soc_dpcm_get_substream(fe, stream);
 
+	dev_warn(fe->dev, "%s: plb taking pcm lock\n", __func__);
 	snd_pcm_stream_lock_irq(substream);
+	dev_warn(fe->dev, "%s: plb taking pcm lock - done\n", __func__);
 	if (state == SND_SOC_DPCM_UPDATE_NO && fe->dpcm[stream].trigger_pending) {
 		dpcm_fe_dai_do_trigger(substream,
 				       fe->dpcm[stream].trigger_pending - 1);
 		fe->dpcm[stream].trigger_pending = 0;
 	}
 	fe->dpcm[stream].runtime_update = state;
+	dev_warn(fe->dev, "%s: plb releasing pcm lock\n", __func__);
 	snd_pcm_stream_unlock_irq(substream);
+	dev_warn(fe->dev, "%s: plb releasing pcm lock- done\n", __func__);
+
 }
 
 static void dpcm_set_be_update_state(struct snd_soc_pcm_runtime *be,
@@ -1167,10 +1186,10 @@ static int dpcm_be_connect(struct snd_soc_pcm_runtime *fe,
 	dpcm->fe = fe;
 	be->dpcm[stream].runtime = fe->dpcm[stream].runtime;
 	dpcm->state = SND_SOC_DPCM_LINK_STATE_NEW;
-	snd_soc_dpcm_fe_lock_irq(fe, stream);
+	snd_soc_dpcm_fe_lock_irq(fe, stream, __func__);
 	list_add(&dpcm->list_be, &fe->dpcm[stream].be_clients);
 	list_add(&dpcm->list_fe, &be->dpcm[stream].fe_clients);
-	snd_soc_dpcm_fe_unlock_irq(fe, stream);
+	snd_soc_dpcm_fe_unlock_irq(fe, stream, __func__);
 
 	dev_dbg(fe->dev, "connected new DPCM %s path %s %s %s\n",
 			stream ? "capture" : "playback",  fe->dai_link->name,
@@ -1231,10 +1250,10 @@ void dpcm_be_disconnect(struct snd_soc_pcm_runtime *fe, int stream)
 
 		dpcm_remove_debugfs_state(dpcm);
 
-		snd_soc_dpcm_fe_lock_irq(fe, stream);
+		snd_soc_dpcm_fe_lock_irq(fe, stream, __func__);
 		list_del(&dpcm->list_be);
 		list_del(&dpcm->list_fe);
-		snd_soc_dpcm_fe_unlock_irq(fe, stream);
+		snd_soc_dpcm_fe_unlock_irq(fe, stream, __func__);
 		kfree(dpcm);
 	}
 }
@@ -1461,10 +1480,10 @@ void dpcm_clear_pending_state(struct snd_soc_pcm_runtime *fe, int stream)
 {
 	struct snd_soc_dpcm *dpcm;
 
-	snd_soc_dpcm_fe_lock_irq(fe, stream);
+	snd_soc_dpcm_fe_lock_irq(fe, stream, __func__);
 	for_each_dpcm_be(fe, stream, dpcm)
 		dpcm_set_be_update_state(dpcm->be, stream, SND_SOC_DPCM_UPDATE_NO);
-	snd_soc_dpcm_fe_unlock_irq(fe, stream);
+	snd_soc_dpcm_fe_unlock_irq(fe, stream, __func__);
 }
 
 void dpcm_be_dai_stop(struct snd_soc_pcm_runtime *fe, int stream,
@@ -2077,16 +2096,23 @@ int dpcm_be_dai_trigger(struct snd_soc_pcm_runtime *fe, int stream,
 			be->dpcm[stream].state = SND_SOC_DPCM_STATE_START;
 			break;
 		case SNDRV_PCM_TRIGGER_STOP:
+			dev_warn(fe->dev, "%s: BE TRIGGER_STOP start\n", __func__);
 			if ((be->dpcm[stream].state != SND_SOC_DPCM_STATE_START) &&
 			    (be->dpcm[stream].state != SND_SOC_DPCM_STATE_PAUSED))
 				continue;
 
+			dev_warn(fe->dev, "%s: BE TRIGGER_STOP check can_be_free_stop\n", __func__);
+
 			if (!snd_soc_dpcm_can_be_free_stop(fe, be, stream))
 				continue;
+
+			dev_warn(fe->dev, "%s: BE TRIGGER_STOP - go \n", __func__);
 
 			ret = soc_pcm_trigger(be_substream, cmd);
 			if (ret)
 				goto end;
+
+			dev_warn(fe->dev, "%s: BE TRIGGER_STOP - done \n", __func__);
 
 			be->dpcm[stream].state = SND_SOC_DPCM_STATE_STOP;
 			break;
@@ -2450,7 +2476,7 @@ close:
 	dpcm_be_dai_shutdown(fe, stream);
 disconnect:
 	/* disconnect any pending BEs */
-	snd_soc_dpcm_fe_lock_irq(fe, stream);
+	snd_soc_dpcm_fe_lock_irq(fe, stream, __func__);
 	for_each_dpcm_be(fe, stream, dpcm) {
 		struct snd_soc_pcm_runtime *be = dpcm->be;
 
@@ -2462,7 +2488,7 @@ disconnect:
 			be->dpcm[stream].state == SND_SOC_DPCM_STATE_NEW)
 				dpcm->state = SND_SOC_DPCM_LINK_STATE_FREE;
 	}
-	snd_soc_dpcm_fe_unlock_irq(fe, stream);
+	snd_soc_dpcm_fe_unlock_irq(fe, stream, __func__);
 
 	if (ret < 0)
 		dev_err(fe->dev, "ASoC: %s() failed (%d)\n", __func__, ret);
@@ -2860,11 +2886,12 @@ static int snd_soc_dpcm_check_state(struct snd_soc_pcm_runtime *fe,
 				    int num_states)
 {
 	struct snd_soc_dpcm *dpcm;
+	unsigned long flags;
 	int state;
 	int ret = 1;
 	int i;
 
-	snd_soc_dpcm_fe_lock_irq(fe, stream);
+	snd_soc_dpcm_fe_lock_irqsave(fe, stream, flags, __func__);
 	for_each_dpcm_fe(be, stream, dpcm) {
 
 		if (dpcm->fe == fe)
@@ -2878,7 +2905,7 @@ static int snd_soc_dpcm_check_state(struct snd_soc_pcm_runtime *fe,
 			}
 		}
 	}
-	snd_soc_dpcm_fe_unlock_irq(fe, stream);
+	snd_soc_dpcm_fe_unlock_irqrestore(fe, stream, flags, __func__);
 
 	/* it's safe to do this BE DAI */
 	return ret;

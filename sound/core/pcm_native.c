@@ -1435,11 +1435,15 @@ static int snd_pcm_pre_stop(struct snd_pcm_substream *substream,
 static int snd_pcm_do_stop(struct snd_pcm_substream *substream,
 			   snd_pcm_state_t state)
 {
+	pcm_warn(substream->pcm, "%s: start\n", __func__);
 	if (substream->runtime->trigger_master == substream &&
 	    snd_pcm_running(substream)) {
+		pcm_warn(substream->pcm, "%s: before TRIGGER_STOP\n", __func__);
 		substream->ops->trigger(substream, SNDRV_PCM_TRIGGER_STOP);
+		pcm_warn(substream->pcm, "%s: after TRIGGER_STOP\n", __func__);
 		substream->runtime->stop_operating = true;
 	}
+	pcm_warn(substream->pcm, "%s: done\n", __func__);		
 	return 0; /* unconditionally stop all substreams */
 }
 
