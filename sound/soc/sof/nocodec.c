@@ -26,47 +26,60 @@ static int sof_nocodec_bes_setup(struct device *dev,
 {
 	struct snd_soc_dai_link_component *dlc;
 	int i;
+	int j = 0;
 
 	if (!drv || !links || !card)
 		return -EINVAL;
 
 	/* set up BE dai_links */
 	for (i = 0; i < link_num; i++) {
+		int dai_id;
+
+		/* map ssp0 to ssp2, don't enable nocodec-2 dailink */
+		if (i == 0)
+			dai_id = 2;
+		else if (i == 2)
+			continue;
+		else
+			dai_id = i;
+
 		dlc = devm_kzalloc(dev, 3 * sizeof(*dlc), GFP_KERNEL);
 		if (!dlc)
 			return -ENOMEM;
 
-		links[i].name = devm_kasprintf(dev, GFP_KERNEL,
+		links[j].name = devm_kasprintf(dev, GFP_KERNEL,
 					       "NoCodec-%d", i);
-		if (!links[i].name)
+		if (!links[j].name)
 			return -ENOMEM;
 
-		links[i].stream_name = links[i].name;
+		links[j].stream_name = links[j].name;
 
-		links[i].cpus = &dlc[0];
-		links[i].codecs = &dlc[1];
-		links[i].platforms = &dlc[2];
+		links[j].cpus = &dlc[0];
+		links[j].codecs = &dlc[1];
+		links[j].platforms = &dlc[2];
 
-		links[i].num_cpus = 1;
-		links[i].num_codecs = 1;
-		links[i].num_platforms = 1;
+		links[j].num_cpus = 1;
+		links[j].num_codecs = 1;
+		links[j].num_platforms = 1;
 
-		links[i].id = i;
-		links[i].no_pcm = 1;
-		links[i].cpus->dai_name = drv[i].name;
-		links[i].platforms->name = dev_name(dev->parent);
-		links[i].codecs->dai_name = "snd-soc-dummy-dai";
-		links[i].codecs->name = "snd-soc-dummy";
-		if (drv[i].playback.channels_min)
-			links[i].dpcm_playback = 1;
-		if (drv[i].capture.channels_min)
-			links[i].dpcm_capture = 1;
+		links[j].id = i;
+		links[j].no_pcm = 1;
+		links[j].cpus->dai_name = drv[dai_id].name;
+		links[j].platforms->name = dev_name(dev->parent);
+		links[j].codecs->dai_name = "snd-soc-dummy-dai";
+		links[j].codecs->name = "snd-soc-dummy";
+		if (drv[dai_id].playback.channels_min)
+			links[j].dpcm_playback = 1;
+		if (drv[dai_id].capture.channels_min)
+			links[j].dpcm_capture = 1;
 
-		links[i].be_hw_params_fixup = sof_pcm_dai_link_fixup;
+		links[j].be_hw_params_fixup = sof_pcm_dai_link_fixup;
+
+		j++;
 	}
 
 	card->dai_link = links;
-	card->num_links = link_num;
+	card->num_links = link_num - 1;
 
 	return 0;
 }
