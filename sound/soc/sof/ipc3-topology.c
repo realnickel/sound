@@ -8,11 +8,16 @@
 //
 
 #include <uapi/sound/sof/tokens.h>
+#include <linux/module.h>
 #include <sound/pcm_params.h>
 #include "sof-priv.h"
 #include "sof-audio.h"
 #include "ipc3-ops.h"
 #include "ops.h"
+
+static int sof_ssp_mclk_id = -1;
+module_param_named(sof_ssp_mclk_id, sof_ssp_mclk_id, int, 0444);
+MODULE_PARM_DESC(sof_ssp_mclk_id, "SOF SSP MCLK ID quirk");
 
 /* Full volume for default values */
 #define VOL_ZERO_DB	BIT(VOLUME_FWL)
@@ -1253,6 +1258,12 @@ static int sof_link_ssp_load(struct snd_soc_component *scomp, struct snd_sof_dai
 		config[i].ssp.mclk_direction = hw_config[i].mclk_direction;
 		config[i].ssp.rx_slots = le32_to_cpu(hw_config[i].rx_slots);
 		config[i].ssp.tx_slots = le32_to_cpu(hw_config[i].tx_slots);
+
+		if (sof_ssp_mclk_id != -1) {
+			dev_warn(scomp->dev, "%s: overriding topology mclk_id %d with parameter %d\n",
+				 __func__, config[i].ssp.mclk_id, sof_ssp_mclk_id);
+			config[i].ssp.mclk_id = sof_ssp_mclk_id;
+		}
 
 		dev_dbg(scomp->dev, "tplg: config SSP%d fmt %#x mclk %d bclk %d fclk %d width (%d)%d slots %d mclk id %d quirks %d clks_control %#x\n",
 			config[i].dai_index, config[i].format,
