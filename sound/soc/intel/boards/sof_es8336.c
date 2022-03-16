@@ -464,6 +464,24 @@ static char soc_components[30];
  /* i2c-<HID>:00 with HID being 8 chars */
 static char codec_name[SND_ACPI_I2C_ID_LEN];
 
+/*
+ * to control the HifiBerry Digi+ PRO, it's required to toggle GPIO to
+ * select the clock source. On the Up2 board, this means
+ * Pin29/BCM5/Linux GPIO 430 and Pin 31/BCM6/ Linux GPIO 404.
+ *
+ * Using the ACPI device name is not very nice, but since we only use
+ * the value for the Up2 board there is no risk of conflict with other
+ * platforms.
+ */
+
+static struct gpiod_lookup_table up2_gpios_table = {
+	/* .dev_id is set during probe */
+	.table = {
+		GPIO_LOOKUP("INT34BB:00", 264, "PA_ENABLE", GPIO_ACTIVE_LOW), //cnl kb
+		{ },
+	},
+};
+
 static int sof_es8336_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -580,16 +598,21 @@ static int sof_es8336_probe(struct platform_device *pdev)
 		}
 	}
 
-	/* get speaker enable GPIO */
-	ret = devm_acpi_dev_add_driver_gpios(codec_dev, gpio_mapping);
-	if (ret)
-		dev_warn(codec_dev, "unable to add GPIO mapping table\n");
+	up2_gpios_table.dev_id = dev_name(codec_dev);
+	gpiod_add_lookup_table(&up2_gpios_table);
 
-	priv->gpio_pa = gpiod_get_optional(codec_dev, "pa-enable", GPIOD_OUT_LOW);
+	/*
+	 * The gpios are required for specific boards with
+	 * local oscillators, and optional in other cases.
+	 * Since we can't identify when they are needed, use
+	 * the GPIO as non-optional
+	 */
+
+	priv->gpio_pa = devm_gpiod_get(codec_dev, "PA_ENABLE",
+	                              GPIOD_OUT_LOW);
 	if (IS_ERR(priv->gpio_pa)) {
-		ret = dev_err_probe(dev, PTR_ERR(priv->gpio_pa),
-				    "could not get pa-enable GPIO\n");
-		goto err_put_codec;
+	        ret = PTR_ERR(priv->gpio_pa);
+	        goto err_put_codec;
 	}
 
 	INIT_LIST_HEAD(&priv->hdmi_pcm_list);
